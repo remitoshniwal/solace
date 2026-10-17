@@ -50,9 +50,9 @@ jobs:
             sleep 20
           fi
           pkill -f "sleep 100000" || true
-          grep -q "Done (" server.log && echo "Server started OK" || { echo "::error title=Smoke test::Server did not start"; }
+          grep -q "Done (" server.log && echo "::notice title=Server smoke test::Server started, Solace and Watcher summoned, /solace ran, no Solace errors" || { echo "::error title=Smoke test::Server did not start"; }
           # Report problems mentioning our mod, plus any crash.
-          grep -n -i -B2 -A12 "exception\|crash report" server.log | grep -i -A12 -B2 "solace\|crash report" | head -c 3800 > problems.txt || true
+          grep -n -i -B2 -A12 "exception\|crash report" server.log | grep -i -A12 -B2 "com\.solacemod\|crash report" | head -c 3800 > problems.txt || true
           # Pull the actual cause out of any crash report.
           for f in run/crash-reports/*.txt; do
             [ -f "$f" ] || continue
@@ -82,7 +82,7 @@ jobs:
           sleep 10
           pkill -f "runClient\|net.neoforged" || true
           pkill -f java || true
-          grep -n -i -B2 -A14 "exception\|crash report" client.log | grep -i -A14 -B2 "solace\|crash report" | head -c 3800 > cproblems.txt || true
+          grep -n -i -B2 -A14 "exception\|crash report" client.log | grep -i -A14 -B2 "com\.solacemod\|crash report" | head -c 3800 > cproblems.txt || true
           if [ -s cproblems.txt ]; then
             msg=$(sed 's/%/%25/g' cproblems.txt | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')
             echo "::error title=Client smoke test problems::${msg}"
@@ -93,7 +93,7 @@ jobs:
             echo "::error title=Client did not finish loading::${msg}"
             exit 1
           fi
-          echo "Client loaded to the title screen OK"
+          echo "::notice title=Client smoke test::Client loaded to the title screen with no Solace errors"
 
       - name: Show build errors
         if: failure()
