@@ -30,6 +30,37 @@ jobs:
       - name: Run the AI self-tests
         run: ./gradlew aiTest
 
+      - name: Smoke test (start a real server with the mod)
+        run: |
+          mkdir -p run && echo "eula=true" > run/eula.txt
+          mkfifo server_in
+          (sleep 100000 > server_in) &
+          ./gradlew runServer < server_in > server.log 2>&1 &
+          for i in $(seq 1 150); do
+            if grep -q "Done (" server.log; then break; fi
+            if grep -qi "crash report\|Failed to start the minecraft server" server.log; then break; fi
+            sleep 2
+          done
+          if grep -q "Done (" server.log; then
+            echo "summon solace:solace 0 100 0" > server_in
+            echo "summon solace:watcher 2 100 2" > server_in
+            echo "solace" > server_in
+            sleep 10
+            echo "stop" > server_in
+            sleep 20
+          fi
+          pkill -f "sleep 100000" || true
+          grep -q "Done (" server.log && echo "Server started OK" || { echo "::error title=Smoke test::Server did not start"; }
+          # Report problems mentioning our mod, plus any crash.
+          grep -n -i -B2 -A12 "exception\|crash report" server.log | grep -i -A12 -B2 "solace\|crash report" | head -c 3800 > problems.txt || true
+          if [ -s problems.txt ]; then
+            msg=$(sed 's/%/%25/g' problems.txt | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')
+            echo "::error title=Smoke test problems::${msg}"
+            exit 1
+          fi
+          grep -q "Done (" server.log || exit 1
+          grep -i "solace" server.log | tail -20
+
       - name: Show build errors
         if: failure()
         run: |
