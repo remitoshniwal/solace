@@ -68,6 +68,33 @@ jobs:
           grep -q "Done (" server.log || exit 1
           grep -i "solace" server.log | tail -20
 
+      - name: Client smoke test (start the game with the mod)
+        run: |
+          sudo apt-get install -y -qq xvfb mesa-utils > /dev/null 2>&1 || true
+          export LIBGL_ALWAYS_SOFTWARE=1
+          xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runClient > client.log 2>&1 &
+          ok=0
+          for i in $(seq 1 120); do
+            if grep -q "Created: .*atlas" client.log; then ok=1; break; fi
+            if grep -qi "crash report\|BUILD FAILED" client.log; then break; fi
+            sleep 2
+          done
+          sleep 10
+          pkill -f "runClient\|net.neoforged" || true
+          pkill -f java || true
+          grep -n -i -B2 -A14 "exception\|crash report" client.log | grep -i -A14 -B2 "solace\|crash report" | head -c 3800 > cproblems.txt || true
+          if [ -s cproblems.txt ]; then
+            msg=$(sed 's/%/%25/g' cproblems.txt | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')
+            echo "::error title=Client smoke test problems::${msg}"
+            exit 1
+          fi
+          if [ $ok -ne 1 ]; then
+            msg=$(tail -40 client.log | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')
+            echo "::error title=Client did not finish loading::${msg}"
+            exit 1
+          fi
+          echo "Client loaded to the title screen OK"
+
       - name: Show build errors
         if: failure()
         run: |
