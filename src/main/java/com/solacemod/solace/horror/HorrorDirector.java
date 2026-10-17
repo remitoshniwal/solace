@@ -318,7 +318,7 @@ public final class HorrorDirector {
             BlockState state = level.getBlockState(p);
             if (state.getBlock() instanceof DoorBlock door && state.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER
                     && !state.is(Blocks.IRON_DOOR)) {
-                door.setOpen(null, level, state, p, !DoorBlock.isOpen(state));
+                door.setOpen(null, level, state, p, !door.isOpen(state));
                 return;
             }
         }

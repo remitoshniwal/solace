@@ -277,6 +277,7 @@ public class SolaceEntity extends PathfinderMob {
     @Override
     public void aiStep() {
         this.updateSwingTime();
+        setAirSupply(getMaxAirSupply()); // Solace never drowns
         super.aiStep();
     }
 
@@ -405,11 +406,6 @@ public class SolaceEntity extends PathfinderMob {
             StoryDirector.onHollowDefeated(this);
         }
         super.die(source);
-    }
-
-    @Override
-    public boolean canBreatheUnderwater() {
-        return true;
     }
 
     @Override
