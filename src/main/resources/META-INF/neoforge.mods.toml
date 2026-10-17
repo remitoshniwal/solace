@@ -1,0 +1,28 @@
+modLoader = "javafml"
+loaderVersion = "${loader_version_range}"
+license = "${mod_license}"
+
+[[mods]]
+modId = "${mod_id}"
+version = "${mod_version}"
+displayName = "${mod_name}"
+authors = "${mod_authors}"
+logoFile = "solace_logo.png"
+description = '''${mod_description}
+
+Talk to Solace in chat (or with your voice). It follows you, fights for you, mines, builds and crafts, and it remembers you. Even in other worlds.
+Works with almost any AI provider (Groq, OpenAI, Anthropic, Gemini, OpenRouter, Ollama, LM Studio, and more), or with no AI at all.'''
+
+[[dependencies.${mod_id}]]
+modId = "neoforge"
+type = "required"
+versionRange = "${neo_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraft_version_range}"
+ordering = "NONE"
+side = "BOTH"

@@ -1,0 +1,21 @@
+# Gradle / build output
+.gradle/
+build/
+out/
+run/
+runs/
+*.class
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+bin/
+
+# NEVER commit config files with API keys
+config/
+*.toml.bak
+.env
