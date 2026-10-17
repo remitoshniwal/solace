@@ -56,7 +56,7 @@ jobs:
           # Pull the actual cause out of any crash report.
           for f in run/crash-reports/*.txt; do
             [ -f "$f" ] || continue
-            grep -n -A6 "Caused by\|Exception:\|Error:\|Failure message\|Mod File\|issue" "$f" | grep -v "^\s*at \|^[0-9]*-\s*at " | head -c 3800 > crash.txt
+            { grep -m1 -A3 "Failure message" "$f"; grep -m1 -A30 "^Stacktrace:" "$f"; grep -A8 "Caused by" "$f"; } | head -c 3800 > crash.txt
             msg=$(sed 's/%/%25/g' crash.txt | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')
             echo "::error title=Crash report::${msg}"
           done
