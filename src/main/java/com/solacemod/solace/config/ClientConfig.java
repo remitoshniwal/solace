@@ -2,7 +2,6 @@ package com.solacemod.solace.config;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 
-import java.util.List;
 
 /**
  * Per-player settings saved in config/solace-client.toml: voice chat and visual comfort options.
@@ -46,7 +45,7 @@ public final class ClientConfig {
 
         b.comment("Hear Solace speak out loud.").push("voice_output");
         TTS_PROVIDER = b.comment("none, openai_compatible (OpenAI, or free local servers like Kokoro-FastAPI), elevenlabs")
-                .defineInList("provider", "none", List.of("none", "openai_compatible", "elevenlabs"));
+                .defineInList("provider", "none", java.util.Arrays.asList("none", "openai_compatible", "elevenlabs"));
         TTS_BASE_URL = b.comment("For openai_compatible. OpenAI: https://api.openai.com/v1  Local Kokoro: http://localhost:8880/v1")
                 .define("baseUrl", "https://api.openai.com/v1");
         TTS_API_KEY = b.comment("API key for the voice service (blank for local servers).")

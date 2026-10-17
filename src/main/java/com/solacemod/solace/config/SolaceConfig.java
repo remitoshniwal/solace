@@ -2,7 +2,6 @@ package com.solacemod.solace.config;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 
-import java.util.List;
 
 /**
  * Settings saved in config/solace-common.toml. You can also edit them in-game: Mods > Solace > Config.
@@ -112,7 +111,7 @@ public final class SolaceConfig {
         b.push("chat");
         LISTEN_MODE = b.comment("When does Solace treat your chat as talking to it?",
                         "nearby = when Solace is close or you say its name, prefix = only messages starting with 'solace' or '@solace', always = every message")
-                .defineInList("listenMode", "nearby", List.of("nearby", "prefix", "always"));
+                .defineInList("listenMode", "nearby", java.util.Arrays.asList("nearby", "prefix", "always"));
         HEARING_RANGE = b.comment("Blocks away Solace can hear you in 'nearby' mode.")
                 .defineInRange("hearingRange", 24, 4, 128);
         REPLIES_VISIBLE_TO_ALL = b.comment("Multiplayer: show Solace's replies to everyone instead of only its owner.")
