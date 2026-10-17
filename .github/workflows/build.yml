@@ -33,14 +33,20 @@ jobs:
       - name: Show build errors
         if: failure()
         run: |
-          # Collect compiler errors (or Gradle's failure reason) into one readable error message.
+          # Turn compiler errors (or Gradle's failure reason) into readable error messages (each max ~4000 chars).
           if grep -q "error:" build.log; then
-            grep -B1 -A3 "error:" build.log | head -c 60000 > errors.txt
+            grep -A1 "error:" build.log | grep -v "^--$" | sed 's#.*/src/main/java/com/solacemod/solace/##' > errors.txt
           else
-            grep -A40 "What went wrong" build.log | head -c 60000 > errors.txt || tail -80 build.log > errors.txt
+            grep -A40 "What went wrong" build.log > errors.txt || tail -80 build.log > errors.txt
           fi
-          msg=$(sed 's/%/%25/g' errors.txt | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')
-          echo "::error title=Build errors::${msg}"
+          split -C 3800 -a 2 errors.txt chunk_
+          n=0
+          for f in chunk_*; do
+            n=$((n+1)); [ $n -gt 10 ] && break
+            msg=$(sed 's/%/%25/g' "$f" | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')
+            echo "::error title=Build errors $n::${msg}"
+          done
+          echo "Total error lines: $(grep -c 'error:' build.log || true)"
 
       - name: Upload the mod jar
         uses: actions/upload-artifact@v4
