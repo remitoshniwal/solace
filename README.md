@@ -18,7 +18,7 @@ Solace shows up about 30 seconds after you join a world. It's a quiet, pale figu
 ## Install (for players)
 
 1. Install **NeoForge for Minecraft 1.21.1** from https://neoforged.net (pick the installer, choose "Install client").
-2. Put `solace-1.0.0.jar` in your `.minecraft/mods` folder.
+2. Download `solace-1.0.0.jar` from the [Releases page](https://github.com/remitoshniwal/solace/releases/latest) and put it in your `.minecraft/mods` folder.
 3. Start Minecraft with the NeoForge profile, open a world, wait 30 seconds.
 
 It works right away with pre-written lines. To give it a real AI brain, keep reading.
@@ -105,7 +105,7 @@ The mod ends up in `build/libs/`. Other useful commands:
 - `./gradlew aiTest` runs the AI self-tests (no Minecraft, no API key, no cost)
 - `python3 tools/make_textures.py` regenerates the textures (or edit the PNGs in `src/main/resources/assets/solace/textures/entity/`, they use the normal player-skin layout)
 
-Pushing to GitHub builds the mod automatically (see `.github/workflows/build.yml`); download it from the **Actions** tab.
+Pushing to GitHub builds and tests the mod automatically (see `.github/workflows/build.yml`). To publish a new version: change `mod_version` in `gradle.properties`, then push a tag like `v1.0.1` (`git tag v1.0.1 && git push origin v1.0.1`). A Release with the jar appears on the Releases page a few minutes later.
 
 ### Where things are
 

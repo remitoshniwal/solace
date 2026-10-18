@@ -4,8 +4,14 @@ name: Build
 
 on:
   push:
+    branches: ["**"]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
+
+# Needed so the workflow can create Releases.
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -118,3 +124,19 @@ jobs:
         with:
           name: solace-mod
           path: build/libs/*.jar
+
+      # When you push a version tag like v1.0.1, publish a Release with the jar attached.
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" build/libs/*.jar \
+            --title "Solace ${GITHUB_REF_NAME}" \
+            --notes "Solace for Minecraft 1.21.1 (NeoForge).
+
+          How to install:
+          1. Install NeoForge for Minecraft 1.21.1 from https://neoforged.net
+          2. Download the .jar file below and put it in your .minecraft/mods folder
+          3. Start Minecraft with the NeoForge profile and open a world
+          4. To give Solace an AI brain: Esc > Mods > Solace > Config"
