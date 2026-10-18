@@ -97,7 +97,7 @@ public final class Powers {
         if (type.equals("teleport_player")) type = "carry";
         boolean horror = type.equals("darken") || type.equals("lights_out") || type.equals("whisper");
         if (horror) {
-            if (!SolaceConfig.STORY_ENABLED.get() || story.act < 2 || SolaceConfig.HORROR_INTENSITY.get() <= 0) return null;
+            if (!SolaceConfig.STORY_ENABLED.get() || story.part() < 2 || SolaceConfig.HORROR_INTENSITY.get() <= 0) return null;
         } else if (!SolaceConfig.ALLOW_POWERS.get()) {
             return "your powers are switched off in this world";
         }
@@ -146,7 +146,7 @@ public final class Powers {
             COOLDOWNS.put(key, now + 20L * COOLDOWN_SECONDS.getOrDefault(type, 30));
             if (cost > 0) Bond.spend(story, cost); // conjure pays for itself inside conjure()
             // Big powers show what it really is, but only once the story has revealed it (chapter 6).
-            if (solace != null && cost >= 15 && story.chapter() >= 6 && SolaceConfig.STORY_ENABLED.get()) solace.showLantern(50);
+            if (solace != null && cost >= 15 && story.chapter >= 6 && SolaceConfig.STORY_ENABLED.get()) solace.showLantern(50);
         }
         // Solace already announced what it was doing. Only follow up when there's news: what "find" found, or a failure.
         if (failed || type.equals("find")) return result;

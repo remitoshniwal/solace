@@ -22,7 +22,8 @@ public final class PlayerStory {
     // Story progress
     public boolean met;
     public UUID solaceId;
-    public int act = 1;
+    /** Which of the 8 chapters the story is in (docs/DESIGN.md section 7). */
+    public int chapter = 1;
     public long playTicks;
     public int trust = 20;
     public final Set<Integer> fragmentsFound = new HashSet<>();
@@ -45,6 +46,10 @@ public final class PlayerStory {
     /** Solace's current request, or null. */
     public BondRequest request;
     public BlockPos meetPos = BlockPos.ZERO;
+    /** When (in story minutes) the current chapter started. */
+    public double chapterStartMin;
+    /** Corner of Maren's house (chapter 5), or null if it hasn't been built. Always in the overworld. */
+    public BlockPos houseCorner;
     public String meetDim = "minecraft:overworld";
 
     /** Something Solace asked the player to do. */
@@ -122,16 +127,9 @@ public final class PlayerStory {
         return playTicks / 1200.0;
     }
 
-    /** Which of the 8 chapters (docs/DESIGN.md section 7) the story is in. */
-    public int chapter() {
-        double min = playMinutes() * com.solacemod.solace.config.SolaceConfig.STORY_SPEED.get();
-        if (ending != Ending.NONE || choicePending) return 8;
-        return switch (act) {
-            case 1 -> min < 20 ? 1 : 2;
-            case 2 -> min < 70 ? 3 : 4;
-            case 3 -> min < 130 ? 5 : 6;
-            default -> 7;
-        };
+    /** The story's four parts: 1 Company (ch 1-2), 2 Static (ch 3-4), 3 Truth (ch 5-6), 4 The Question (ch 7-8). */
+    public int part() {
+        return (chapter + 1) / 2;
     }
 
     public boolean storyOver() {
@@ -176,7 +174,7 @@ public final class PlayerStory {
         t.putString("Name", playerName);
         t.putBoolean("Met", met);
         if (solaceId != null) t.putUUID("SolaceId", solaceId);
-        t.putInt("Act", act);
+        t.putInt("Chapter", chapter);
         t.putLong("PlayTicks", playTicks);
         t.putInt("Trust", trust);
         t.putIntArray("Fragments", fragmentsFound.stream().mapToInt(Integer::intValue).toArray());
@@ -215,6 +213,8 @@ public final class PlayerStory {
         t.putDouble("TotalGiven", totalGiven);
         if (request != null) t.put("Request", request.save());
         t.putLong("MeetPos", meetPos.asLong());
+        t.putDouble("ChapterStart", chapterStartMin);
+        if (houseCorner != null) t.putLong("House", houseCorner.asLong());
         t.putString("MeetDim", meetDim);
         return t;
     }
@@ -224,7 +224,8 @@ public final class PlayerStory {
         s.playerName = t.getString("Name");
         s.met = t.getBoolean("Met");
         if (t.hasUUID("SolaceId")) s.solaceId = t.getUUID("SolaceId");
-        s.act = Math.max(1, t.getInt("Act"));
+        // Older saves stored a 1-4 "act": start them at the first chapter of that part.
+        s.chapter = t.contains("Chapter") ? Math.max(1, Math.min(8, t.getInt("Chapter"))) : Math.max(1, t.getInt("Act")) * 2 - 1;
         s.playTicks = t.getLong("PlayTicks");
         s.trust = t.contains("Trust") ? t.getInt("Trust") : 20;
         for (int f : t.getIntArray("Fragments")) s.fragmentsFound.add(f);
@@ -265,6 +266,8 @@ public final class PlayerStory {
         s.totalGiven = t.getDouble("TotalGiven");
         if (t.contains("Request")) s.request = BondRequest.load(t.getCompound("Request"));
         s.meetPos = BlockPos.of(t.getLong("MeetPos"));
+        s.chapterStartMin = t.contains("ChapterStart") ? t.getDouble("ChapterStart") : s.playMinutes();
+        if (t.contains("House")) s.houseCorner = BlockPos.of(t.getLong("House"));
         s.meetDim = t.contains("MeetDim") ? t.getString("MeetDim") : "minecraft:overworld";
         return s;
     }

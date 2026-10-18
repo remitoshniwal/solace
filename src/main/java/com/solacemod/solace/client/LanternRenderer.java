@@ -49,7 +49,8 @@ final class LanternRenderer {
     }
 
     void render(SolaceEntity entity, float partialTick, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
-        float t = entity.tickCount + partialTick;
+        // Real time, not game time: it keeps drifting even while the world is frozen around it.
+        float t = (net.minecraft.Util.getMillis() % 3_600_000L) / 50F;
         boolean hollow = entity.isHollow();
         float speed = hollow || entity.isAgitated() ? 2.2F : 1.0F;
         animate(t * speed);
@@ -57,9 +58,10 @@ final class LanternRenderer {
 
         poseStack.pushPose();
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - Mth.rotLerp(partialTick, entity.yBodyRotO, entity.yBodyRot)));
+        if (entity.getForm() == SolaceEntity.FORM_VAST) poseStack.scale(3.0F, 3.0F, 3.0F);
         poseStack.scale(-1.0F, -1.0F, 1.0F);
-        // Model space: y points down and the ground is at 24 pixels. Float half a block up, bobbing slowly.
-        poseStack.translate(0.0F, -1.501F - 0.5F - Mth.sin(t * 0.04F) * 0.08F, 0.0F);
+        // Model space: y points down and the ground is at 24 pixels. Float above the ground, bobbing slowly.
+        poseStack.translate(0.0F, -1.501F - 0.65F - Mth.sin(t * 0.04F) * 0.08F, 0.0F);
 
         // The tiny figure, curled up inside the light.
         poseStack.pushPose();

@@ -328,13 +328,13 @@ public final class SolaceBrain {
         boolean story_ = SolaceConfig.STORY_ENABLED.get();
         ChatFormatting color;
         if (solace != null && solace.isHollow()) color = ChatFormatting.DARK_RED;
-        else if (story.ending == Ending.FOREVER) color = ChatFormatting.GRAY;
-        else if (!story_ || story.ending == Ending.TOGETHER || story.act <= 2) color = ChatFormatting.AQUA;
-        else if (story.act == 3) color = ChatFormatting.DARK_AQUA;
+        else if (story.ending == Ending.FOREVER || story.ending == Ending.COLLECTED) color = ChatFormatting.GRAY;
+        else if (!story_ || story.ending == Ending.TOGETHER || story.part() <= 2) color = ChatFormatting.AQUA;
+        else if (story.part() == 3) color = ChatFormatting.DARK_AQUA;
         else color = ChatFormatting.RED;
 
         MutableComponent name = Component.empty();
-        if (story_ && story.act >= 3 && story.ending == Ending.NONE && RANDOM.nextFloat() < 0.2F) {
+        if (story_ && story.part() >= 3 && story.ending == Ending.NONE && RANDOM.nextFloat() < 0.2F) {
             name.append(Component.literal("Sol").withStyle(color))
                     .append(Component.literal("a").withStyle(Style.EMPTY.withColor(color).withObfuscated(true)))
                     .append(Component.literal("ce").withStyle(color));
@@ -343,7 +343,7 @@ public final class SolaceBrain {
         }
         MutableComponent line = Component.literal("<").append(name).append("> ");
 
-        boolean glitch = "glitch".equals(emotion) || (story_ && story.act >= 3 && story.ending == Ending.NONE && RANDOM.nextFloat() < 0.12F);
+        boolean glitch = "glitch".equals(emotion) || (story_ && story.part() >= 3 && story.ending == Ending.NONE && RANDOM.nextFloat() < 0.12F);
         String[] words = text.split(" ");
         int glitchWords = glitch ? 1 + RANDOM.nextInt(Math.min(3, Math.max(1, words.length / 4 + 1))) : 0;
         Set<Integer> obf = new HashSet<>();

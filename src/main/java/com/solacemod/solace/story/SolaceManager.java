@@ -99,11 +99,11 @@ public final class SolaceManager {
     static void updateForm(SolaceEntity solace, PlayerStory story) {
         if (solace.isHollow()) return;
         boolean storyOn = com.solacemod.solace.config.SolaceConfig.STORY_ENABLED.get();
-        int lumps = !storyOn ? 0 : story.ending == Ending.NONE ? LUMPS[Math.min(8, story.chapter())] : story.ending == Ending.FOREVER ? 20 : 0;
+        int lumps = !storyOn ? 0 : story.ending == Ending.NONE ? LUMPS[Math.min(8, story.chapter)] : story.ending == Ending.FOREVER || story.ending == Ending.COLLECTED ? 20 : 0;
         solace.setLumps(lumps);
         if (solace.isShowingLantern()) return;
-        boolean uneasy = storyOn && story.ending == Ending.NONE && story.act >= 3;
-        solace.setForm(uneasy || story.ending == Ending.FOREVER ? SolaceEntity.FORM_UNEASY : SolaceEntity.FORM_NORMAL);
+        boolean uneasy = storyOn && story.ending == Ending.NONE && story.part() >= 3;
+        solace.setForm(uneasy || story.ending == Ending.FOREVER || story.ending == Ending.COLLECTED ? SolaceEntity.FORM_UNEASY : SolaceEntity.FORM_NORMAL);
     }
 
     /** Runs every 2 seconds per online player. */

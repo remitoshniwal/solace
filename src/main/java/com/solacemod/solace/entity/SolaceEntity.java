@@ -73,6 +73,8 @@ public class SolaceEntity extends PathfinderMob {
     public static final int FORM_HOLLOW = 2;
     /** The true form, shown only for a few seconds at a time (big powers, strong feelings, story moments). */
     public static final int FORM_LANTERN = 3;
+    /** The Lantern, but enormous: it fills the sky (the chapter 6 confession). */
+    public static final int FORM_VAST = 4;
 
     private static final EntityDataAccessor<Optional<UUID>> DATA_OWNER = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.OPTIONAL_UUID);
     private static final EntityDataAccessor<Integer> DATA_FORM = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.INT);
@@ -271,7 +273,7 @@ public class SolaceEntity extends PathfinderMob {
 
     /** The Lantern shape is drawn for the true form and for the Hollow. */
     public boolean isLanternForm() {
-        return getForm() == FORM_LANTERN || getForm() == FORM_HOLLOW;
+        return getForm() == FORM_LANTERN || getForm() == FORM_VAST || getForm() == FORM_HOLLOW;
     }
 
     public boolean isShowingLantern() {
@@ -280,14 +282,26 @@ public class SolaceEntity extends PathfinderMob {
 
     /** Shows the true form for a moment, then goes back to looking like a person. */
     public void showLantern(int ticks) {
+        showLantern(ticks, false);
+    }
+
+    public void showLantern(int ticks, boolean vast) {
         if (isHollow()) return;
         if (lanternTicks <= 0) formBeforeLantern = getForm();
         lanternTicks = Math.max(lanternTicks, ticks);
-        setForm(FORM_LANTERN);
+        setForm(vast ? FORM_VAST : FORM_LANTERN);
         if (level() instanceof ServerLevel level) {
             level.sendParticles(ParticleTypes.SOUL, getX(), getY() + 2, getZ(), 30, 0.8, 1.5, 0.8, 0.02);
             Sounds.playAt(this, "block.beacon.activate", 0.8F, 0.5F);
         }
+    }
+
+    /** Back to looking like a person, as if nothing happened. */
+    public void endLantern() {
+        lanternTicks = 0;
+        if (getForm() != FORM_LANTERN && getForm() != FORM_VAST) return;
+        setForm(formBeforeLantern);
+        ((ServerLevel) level()).sendParticles(ParticleTypes.ASH, getX(), getY() + 1.5, getZ(), 40, 0.6, 1.2, 0.6, 0.02);
     }
 
     public boolean isHollow() {
@@ -362,10 +376,7 @@ public class SolaceEntity extends PathfinderMob {
         }
         if (hurtReactCooldown > 0) hurtReactCooldown--;
         if (agitatedTicks > 0 && --agitatedTicks == 0) entityData.set(DATA_AGITATED, false);
-        if (lanternTicks > 0 && --lanternTicks == 0 && getForm() == FORM_LANTERN) {
-            setForm(formBeforeLantern);
-            ((ServerLevel) level()).sendParticles(ParticleTypes.ASH, getX(), getY() + 1.5, getZ(), 40, 0.6, 1.2, 0.6, 0.02);
-        }
+        if (lanternTicks > 0 && --lanternTicks == 0) endLantern();
         // A stale copy (e.g. one left in an unloaded chunk after Solace was re-summoned) removes itself.
         if ((tickCount == 1 || tickCount % 100 == 0) && !SolaceManager.isCurrent(this)) {
             if (bossEvent != null) bossEvent.removeAllPlayers();
@@ -500,6 +511,13 @@ public class SolaceEntity extends PathfinderMob {
     @Override
     public boolean causeFallDamage(float distance, float multiplier, DamageSource source) {
         return false;
+    }
+
+    /** The Lantern is drawn much bigger than its hitbox: don't let the game skip drawing it when its feet are off-screen. */
+    @Override
+    public net.minecraft.world.phys.AABB getBoundingBoxForCulling() {
+        int form = getForm();
+        return form == FORM_VAST ? getBoundingBox().inflate(10, 14, 10) : isLanternForm() ? getBoundingBox().inflate(2.5, 4, 2.5) : super.getBoundingBoxForCulling();
     }
 
     /** The Hollow is the huge Lantern shape, so it's much taller. */
@@ -702,7 +720,7 @@ public class SolaceEntity extends PathfinderMob {
         tag.put("Pockets", inventory.createTag(registryAccess()));
         tag.putString("Mode", mode.name());
         tag.putBoolean("Guard", guard);
-        tag.putInt("Form", getForm() == FORM_HOLLOW ? FORM_UNEASY : getForm() == FORM_LANTERN ? formBeforeLantern : getForm());
+        tag.putInt("Form", getForm() == FORM_HOLLOW ? FORM_UNEASY : getForm() == FORM_LANTERN || getForm() == FORM_VAST ? formBeforeLantern : getForm());
         if (stayPos != null) tag.putLong("StayPos", stayPos.asLong());
     }
 
@@ -719,7 +737,7 @@ public class SolaceEntity extends PathfinderMob {
         guard = tag.getBoolean("Guard");
         // The boss form is never saved, so make sure the boss stats aren't either.
         int form = tag.getInt("Form");
-        setForm(form == FORM_HOLLOW || form == FORM_LANTERN ? FORM_UNEASY : form);
+        setForm(form == FORM_HOLLOW || form == FORM_LANTERN || form == FORM_VAST ? FORM_UNEASY : form);
         resetAttributes();
         if (getHealth() > getMaxHealth()) setHealth(getMaxHealth());
         if (tag.contains("StayPos")) stayPos = BlockPos.of(tag.getLong("StayPos"));

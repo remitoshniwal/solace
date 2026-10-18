@@ -9,8 +9,10 @@ public enum Ending {
     RELEASE,
     /** "Erase": Solace let itself be deleted. Maren is still trapped. */
     ERASE,
-    /** Secret: trust Solace enough and read every page, and it lets Maren go by itself. */
-    TOGETHER;
+    /** Secret: trust Solace enough, read every page and never take more than you need, and it lets Maren go by itself. */
+    TOGETHER,
+    /** Secret, bad: owe Solace far too much when the question comes, and it doesn't ask. It takes you. */
+    COLLECTED;
 
     public static Ending parse(String s) {
         try {

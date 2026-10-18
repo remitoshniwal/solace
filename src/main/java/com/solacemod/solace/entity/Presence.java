@@ -53,7 +53,7 @@ public final class Presence {
         if (solace.combat.ownerFighting() || owner.getHealth() <= 8 || solace.getTask() != null || solace.getStareTicks() > 0) return;
         PlayerStory story = story(owner);
         if (story == null || story.bossActive) return;
-        int chapter = story.chapter();
+        int chapter = story.chapter;
         double rate = switch (chapter) {
             case 1 -> 0.3;
             case 2 -> 0.6;

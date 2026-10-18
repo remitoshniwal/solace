@@ -157,12 +157,12 @@ public final class ActionExecutor {
                 return null;
             }
             case "stare" -> {
-                if (story.act < 2) return null;
+                if (story.part() < 2) return null;
                 solace.setStareTicks(20 * 8);
                 return null;
             }
             case "glitch" -> {
-                if (story.act < 2) return null;
+                if (story.part() < 2) return null;
                 HorrorDirector.glitchScreen(owner, 0, 30, "");
                 return null;
             }

@@ -67,13 +67,13 @@ public final class SolaceCommand {
                         .executes(ctx -> msg(ctx, "This restarts your Solace story in this world from the beginning. Type /solace reset confirm"))
                         .then(Commands.literal("confirm").executes(SolaceCommand::reset)))
                 .then(Commands.literal("admin").requires(src -> src.hasPermission(2))
-                        .then(Commands.literal("act").then(Commands.argument("player", EntityArgument.player())
-                                .then(Commands.argument("act", IntegerArgumentType.integer(1, 4)).executes(ctx -> {
+                        .then(Commands.literal("chapter").then(Commands.argument("player", EntityArgument.player())
+                                .then(Commands.argument("chapter", IntegerArgumentType.integer(1, 8)).executes(ctx -> {
                                     ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
                                     PlayerStory story = story(ctx, p);
                                     if (!story.met) return fail(ctx, p.getGameProfile().getName() + " hasn't met Solace yet (it appears 30 seconds after joining).");
-                                    StoryDirector.setAct(p, story, IntegerArgumentType.getInteger(ctx, "act"));
-                                    return msg(ctx, "Moved " + p.getGameProfile().getName() + " to act " + story.act + ".");
+                                    StoryDirector.setChapter(p, story, IntegerArgumentType.getInteger(ctx, "chapter"));
+                                    return msg(ctx, "Moved " + p.getGameProfile().getName() + " to chapter " + story.chapter + ".");
                                 }))))
                         .then(Commands.literal("trust").then(Commands.argument("player", EntityArgument.player())
                                 .then(Commands.argument("value", IntegerArgumentType.integer(-100, 100)).executes(ctx -> {
@@ -132,7 +132,7 @@ public final class SolaceCommand {
                         .then(Commands.literal("question").then(Commands.argument("player", EntityArgument.player()).executes(ctx -> {
                             ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
                             PlayerStory s = story(ctx, p);
-                            StoryDirector.setAct(p, s, 4);
+                            StoryDirector.setChapter(p, s, 8);
                             for (int i = 0; i < StoryText.FRAGMENT_COUNT; i++) s.fragmentsFound.add(i);
                             return msg(ctx, "Solace will ask its question in about a minute.");
                         })))));
@@ -199,12 +199,12 @@ public final class SolaceCommand {
         msg(ctx, "AI brain: " + AiService.describe());
         msg(ctx, "AI requests today: " + data.requestsToday + " (limit " + com.solacemod.solace.config.SolaceConfig.DAILY_REQUEST_LIMIT.get() + ")");
         if (!s.met) return msg(ctx, "You haven't met Solace yet.");
-        msg(ctx, "Story: act " + s.act + ", " + Math.round(s.playMinutes()) + " minutes together, pages found " + s.fragmentsFound.size() + "/" + StoryText.FRAGMENT_COUNT
+        msg(ctx, "Story: chapter " + s.chapter + " of 8, " + Math.round(s.playMinutes()) + " minutes together, pages found " + s.fragmentsFound.size() + "/" + StoryText.FRAGMENT_COUNT
                 + (s.ending.name().equals("NONE") ? "" : ", ending: " + s.ending));
         msg(ctx, "Solace's strength (Tether): " + (int) s.tether + "/" + (int) com.solacemod.solace.story.Bond.maxTether(s)
                 + ". Your debt to Solace: " + (int) s.debt + (s.request != null ? ". It asked you: \"" + s.request.text + "\"" : ""));
         msg(ctx, "Trust: " + s.trust + ". Things Solace remembers about you: " + s.facts.size()
-                + ". Endings discovered: " + GlobalMemory.distinctEndings(player.getUUID()) + "/4");
+                + ". Endings discovered: " + GlobalMemory.distinctEndings(player.getUUID()) + "/5");
         return 1;
     }
 

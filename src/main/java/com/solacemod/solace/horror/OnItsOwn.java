@@ -57,7 +57,7 @@ public final class OnItsOwn {
     }
 
     /** Nothing that moves or startles the player while they're in real trouble. */
-    static boolean calm(ServerPlayer p) {
+    public static boolean calm(ServerPlayer p) {
         return p.isAlive() && !p.isSpectator() && p.getHealth() > 8 && !p.isPassenger() && !p.isFallFlying() && !p.isSleeping()
                 && !p.isInLava() && !p.isUnderWater() && !Phenomena.isDisplaced(p) && SolaceCombat.nearestThreat(null, p, 14) == null;
     }
@@ -72,9 +72,10 @@ public final class OnItsOwn {
     // ---------- The Fall ----------
 
     /** You're in the sky for a third of a second, then back. Nothing is said. */
-    static boolean fall(ServerPlayer p, PlayerStory story) {
+    public static boolean fall(ServerPlayer p, PlayerStory story) {
         if (!calm(p) || !p.onGround()) return false;
         if (!Phenomena.fall(p, 7)) return false;
+        story.beatsDone.add("fell");
         story.addEvent("you briefly dropped the player from the sky and put them back (don't mention it unless they do; then deny it, or be strange about it)");
         return true;
     }
@@ -82,7 +83,7 @@ public final class OnItsOwn {
     // ---------- Two places ----------
 
     /** Solace is right beside you... and also standing over there. */
-    static boolean twoPlaces(ServerPlayer p, PlayerStory story) {
+    public static boolean twoPlaces(ServerPlayer p, PlayerStory story) {
         SolaceEntity solace = solace(p, story);
         if (solace == null) return false;
         if (solace.distanceTo(p) > 6) solace.blinkBehind(p);
@@ -98,9 +99,9 @@ public final class OnItsOwn {
     /** Called every second. When you sleep, it stands over your bed. When you wake, it's right in front of your face. */
     public static void tickSleep(ServerPlayer p, PlayerStory story) {
         if (!p.isSleeping() || WATCHING_SLEEP.containsKey(p.getUUID())) return;
-        if (!SolaceConfig.STORY_ENABLED.get() || SolaceConfig.HORROR_INTENSITY.get() <= 0 || story.chapter() < 2 || story.bossActive) return;
+        if (!SolaceConfig.STORY_ENABLED.get() || SolaceConfig.HORROR_INTENSITY.get() <= 0 || story.chapter < 2 || story.bossActive) return;
         WATCHING_SLEEP.put(p.getUUID(), false); // decided once per sleep
-        if (RANDOM.nextFloat() > 0.45F + 0.1F * Math.min(3, story.chapter() - 2)) return;
+        if (RANDOM.nextFloat() > 0.45F + 0.1F * Math.min(3, story.chapter - 2)) return;
         SolaceEntity solace = solace(p, story);
         BlockPos bed = p.getSleepingPos().orElse(null);
         if (solace == null || bed == null) return;
@@ -134,6 +135,9 @@ public final class OnItsOwn {
             }
             solace.setStareTicks(20 * 4);
             Bond.onSleepWatched(story);
+            if (story.beatsDone.add("first_sleep")) {
+                Scheduler.later(40, () -> com.solacemod.solace.story.SolaceBrain.event(p, com.solacemod.solace.story.StoryText.C2_SLEEP, true));
+            }
             story.addEvent("you watched the player sleep all night, and were right in front of their face when they woke");
         });
     }
@@ -142,7 +146,7 @@ public final class OnItsOwn {
 
     /** Called every second. In the early chapters, now and then, it leaves you something. */
     public static void tickGifts(ServerPlayer p, PlayerStory story) {
-        if (!SolaceConfig.STORY_ENABLED.get() || !SolaceConfig.ALLOW_WORLD_CHANGES.get() || story.chapter() > 2 || story.bossActive) return;
+        if (!SolaceConfig.STORY_ENABLED.get() || !SolaceConfig.ALLOW_WORLD_CHANGES.get() || story.chapter > 2 || story.bossActive) return;
         MinecraftServer server = p.getServer();
         if (server == null) return;
         long now = server.getTickCount();
@@ -154,7 +158,7 @@ public final class OnItsOwn {
 
     static boolean gift(ServerPlayer p, PlayerStory story) {
         if (!SolaceConfig.ALLOW_WORLD_CHANGES.get()) return false;
-        int ch = story.chapter();
+        int ch = story.chapter;
         ServerLevel level = p.serverLevel();
         // Later on, the gift is a pig. Named after her.
         if (ch >= 3 && RANDOM.nextFloat() < 0.25F) {
@@ -302,7 +306,7 @@ public final class OnItsOwn {
 
     /** When you come back after a long time away, it has made something. */
     public static void builtWhileAway(ServerPlayer p, PlayerStory story, long awayMinutes) {
-        if (!SolaceConfig.ALLOW_WORLD_CHANGES.get() || SolaceConfig.HORROR_INTENSITY.get() <= 0 || story.chapter() < 3 || awayMinutes < 10) return;
+        if (!SolaceConfig.ALLOW_WORLD_CHANGES.get() || SolaceConfig.HORROR_INTENSITY.get() <= 0 || story.chapter < 3 || awayMinutes < 10) return;
         ServerLevel level = p.serverLevel();
         Vec3 at = behind(p, 6 + RANDOM.nextInt(5));
         if (at == null) return;

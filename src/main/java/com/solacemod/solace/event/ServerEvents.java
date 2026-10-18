@@ -120,6 +120,7 @@ public final class ServerEvents {
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
         Scheduler.clear();
+        com.solacemod.solace.horror.WorldFreeze.unfreeze(event.getServer());
         com.solacemod.solace.horror.OnItsOwn.reset();
         SolaceBrain.reset();
         StoryDirector.reset();

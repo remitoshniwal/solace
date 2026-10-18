@@ -76,8 +76,9 @@ public final class HorrorDirector {
         MinecraftServer server = player.getServer();
         if (server == null || player.isSpectator() || !player.isAlive()) return;
         boolean erased = story.ending == Ending.ERASE;
-        if (story.ending != Ending.NONE && !erased) return;
-        if (story.chapter() < 2 && !erased) return;
+        boolean released = story.ending == Ending.RELEASE;
+        if (story.ending != Ending.NONE && !erased && !released) return;
+        if (story.chapter < 2 && !erased) return;
 
         long now = server.getTickCount();
         if (story.nextHorrorTick == 0) {
@@ -91,12 +92,17 @@ public final class HorrorDirector {
             if (RANDOM.nextFloat() < 0.5F) spawnWatcher(player, 50, 70, 20 * 20, 25, -1);
             return;
         }
+        if (released) {
+            if (RANDOM.nextFloat() < 0.2F) placeSign(player, new String[]{"", "thank you"});
+            else if (RANDOM.nextFloat() < 0.2F) footsteps(player);
+            return;
+        }
         Kind kind = pick(story);
         if (kind != null) run(player, story, kind);
     }
 
     private static long scheduleGap(PlayerStory story) {
-        double minutes = switch (story.ending == Ending.ERASE ? 0 : story.act) {
+        double minutes = switch (story.ending == Ending.ERASE || story.ending == Ending.RELEASE ? 0 : story.part()) {
             case 0 -> 15 + RANDOM.nextDouble() * 10;
             case 1 -> 6 + RANDOM.nextDouble() * 4;
             case 2 -> 4 + RANDOM.nextDouble() * 3;
@@ -114,7 +120,7 @@ public final class HorrorDirector {
         boolean world = SolaceConfig.ALLOW_WORLD_CHANGES.get();
         boolean chat = SolaceConfig.ALLOW_FAKE_MESSAGES.get();
         boolean screen = SolaceConfig.ALLOW_SCREEN_EFFECTS.get();
-        int chapter = story.chapter();
+        int chapter = story.chapter;
         if (world) add(bag, Kind.GIFT, chapter <= 3 ? 2 : 1);
         add(bag, Kind.TWO_PLACES, 2);
         if (chapter >= 3) {
@@ -135,16 +141,16 @@ public final class HorrorDirector {
         add(bag, Kind.FOOTSTEPS, 3);
         add(bag, Kind.CAVE, 2);
         add(bag, Kind.WHISPER, 1);
-        add(bag, Kind.WATCHER, story.act >= 4 ? 3 : 2);
+        add(bag, Kind.WATCHER, story.part() >= 4 ? 3 : 2);
         add(bag, Kind.STARE, 2);
         add(bag, Kind.MINING, 1);
         if (world) add(bag, Kind.DOOR, 1);
         if (chat) add(bag, Kind.FAKE_CHAT, 1);
         if (screen) add(bag, Kind.GLITCH, 1);
-        if (story.act >= 3) {
+        if (story.part() >= 3) {
             if (world) add(bag, Kind.TORCHES, 2);
             if (world) add(bag, Kind.SIGN, 1);
-            add(bag, Kind.DARKNESS, story.act >= 4 ? 2 : 1);
+            add(bag, Kind.DARKNESS, story.part() >= 4 ? 2 : 1);
             add(bag, Kind.TITLE, 1);
             add(bag, Kind.RENAME, 1);
             add(bag, Kind.CORRUPT, 1);
@@ -184,7 +190,7 @@ public final class HorrorDirector {
                 for (int i = 0; i < 4; i++) Scheduler.later(1 + i * 14, () -> Sounds.playFor(player, below, Sounds.get("block.stone.break"), 0.8F, 0.8F));
             }
             case WATCHER -> {
-                if (story.act >= 4) spawnWatcher(player, 16, 26, 20 * 30, 8, -1);
+                if (story.part() >= 4) spawnWatcher(player, 16, 26, 20 * 30, 8, -1);
                 else spawnWatcher(player, 35, 60, 20 * 30, 18, -1);
             }
             case DOOR -> toggleDoor(player);
@@ -193,7 +199,7 @@ public final class HorrorDirector {
                 else if (RANDOM.nextBoolean()) fakeJoin(player, "Maren");
                 else fakeChat(player, player.getGameProfile().getName(), "I'm still here.");
             }
-            case GLITCH -> glitchScreen(player, RANDOM.nextInt(3), 20 + RANDOM.nextInt(30), story.act >= 3 ? "SHE IS STILL HERE" : "");
+            case GLITCH -> glitchScreen(player, RANDOM.nextInt(3), 20 + RANDOM.nextInt(30), story.part() >= 3 ? "SHE IS STILL HERE" : "");
             case STARE -> {
                 MinecraftServer server = player.getServer();
                 SolaceEntity solace = server == null ? null : SolaceManager.find(server, story);
@@ -276,6 +282,25 @@ public final class HorrorDirector {
             if (watcher == null) return null;
             watcher.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
             watcher.configure(player, lifeTicks, vanishDistance, fragmentIndex, null);
+            level.addFreshEntity(watcher);
+            return watcher;
+        }
+        return null;
+    }
+
+    /** Spawns the Watcher near a chosen point (used to lead the player somewhere). */
+    @Nullable
+    public static WatcherEntity spawnWatcherAt(ServerPlayer player, Vec3 near, int lifeTicks, int vanishDistance) {
+        ServerLevel level = player.serverLevel();
+        for (int attempt = 0; attempt < 10; attempt++) {
+            BlockPos column = BlockPos.containing(near.x + RANDOM.nextInt(7) - 3, player.getY(), near.z + RANDOM.nextInt(7) - 3);
+            if (!level.hasChunkAt(column)) continue;
+            BlockPos spot = findStandingSpot(level, column, player);
+            if (spot == null) continue;
+            WatcherEntity watcher = ModEntities.WATCHER.get().create(level);
+            if (watcher == null) return null;
+            watcher.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
+            watcher.configure(player, lifeTicks, vanishDistance, -1, null);
             level.addFreshEntity(watcher);
             return watcher;
         }

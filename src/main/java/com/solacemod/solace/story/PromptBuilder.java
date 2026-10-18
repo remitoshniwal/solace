@@ -58,7 +58,7 @@ public final class PromptBuilder {
 
         if (SolaceConfig.STORY_ENABLED.get()) {
             sb.append('\n').append(StoryText.SECRET_LORE).append('\n');
-            sb.append('\n').append(StoryText.actPersona(story.act, story.ending)).append('\n');
+            sb.append('\n').append(StoryText.chapterPersona(story.chapter, story.ending)).append('\n');
         } else {
             sb.append("\nYou are a kind, loyal, slightly mysterious companion. There is no horror story.\n");
         }
@@ -127,7 +127,7 @@ public final class PromptBuilder {
             }
             sb.append("{\"type\":\"carry\",\"name\":\"home\"} [15] teleport the player to a remembered place (or \"solace\" = to you)\n");
         }
-        if (SolaceConfig.STORY_ENABLED.get() && story.act >= 2 && story.ending == Ending.NONE) {
+        if (SolaceConfig.STORY_ENABLED.get() && story.part() >= 2 && story.ending == Ending.NONE) {
             sb.append("{\"type\":\"stare\"} go silent and stare at the player | {\"type\":\"glitch\"} make their screen flicker\n");
             sb.append("{\"type\":\"darken\"} smother their vision in darkness | {\"type\":\"lights_out\"} snuff out torches behind them | {\"type\":\"whisper\"} a whisper right behind them (use these rarely, for effect)\n");
         }

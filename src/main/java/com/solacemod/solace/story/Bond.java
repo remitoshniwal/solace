@@ -33,13 +33,10 @@ public final class Bond {
     }
 
     public static double maxTether(PlayerStory story) {
-        if (story.ending == Ending.FOREVER || story.ending == Ending.TOGETHER) return 150;
-        return switch (story.act) {
-            case 1 -> 40;
-            case 2 -> 70;
-            case 3 -> 100;
-            default -> 150;
-        };
+        if (story.ending == Ending.FOREVER || story.ending == Ending.TOGETHER || story.ending == Ending.COLLECTED) return 150;
+        // Grows chapter by chapter (index = chapter). No hard cap on what it can do, just on how much at once.
+        double[] byChapter = {0, 35, 45, 60, 75, 95, 115, 135, 150};
+        return byChapter[Math.max(1, Math.min(8, story.chapter))];
     }
 
     private static void addTether(PlayerStory story, double amount) {
