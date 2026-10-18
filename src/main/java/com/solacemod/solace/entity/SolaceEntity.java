@@ -78,6 +78,8 @@ public class SolaceEntity extends PathfinderMob {
     public enum Mode { FOLLOW, STAY, WANDER }
 
     public final SimpleContainer inventory = new SimpleContainer(27);
+    /** How Solace behaves in your fights: it watches, cheers, and now and then one-taps something. */
+    public final SolaceCombat combat = new SolaceCombat(this);
     private Mode mode = Mode.FOLLOW;
     private boolean guard;
     private BlockPos stayPos;
@@ -124,7 +126,13 @@ public class SolaceEntity extends PathfinderMob {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new SolaceGoals.StareGoal(this));
         this.goalSelector.addGoal(2, new SolaceGoals.TaskGoal(this));
-        this.goalSelector.addGoal(3, new MeleeAttackGoal(this, 1.25, true));
+        // Only the Hollow (the boss) fights like a monster. Normally Solace watches and one-taps (see SolaceCombat).
+        this.goalSelector.addGoal(3, new MeleeAttackGoal(this, 1.25, true) {
+            @Override
+            public boolean canUse() {
+                return isHollow() && super.canUse();
+            }
+        });
         this.goalSelector.addGoal(4, new SolaceGoals.FollowOwnerGoal(this));
         this.goalSelector.addGoal(5, new SolaceGoals.StayGoal(this));
         this.goalSelector.addGoal(6, new OpenDoorGoal(this, true));
@@ -132,10 +140,6 @@ public class SolaceEntity extends PathfinderMob {
         this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(9, new RandomLookAroundGoal(this));
 
-        this.targetSelector.addGoal(1, new SolaceGoals.DefendOwnerGoal(this));
-        this.targetSelector.addGoal(2, new SolaceGoals.AssistOwnerGoal(this));
-        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Monster.class, 10, true, false,
-                e -> guard && !isHollow() && !(e instanceof Creeper) && SolaceConfig.ALLOW_COMBAT.get()));
         this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, Player.class, 10, false, false,
                 p -> isHollow() && p.getUUID().equals(getOwnerUUID())));
     }
@@ -309,8 +313,9 @@ public class SolaceEntity extends PathfinderMob {
         }
         if (isHollow()) {
             tickBoss();
-        } else if (tickCount % 40 == 0) {
-            equipBestWeapon();
+        } else {
+            combat.tick();
+            if (tickCount % 40 == 0) equipBestWeapon();
         }
     }
 

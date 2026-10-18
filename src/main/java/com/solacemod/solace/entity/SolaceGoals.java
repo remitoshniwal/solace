@@ -6,8 +6,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
-import net.minecraft.world.entity.ai.goal.target.TargetGoal;
-import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -185,70 +183,6 @@ public final class SolaceGoals {
         @Override
         public boolean canUse() {
             return solace.getMode() == SolaceEntity.Mode.WANDER && !solace.isHollow() && super.canUse();
-        }
-    }
-
-    /** Attacks whatever just hurt the owner. */
-    public static final class DefendOwnerGoal extends TargetGoal {
-        private final SolaceEntity solace;
-        private LivingEntity attacker;
-        private int timestamp;
-
-        public DefendOwnerGoal(SolaceEntity solace) {
-            super(solace, false);
-            this.solace = solace;
-            setFlags(EnumSet.of(Flag.TARGET));
-        }
-
-        @Override
-        public boolean canUse() {
-            if (solace.isHollow() || !SolaceConfig.ALLOW_COMBAT.get()) return false;
-            Player owner = solace.getOwner();
-            if (owner == null) return false;
-            attacker = owner.getLastHurtByMob();
-            int ts = owner.getLastHurtByMobTimestamp();
-            return ts != timestamp && attacker != null && attacker != solace && allowedTarget(attacker)
-                    && canAttack(attacker, TargetingConditions.DEFAULT);
-        }
-
-        @Override
-        public void start() {
-            mob.setTarget(attacker);
-            Player owner = solace.getOwner();
-            if (owner != null) timestamp = owner.getLastHurtByMobTimestamp();
-            super.start();
-        }
-    }
-
-    /** Attacks whatever the owner attacks. */
-    public static final class AssistOwnerGoal extends TargetGoal {
-        private final SolaceEntity solace;
-        private LivingEntity victim;
-        private int timestamp;
-
-        public AssistOwnerGoal(SolaceEntity solace) {
-            super(solace, false);
-            this.solace = solace;
-            setFlags(EnumSet.of(Flag.TARGET));
-        }
-
-        @Override
-        public boolean canUse() {
-            if (solace.isHollow() || !SolaceConfig.ALLOW_COMBAT.get()) return false;
-            Player owner = solace.getOwner();
-            if (owner == null) return false;
-            victim = owner.getLastHurtMob();
-            int ts = owner.getLastHurtMobTimestamp();
-            return ts != timestamp && victim != null && victim != solace && allowedTarget(victim)
-                    && canAttack(victim, TargetingConditions.DEFAULT);
-        }
-
-        @Override
-        public void start() {
-            mob.setTarget(victim);
-            Player owner = solace.getOwner();
-            if (owner != null) timestamp = owner.getLastHurtMobTimestamp();
-            super.start();
         }
     }
 

@@ -10,7 +10,7 @@ import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.function.Predicate;
 
-/** Hunts the nearest mob of a type (or any hostile mob) until enough are defeated or none are left. */
+/** Hunts the nearest mob of a type (or any hostile mob), one-tapping them one by one until enough are gone. */
 public final class AttackTask implements SolaceTask {
     private final Predicate<LivingEntity> filter;
     private final String name;
@@ -18,6 +18,7 @@ public final class AttackTask implements SolaceTask {
     private LivingEntity current;
     private int defeated;
     private int idle;
+    private int wait = 20;
 
     public AttackTask(@Nullable EntityType<?> type, String name, int count) {
         this.filter = type == null ? e -> e instanceof Enemy : e -> e.getType() == type;
@@ -48,13 +49,12 @@ public final class AttackTask implements SolaceTask {
             }
             idle = 0;
         }
-        if (solace.getTarget() != current) solace.setTarget(current);
+        // Solace doesn't brawl. It flickers to each one and ends it in a single touch.
+        if (++wait >= 25) {
+            wait = 0;
+            solace.combat.oneTap(current);
+        }
         return false;
-    }
-
-    @Override
-    public void stop(SolaceEntity solace) {
-        if (current != null && solace.getTarget() == current) solace.setTarget(null);
     }
 
     @Override

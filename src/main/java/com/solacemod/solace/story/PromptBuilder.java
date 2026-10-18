@@ -94,8 +94,9 @@ public final class PromptBuilder {
         StringBuilder sb = new StringBuilder("ACTIONS you can do in the world:\n");
         sb.append("{\"type\":\"follow\"} follow the player | {\"type\":\"stay\"} wait here | {\"type\":\"wander\"} roam nearby | {\"type\":\"come\"} come to the player now\n");
         if (SolaceConfig.ALLOW_COMBAT.get()) {
-            sb.append("{\"type\":\"guard\",\"on\":true} fight hostile mobs near the player (on:false to stop)\n");
-            sb.append("{\"type\":\"attack\",\"target\":\"zombie\",\"count\":3} hunt that mob type (\"hostile\" = any monster)\n");
+            sb.append("You don't brawl like a pet. In the player's fights you watch and cheer; now and then you flicker to a mob and kill it with one touch (this happens on its own).\n");
+            sb.append("{\"type\":\"guard\",\"on\":true} watch over the player more closely (you'll step in more often; on:false to stop)\n");
+            sb.append("{\"type\":\"attack\",\"target\":\"zombie\",\"count\":3} flicker to those mobs and end them one by one (\"hostile\" = any monster)\n");
         }
         if (SolaceConfig.ALLOW_MINING.get()) {
             sb.append("{\"type\":\"mine\",\"block\":\"iron\",\"count\":8} mine blocks: logs, stone, dirt, sand, coal, iron, gold, diamond, copper, redstone, or any block id\n");
