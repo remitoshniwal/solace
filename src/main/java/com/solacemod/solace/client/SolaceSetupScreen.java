@@ -516,14 +516,20 @@ public final class SolaceSetupScreen extends Screen {
         rebuildWidgets();
         LlmRequest req = new LlmRequest("Reply with exactly: {\"say\":\"I can hear you.\"}", List.of(ChatMessage.user("Test")), 200, 0.0, true);
         long start = System.currentTimeMillis();
-        LlmProvider.create(settings).complete(req).whenComplete((text, err) -> Minecraft.getInstance().execute(() -> {
+        LlmProvider llm = LlmProvider.create(settings);
+        llm.complete(req).whenComplete((text, err) -> Minecraft.getInstance().execute(() -> {
             testing = false;
             if (err != null) {
                 Throwable cause = Http.unwrap(err);
                 String hint = cause instanceof LlmException e ? e.hint() : cause.getMessage();
                 status = Component.literal("Failed: " + hint).withStyle(ChatFormatting.RED);
             } else {
-                status = Component.literal("It works! (" + (System.currentTimeMillis() - start) + " ms) Press Done to save.").withStyle(ChatFormatting.GREEN);
+                String used = llm instanceof com.solacemod.solace.ai.GeminiProvider g ? g.activeModel() : settings.model();
+                if (llm instanceof com.solacemod.solace.ai.GeminiProvider g2 && !g2.activeModel().equals(settings.model())) {
+                    model = g2.activeModel(); // remember the model that actually works
+                }
+                status = Component.literal("It works! Model: " + used + " (" + (System.currentTimeMillis() - start) + " ms). Press Done to save.")
+                        .withStyle(ChatFormatting.GREEN);
             }
             if (minecraft != null && minecraft.screen == this) rebuildWidgets();
         }));

@@ -18,11 +18,45 @@ public class LlmException extends RuntimeException {
         return status;
     }
 
-    /** A short, beginner friendly explanation of what probably went wrong. */
+    /**
+     * The provider's own explanation, pulled out of its JSON error (e.g. Google's "error.message"), or null.
+     * This is usually the most useful thing to show, because it says exactly what's wrong.
+     */
+    public String providerMessage() {
+        String msg = getMessage();
+        if (msg == null) return null;
+        int brace = msg.indexOf('{');
+        if (brace < 0) return null;
+        try {
+            com.google.gson.JsonElement el = com.google.gson.JsonParser.parseString(msg.substring(brace));
+            if (!el.isJsonObject()) return null;
+            com.google.gson.JsonObject o = el.getAsJsonObject();
+            com.google.gson.JsonElement err = o.get("error");
+            if (err != null && err.isJsonObject() && err.getAsJsonObject().has("message")) {
+                return err.getAsJsonObject().get("message").getAsString();
+            }
+            if (err != null && err.isJsonPrimitive()) return err.getAsString();
+            if (o.has("message")) return o.get("message").getAsString();
+        } catch (RuntimeException ignored) {
+            // The body was cut off or isn't JSON
+        }
+        return null;
+    }
+
+    /** A short, beginner friendly explanation, plus the provider's own reason when it gave one. */
     public String hint() {
+        String base = baseHint();
+        String detail = providerMessage();
+        if (detail == null || detail.isBlank()) return base;
+        String d = detail.length() > 220 ? detail.substring(0, 220) + "..." : detail;
+        return base + " Provider says: \"" + d + "\"";
+    }
+
+    private String baseHint() {
         return switch (status) {
             case 400 -> "The provider rejected the request (400). The model name may be wrong for this provider.";
-            case 401, 403 -> "The API key was rejected (" + status + "). Check your API key in Solace setup.";
+            case 401 -> "The API key was rejected (401). Check your API key in Solace setup.";
+            case 403 -> "Access denied (403). The key works but isn't allowed to do this (see the reason below).";
             case 404 -> "Model not found (404). The provider may have retired it. In Solace setup, put a current model name in the Model box (check the provider's website).";
             case 429 -> "Rate limited or out of credits (429). Wait a bit, or check your plan with the provider.";
             case 500, 502, 503, 504, 529 -> "The provider is having problems (" + status + "). Try again later.";

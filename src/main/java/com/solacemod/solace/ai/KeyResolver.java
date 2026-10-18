@@ -10,9 +10,10 @@ public final class KeyResolver {
 
     public static String resolve(String raw) {
         if (raw == null) return "";
-        String trimmed = raw.trim();
+        // Keys never contain spaces; remove any that sneak in when copying (including line breaks and invisible ones).
+        String trimmed = raw.replaceAll("[\\s\\u200B\\u00A0\\uFEFF]", "");
         if (trimmed.regionMatches(true, 0, "env:", 0, 4)) {
-            String value = System.getenv(trimmed.substring(4).trim());
+            String value = System.getenv(trimmed.substring(4));
             return value == null ? "" : value.trim();
         }
         return trimmed;

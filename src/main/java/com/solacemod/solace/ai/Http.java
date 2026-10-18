@@ -110,6 +110,6 @@ public final class Http {
     static String shorten(String s) {
         if (s == null) return "";
         String one = s.replaceAll("\\s+", " ").trim();
-        return one.length() > 300 ? one.substring(0, 300) + "..." : one;
+        return one.length() > 1500 ? one.substring(0, 1500) + "..." : one;
     }
 }

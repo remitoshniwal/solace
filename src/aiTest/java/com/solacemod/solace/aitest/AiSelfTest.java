@@ -71,12 +71,17 @@ public final class AiSelfTest {
                 respond(ex, 200, "{\"models\":["
                         + "{\"name\":\"models/gemini-3.5-flash-lite\",\"supportedGenerationMethods\":[\"generateContent\"]},"
                         + "{\"name\":\"models/gemini-3.5-flash\",\"supportedGenerationMethods\":[\"generateContent\"]},"
+                        + "{\"name\":\"models/gemini-4-flash\",\"supportedGenerationMethods\":[\"generateContent\"]},"
                         + "{\"name\":\"models/gemini-3.5-flash-image\",\"supportedGenerationMethods\":[\"generateContent\"]},"
                         + "{\"name\":\"models/text-embedding-004\",\"supportedGenerationMethods\":[\"embedContent\"]}]}");
                 return;
             }
             read(ex);
             lastPath.set(path);
+            if (path.contains("gemini-4-flash")) {
+                respond(ex, 403, "{\"error\":{\"code\":403,\"message\":\"This model is not available on the free tier.\",\"status\":\"PERMISSION_DENIED\"}}");
+                return;
+            }
             if (path.contains("gemini-2.5-flash")) {
                 respond(ex, 404, "{\"error\":{\"code\":404,\"message\":\"models/gemini-2.5-flash is not found\"}}");
                 return;
@@ -131,7 +136,9 @@ public final class AiSelfTest {
         com.solacemod.solace.ai.GeminiProvider gp = (com.solacemod.solace.ai.GeminiProvider) LlmProvider.create(retired);
         out = gp.complete(req).get();
         check("gemini: recovers from retired model", out.equals(reply) && lastPath.get().endsWith("gemini-3.5-flash:generateContent"));
-        check("gemini: remembers working model", gp.activeModel().equals("gemini-3.5-flash"));
+        check("gemini: skipped forbidden model, remembers working one", gp.activeModel().equals("gemini-3.5-flash"));
+        LlmException forbidden = new LlmException(403, "HTTP 403: {\"error\":{\"code\":403,\"message\":\"Generative Language API has not been used in project 123\",\"status\":\"PERMISSION_DENIED\"}}");
+        check("errors: provider's own reason is shown", forbidden.hint().contains("Generative Language API has not been used"));
         check("gemini: default model is the auto-updating alias", ProviderSettings.resolve("gemini", "k", "", "", 10, "").model().equals("gemini-flash-latest"));
 
         // Errors
