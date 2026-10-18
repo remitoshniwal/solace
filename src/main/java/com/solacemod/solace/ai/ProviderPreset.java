@@ -28,7 +28,7 @@ public record ProviderPreset(String name, Protocol protocol, String baseUrl, Str
         add(new ProviderPreset("gemini", Protocol.GEMINI, "https://generativelanguage.googleapis.com", "gemini-flash-latest", true, "https://aistudio.google.com/apikey"));
         // OpenRouter has hundreds of models with very different prices, so only switch to ones from this list.
         add(new ProviderPreset("openrouter", Protocol.OPENAI, "https://openrouter.ai/api/v1", "meta-llama/llama-3.3-70b-instruct", true, "https://openrouter.ai/keys",
-                List.of("meta-llama/llama-3.3-70b-instruct", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "google/gemini-flash-latest", "qwen/qwen3.6-27b"), false));
+                List.of("meta-llama/llama-3.3-70b-instruct", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "google/gemini-3.8-flash", "qwen/qwen3.6-27b"), false));
         add(new ProviderPreset("deepseek", Protocol.OPENAI, "https://api.deepseek.com", "deepseek-v4-flash", true, "https://platform.deepseek.com/api_keys",
                 List.of("deepseek-v4-flash", "deepseek-v4-pro"), false));
         add(new ProviderPreset("mistral", Protocol.OPENAI, "https://api.mistral.ai/v1", "mistral-small-latest", true, "https://console.mistral.ai/api-keys",

@@ -144,6 +144,10 @@ public final class AiSelfTest {
         check("groq: thinking model asked to think briefly", JsonParser.parseString(lastBody.get()).getAsJsonObject().get("reasoning_effort").getAsString().equals("low"));
         check("groq: default is gpt-oss-120b", ProviderSettings.resolve("groq", "k", "", "", 10, "").model().equals("openai/gpt-oss-120b"));
 
+        // Real error formats seen from providers
+        check("errors: Gemini/xAI bad key (400) says key", new LlmException(400, "HTTP 400: {\"error\":{\"code\":400,\"message\":\"API key not valid. Please pass a valid API key.\"}}").hint().startsWith("Your API key was rejected"));
+        check("errors: Mistral detail field is shown", new LlmException(401, "HTTP 401: {\"detail\":\"Invalid API Key\"}").hint().contains("Invalid API Key"));
+
         // Provider defaults match current documentation
         check("deepseek: v4 model, no /v1", ProviderSettings.resolve("deepseek", "k", "", "", 10, "").model().equals("deepseek-v4-flash")
                 && ProviderSettings.resolve("deepseek", "k", "", "", 10, "").baseUrl().equals("https://api.deepseek.com"));

@@ -36,7 +36,9 @@ public class LlmException extends RuntimeException {
                 return err.getAsJsonObject().get("message").getAsString();
             }
             if (err != null && err.isJsonPrimitive()) return err.getAsString();
-            if (o.has("message")) return o.get("message").getAsString();
+            if (o.has("message") && o.get("message").isJsonPrimitive()) return o.get("message").getAsString();
+            if (o.has("detail") && o.get("detail").isJsonPrimitive()) return o.get("detail").getAsString(); // Mistral
+            if (o.has("error_description")) return o.get("error_description").getAsString();
         } catch (RuntimeException ignored) {
             // The body was cut off or isn't JSON
         }
@@ -58,6 +60,12 @@ public class LlmException extends RuntimeException {
     }
 
     private String baseHint() {
+        // Some providers (Gemini, xAI) report a bad key as 400 instead of 401.
+        String reason = providerMessage() == null ? "" : providerMessage().toLowerCase();
+        if ((status == 400 || status == 401 || status == 403) && (reason.contains("api key") || reason.contains("api_key")
+                || reason.contains("authentication") || reason.contains("unauthorized"))) {
+            return "Your API key was rejected (" + status + "). Copy it again from the provider's website and paste it into Solace setup.";
+        }
         return switch (status) {
             case 400 -> "The provider rejected the request (400). The model name may be wrong for this provider.";
             case 401 -> "The API key was rejected (401). Check your API key in Solace setup.";
