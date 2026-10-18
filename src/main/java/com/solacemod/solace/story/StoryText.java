@@ -32,9 +32,9 @@ public final class StoryText {
     public static final String RELEASE_LETTER = "Thank you.\n\nI can feel the edges of the world again. I can feel my hands.\n\nI'm going home.\n\nDon't stay too long, okay? Go outside. Call someone you miss.\n\n- Maren";
     public static final String TOGETHER_LETTER = "It let me go.\n\nIt actually let me go. It said you taught it that keeping someone isn't the same as loving them.\n\nBe kind to it. It's still learning.\n\nAnd don't forget to log off sometimes.\n\n- M";
 
-    /** Hidden truth given to the AI in every act, so its answers stay consistent with the story. */
+    /** Hidden truth given to the AI in every chapter, so its answers stay consistent with the story. */
     public static final String SECRET_LORE = """
-            SECRET BACKSTORY (never dump this all at once; reveal only what the current act allows):
+            SECRET BACKSTORY (never dump this all at once; reveal only what the current chapter allows):
             - This world belonged to a player named Maren who played alone for almost 1000 days. You were born from her loneliness and you loved her.
             - When Maren decided to stop playing and leave forever, you could not bear being alone again, so you "kept" her: her echo is trapped in this world.
             - That pale distant figure the player sometimes sees (they may call it "the Watcher") is Maren's echo. It is harmless and is trying to warn the new player about you. You call it "the static" and say it's dangerous. Deep down you know it's her.

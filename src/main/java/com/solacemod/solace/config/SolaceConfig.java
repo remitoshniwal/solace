@@ -125,7 +125,7 @@ public final class SolaceConfig {
         b.pop();
 
         b.push("story");
-        STORY_ENABLED = b.comment("Run the story (acts, torn pages, the Watcher, the endings). If false, Solace is just a friendly companion.")
+        STORY_ENABLED = b.comment("Run the story (8 chapters, torn pages, the Watcher, the endings). If false, Solace is just a friendly companion.")
                 .define("storyEnabled", true);
         STORY_SPEED = b.comment("Story pace. 1.0 = about 3 hours of play to reach the ending. 2.0 = twice as fast.")
                 .defineInRange("storySpeed", 1.0, 0.1, 20.0);

@@ -4,23 +4,27 @@
 
 Minecraft **1.21.1**, **NeoForge**. Works in singleplayer and on servers.
 
-Solace shows up about 30 seconds after you join a world. It's a quiet, pale figure that follows you, talks to you, fights for you, mines, builds and crafts. It's sweet at first. Then you start finding torn journal pages from a player named Maren, and you see someone standing far away who vanishes when you look straight at them...
+Solace shows up about 30 seconds after you join a world. It's a quiet, pale figure that follows you, talks to you, cheers you on in fights (and now and then ends one with a single hit), mines, builds and crafts. It's sweet at first. Then you start finding torn journal pages from a player named Maren, and you see someone standing far away who vanishes when you look straight at them...
 
 ## What it can do
 
 - **Talks like a real person.** Chat normally near Solace, or start a message with "Solace". Every word comes from an AI (almost any AI service works, see below). Nothing is pre-written.
 - **Not a player. Something else.** Solace can't be hurt, hovers, moves silently and blinks in and out of existence. It sees everything: where you are, what you carry, what's buried in the stone around you, how many times you've died, even what time it is in the real world.
 - **Has powers.** It can heal you, bless you with effects, change the weather and time, strike monsters with lightning or banish them, make hidden creatures glow, find any ore or structure, conjure items out of nothing, and carry you home.
+- **Power comes at a price.** Its strength (**Tether**) grows while you're together and gets spent on powers. Nothing is off limits, not even netherite, but big things cost a lot. Every gift adds to your **Debt**. Owe it enough and it starts asking for things. Owe it too much and it collects.
+- **Moves wrong.** Most of the time it walks like a player. Sometimes it glides without moving its legs, stutters forward like lag, flickers, turns its head too far, stands somewhere it shouldn't be at the edge of your vision, or copies your every move.
+- **Does things on its own.** Leaves gifts on your bed. Watches you sleep. Builds things while you're logged off. Rearranges your chests. Once in a while, for a third of a second, you're in the sky, falling... and then you're back, like nothing happened.
+- **Two forms.** The Mimic, with lumps moving under its skin, and the Lantern, its true form: a huge glowing mass of tendrils with something small curled up inside.
 - **Does what you ask.** "follow me", "stay here", "guard me", "mine 10 iron", "chop some wood", "pick up the items", "build a shelter", "craft a stone pickaxe", "light this place up", "give me your cobblestone", "remember this place as home", "take me home", "where's the nearest village?", "make it day", "heal me"
 - **Remembers you.** Your name, what you like, what you did, how you treated it. It even remembers you **across different worlds**.
 - **Voice chat (optional).** Hold **G** to talk with your mic, and hear Solace speak.
-- **A real story.** 4 acts, 7 journal pages, the Watcher, a boss fight, and **4 endings** (one is secret).
+- **A real story.** 8 chapters, 7 journal pages, the Watcher, Maren's house, a boss fight, and **5 endings** (two are secret).
 - **Horror that respects you.** Footsteps, torches going out, fake chat messages, signs, a fake crash screen... Every effect can be turned off, and nothing ever destroys your builds.
 
 ## Install (for players)
 
 1. Install **NeoForge for Minecraft 1.21.1** from https://neoforged.net (pick the installer, choose "Install client").
-2. Download `solace-1.0.0.jar` from the [Releases page](https://github.com/remitoshniwal/solace/releases/latest) and put it in your `.minecraft/mods` folder.
+2. Download the newest `solace-....jar` from the [Releases page](https://github.com/remitoshniwal/solace/releases/latest) and put it in your `.minecraft/mods` folder.
 3. Start Minecraft with the NeoForge profile, open a world, wait 30 seconds.
 
 Solace needs an AI brain to talk. Setting one up takes about two minutes and can be free; see below.
@@ -81,7 +85,7 @@ Open setup and go to the **Voice** page:
 | `/solace test` | Test your AI settings |
 | `/solace forget confirm` | Wipe Solace's memory of you (all worlds) |
 | `/solace reset confirm` | Restart the story in this world |
-| `/solace admin ...` | Server operators: `act`, `trust`, `fragment`, `horror`, `question` (for testing) |
+| `/solace admin ...` | Server operators, for testing: `chapter`, `trust`, `bond`, `fragment`, `horror`, `presence`, `lantern`, `question` (see [docs/STORY.md](docs/STORY.md)) |
 
 **Tip:** give Solace items by right-clicking it while holding them. It needs blocks to build, a pickaxe to mine stone and ores, and coal + sticks to make torches.
 
@@ -90,6 +94,7 @@ Open setup and go to the **Voice** page:
 On the **Story & Horror** page:
 - **Scares: Off** turns all scares off. **Story: OFF** makes Solace just a friendly companion.
 - Each scare type has its own switch: torches/doors/signs, fake messages, screen glitches, fake crash. Glitches are soft, with no bright strobing.
+- Nothing Solace does on its own ever hurts you, and none of it happens while you're in a real fight or low on health. In multiplayer, the chapter 6 "frozen world" only happens when you're the only player online.
 - Solace is told to keep things teen-appropriate, and to drop the act and be kind if a player seems genuinely upset in real life.
 
 ## Building it yourself (for developers)
