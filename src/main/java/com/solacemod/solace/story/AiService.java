@@ -96,12 +96,28 @@ public final class AiService {
         LlmProvider backup = fallback();
         if (main == null && backup == null) return CompletableFuture.failedFuture(new LlmException(-1, "No AI provider configured"));
         if (main == null) return backup.complete(request);
-        return main.complete(request).exceptionallyCompose(err -> {
+        return main.complete(request).thenApply(text -> {
+            rememberReplacement(main);
+            return text;
+        }).exceptionallyCompose(err -> {
             Throwable cause = Http.unwrap(err);
             Solace.LOGGER.warn("Solace AI provider {} failed: {}", main.settings(), cause.getMessage());
             if (backup != null) return backup.complete(request);
             return CompletableFuture.failedFuture(cause);
         });
+    }
+
+    /** If the configured model was retired and the provider switched to a working one, save that so it sticks. */
+    private static void rememberReplacement(LlmProvider provider) {
+        String active = provider.activeModel();
+        if (active == null || active.equals(provider.settings().model())) return;
+        Solace.LOGGER.info("Solace: model '{}' is no longer available, switched to '{}'", provider.settings().model(), active);
+        try {
+            SolaceConfig.MODEL.set(active);
+            SolaceConfig.SPEC.save();
+        } catch (RuntimeException e) {
+            Solace.LOGGER.warn("Could not save the replacement model", e);
+        }
     }
 
     public static String hintFor(Throwable err) {

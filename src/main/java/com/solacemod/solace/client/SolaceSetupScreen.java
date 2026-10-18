@@ -531,9 +531,9 @@ public final class SolaceSetupScreen extends Screen {
                 String hint = cause instanceof LlmException e ? e.hint() : cause.getMessage();
                 status = Component.literal("Failed: " + hint).withStyle(ChatFormatting.RED);
             } else {
-                String used = llm instanceof com.solacemod.solace.ai.GeminiProvider g ? g.activeModel() : settings.model();
-                if (llm instanceof com.solacemod.solace.ai.GeminiProvider g2 && !g2.activeModel().equals(settings.model())) {
-                    model = g2.activeModel(); // remember the model that actually works
+                String used = llm.activeModel();
+                if (!used.equals(settings.model())) {
+                    model = used; // the configured model was retired; remember the one that actually works
                 }
                 status = Component.literal("It works! Model: " + used + " (" + (System.currentTimeMillis() - start) + " ms). Press Done to save.")
                         .withStyle(ChatFormatting.GREEN);

@@ -8,6 +8,11 @@ public interface LlmProvider {
 
     ProviderSettings settings();
 
+    /** The model actually in use. Can differ from the config if the configured model was retired and replaced. */
+    default String activeModel() {
+        return settings().model();
+    }
+
     /** Builds the right provider for the given settings. */
     static LlmProvider create(ProviderSettings settings) {
         return switch (settings.protocol()) {

@@ -4,7 +4,10 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -32,25 +35,110 @@ public final class OpenAiCompatibleProvider implements LlmProvider {
         return settings;
     }
 
+    /** Set when the configured model turned out not to exist and we switched to one that does. */
+    private volatile String replacementModel;
+
     @Override
-    public CompletableFuture<String> complete(LlmRequest request) {
-        return send(request, true);
+    public String activeModel() {
+        return replacementModel != null ? replacementModel : settings.model();
     }
 
-    private CompletableFuture<String> send(LlmRequest request, boolean mayRetry) {
-        JsonObject body = buildBody(request);
+    @Override
+    public CompletableFuture<String> complete(LlmRequest request) {
+        String model = activeModel();
+        return send(request, model, true).exceptionallyCompose(error -> {
+            Throwable cause = Http.unwrap(error);
+            // Providers retire model names regularly. If this one is gone, look up which models exist and try good ones.
+            if (cause instanceof LlmException e && isModelMissing(e)) {
+                return findCandidates().thenCompose(list -> tryCandidates(request, list, model, cause, 0));
+            }
+            return CompletableFuture.failedFuture(cause);
+        });
+    }
+
+    /** "Model not found / decommissioned / does not exist" errors look different on every provider. */
+    static boolean isModelMissing(LlmException e) {
+        String m = e.getMessage() == null ? "" : e.getMessage().toLowerCase();
+        if (e.status() == 404) return true;
+        return (e.status() == 400 || e.status() == 422) && m.contains("model")
+                && (m.contains("decommission") || m.contains("does not exist") || m.contains("not found") || m.contains("not_found")
+                || m.contains("invalid model") || m.contains("unknown model") || m.contains("no longer") || m.contains("deprecated")
+                || m.contains("not a valid model"));
+    }
+
+    private CompletableFuture<String> tryCandidates(LlmRequest request, List<String> candidates, String original, Throwable originalError, int index) {
+        if (index >= candidates.size() || index >= 5) return CompletableFuture.failedFuture(originalError);
+        String candidate = candidates.get(index);
+        if (candidate.equals(original)) return tryCandidates(request, candidates, original, originalError, index + 1);
+        return send(request, candidate, true)
+                .thenApply(text -> {
+                    replacementModel = candidate;
+                    return text;
+                })
+                .exceptionallyCompose(err -> {
+                    Throwable c = Http.unwrap(err);
+                    if (c instanceof LlmException e && (isModelMissing(e) || e.status() == 403 || e.status() == 429)) {
+                        return tryCandidates(request, candidates, original, originalError, index + 1);
+                    }
+                    return CompletableFuture.failedFuture(c);
+                });
+    }
+
+    /** Asks the provider which models exist (GET /models) and ranks the ones worth trying. */
+    CompletableFuture<List<String>> findCandidates() {
+        return Http.getJson(settings.baseUrl() + "/models", authHeaders(), settings.timeoutSeconds())
+                .thenApply(json -> rankModels(json, ProviderPreset.get(settings.name())))
+                .exceptionally(err -> List.of());
+    }
+
+    static List<String> rankModels(JsonObject json, ProviderPreset preset) {
+        List<String> ids = new ArrayList<>();
+        JsonElement data = json.has("data") ? json.get("data") : json.get("models");
+        if (data != null && data.isJsonArray()) {
+            for (JsonElement el : data.getAsJsonArray()) {
+                if (!el.isJsonObject()) continue;
+                JsonObject m = el.getAsJsonObject();
+                String id = m.has("id") ? m.get("id").getAsString() : m.has("name") ? m.get("name").getAsString() : "";
+                if (m.has("active") && !m.get("active").getAsBoolean()) continue;
+                if (!id.isEmpty() && isChatModel(id)) ids.add(id);
+            }
+        }
+        List<String> ranked = new ArrayList<>();
+        // 1. The replacements we picked for this provider, in order.
+        if (preset != null) for (String p : preset.preferredModels()) if (ids.contains(p)) ranked.add(p);
+        // OpenRouter etc.: never jump to some random (possibly expensive) model.
+        if (preset != null && !preset.autoPickAny()) return ranked;
+        // 2. Well-known chat model families, then anything else that looks like a chat model.
+        String[] families = {"gpt-oss", "llama", "qwen", "mistral", "gemma", "deepseek", "grok", "gpt-"};
+        for (String f : families) ids.stream().filter(i -> i.contains(f) && !ranked.contains(i)).sorted(Comparator.reverseOrder()).forEach(ranked::add);
+        ids.stream().filter(i -> !ranked.contains(i)).forEach(ranked::add);
+        return ranked;
+    }
+
+    /** Filters out speech, image, embedding and safety-filter models. */
+    static boolean isChatModel(String id) {
+        String i = id.toLowerCase();
+        return !i.matches(".*(whisper|tts|audio|transcri|speech|embed|guard|moderation|dall-e|image|realtime|rerank|orpheus|playai|compound|vision-only|search).*");
+    }
+
+    private Map<String, String> authHeaders() {
         Map<String, String> headers = new HashMap<>();
         if (!settings.apiKey().isEmpty()) headers.put("Authorization", "Bearer " + settings.apiKey());
         if ("openrouter".equals(settings.name())) {
             headers.put("HTTP-Referer", "https://github.com/solacemod/solace");
             headers.put("X-Title", "Solace Minecraft Mod");
         }
-        return Http.postJson(settings.baseUrl() + "/chat/completions", headers, body, settings.timeoutSeconds())
+        return headers;
+    }
+
+    private CompletableFuture<String> send(LlmRequest request, String model, boolean mayRetry) {
+        JsonObject body = buildBody(request, model);
+        return Http.postJson(settings.baseUrl() + "/chat/completions", authHeaders(), body, settings.timeoutSeconds())
                 .thenApply(OpenAiCompatibleProvider::extractText)
                 .exceptionallyCompose(error -> {
                     Throwable cause = Http.unwrap(error);
-                    if (mayRetry && cause instanceof LlmException e && e.status() == 400 && adjustFor(e.getMessage())) {
-                        return send(request, false);
+                    if (mayRetry && cause instanceof LlmException e && e.status() == 400 && !isModelMissing(e) && adjustFor(e.getMessage())) {
+                        return send(request, model, false);
                     }
                     return CompletableFuture.failedFuture(cause);
                 });
@@ -78,9 +166,10 @@ public final class OpenAiCompatibleProvider implements LlmProvider {
         return changed;
     }
 
-    JsonObject buildBody(LlmRequest request) {
+    JsonObject buildBody(LlmRequest request, String model) {
         JsonObject body = new JsonObject();
-        body.addProperty("model", settings.model());
+        body.addProperty("model", model);
+        boolean thinkingModel = model.contains("gpt-oss") || model.contains("qwen3") || model.contains("deepseek-r") || model.contains("reason");
         JsonArray messages = new JsonArray();
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
@@ -98,10 +187,14 @@ public final class OpenAiCompatibleProvider implements LlmProvider {
             body.addProperty("max_completion_tokens", Math.max(request.maxTokens(), 2000));
         } else {
             // OpenRouter models may "think" first, and thinking counts toward the limit. Leave room so replies aren't cut off.
-            int limit = "openrouter".equals(settings.name()) ? Math.max(request.maxTokens(), 1500) : request.maxTokens();
+            int limit = "openrouter".equals(settings.name()) || thinkingModel ? Math.max(request.maxTokens(), 1500) : request.maxTokens();
             body.addProperty("max_tokens", limit);
         }
         if (!skipTemperature) body.addProperty("temperature", request.temperature());
+        if (thinkingModel && !"openrouter".equals(settings.name()) && !skipSpeedHints) {
+            // Groq, Cerebras etc.: ask "thinking" models to think briefly. Removed automatically if the server rejects it.
+            body.addProperty("reasoning_effort", "low");
+        }
         if ("openrouter".equals(settings.name()) && !skipSpeedHints) {
             // Send the request to whichever server hosting this model answers fastest.
             JsonObject provider = new JsonObject();

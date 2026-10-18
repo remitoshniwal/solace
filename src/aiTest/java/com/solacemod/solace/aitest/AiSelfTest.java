@@ -90,6 +90,23 @@ public final class AiSelfTest {
             text.addProperty("text", reply);
             respond(ex, 200, "{\"candidates\":[{\"content\":{\"parts\":[" + text + "]}}]}");
         });
+        // A Groq-like server where the old default model was retired.
+        server.createContext("/groq2/models", ex -> {
+            respond(ex, 200, "{\"data\":[{\"id\":\"whisper-large-v3\"},{\"id\":\"meta-llama/llama-guard-4-12b\"},"
+                    + "{\"id\":\"llama-3.1-8b-instant\"},{\"id\":\"openai/gpt-oss-120b\"},{\"id\":\"openai/gpt-oss-20b\"}]}");
+        });
+        server.createContext("/groq2/chat/completions", ex -> {
+            String body = read(ex);
+            lastBody.set(body);
+            if (body.contains("llama-3.3-70b-versatile")) {
+                respond(ex, 404, "{\"error\":{\"message\":\"The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.\",\"code\":\"model_not_found\"}}");
+                return;
+            }
+            JsonObject msg = new JsonObject();
+            msg.addProperty("role", "assistant");
+            msg.addProperty("content", reply);
+            respond(ex, 200, "{\"choices\":[{\"message\":" + msg + "}]}");
+        });
         server.createContext("/bad/chat/completions", ex -> {
             read(ex);
             respond(ex, 401, "{\"error\":\"invalid key\"}");
@@ -118,6 +135,14 @@ public final class AiSelfTest {
         check("openrouter: fastest-server routing", orBody.has("provider") && orBody.getAsJsonObject("provider").get("sort").getAsString().equals("latency"));
         check("openrouter: low reasoning effort", orBody.has("reasoning") && orBody.getAsJsonObject("reasoning").get("effort").getAsString().equals("low"));
         check("timeout: friendly hint", new LlmException("HttpTimeoutException: request timed out", null).hint().contains("took too long"));
+
+        // Groq: retired model is replaced with the recommended one
+        ProviderSettings gq = ProviderSettings.resolve("groq", "gsk-test", "llama-3.3-70b-versatile", base + "/groq2", 10, "");
+        LlmProvider gqp = LlmProvider.create(gq);
+        out = gqp.complete(req).get();
+        check("groq: recovers from retired model", out.equals(reply) && gqp.activeModel().equals("openai/gpt-oss-120b"));
+        check("groq: thinking model asked to think briefly", JsonParser.parseString(lastBody.get()).getAsJsonObject().get("reasoning_effort").getAsString().equals("low"));
+        check("groq: default is gpt-oss-120b", ProviderSettings.resolve("groq", "k", "", "", 10, "").model().equals("openai/gpt-oss-120b"));
 
         // Anthropic
         ProviderSettings an = ProviderSettings.resolve("anthropic", "ak-test", "", base + "/anthropic", 10, "low");

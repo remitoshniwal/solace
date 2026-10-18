@@ -33,7 +33,7 @@ public final class GeminiProvider implements LlmProvider {
         return send(request, replacementModel != null ? replacementModel : settings.model(), true);
     }
 
-    /** The model actually being used (may differ from the config if the configured one was retired). */
+    @Override
     public String activeModel() {
         return replacementModel != null ? replacementModel : settings.model();
     }
