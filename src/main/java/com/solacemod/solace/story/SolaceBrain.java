@@ -312,6 +312,10 @@ public final class SolaceBrain {
     /** Shows Solace's line in chat and sends it to the player's game for text-to-speech. */
     public static void display(ServerPlayer owner, @Nullable SolaceEntity solace, PlayerStory story, String text, String emotion) {
         Component message = format(story, solace, text, emotion);
+        if (solace != null && emotion != null && java.util.Set.of("angry", "sad", "glitch", "afraid")
+                .contains(emotion.toLowerCase(java.util.Locale.ROOT))) {
+            solace.agitate(20 * 8);
+        }
         if (SolaceConfig.REPLIES_VISIBLE_TO_ALL.get() && owner.getServer() != null) {
             owner.getServer().getPlayerList().broadcastSystemMessage(message, false);
         } else {

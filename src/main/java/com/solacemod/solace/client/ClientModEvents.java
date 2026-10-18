@@ -27,6 +27,12 @@ public final class ClientModEvents {
     }
 
     @SubscribeEvent
+    public static void onLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        event.registerLayerDefinition(SolaceModels.LUMP, SolaceModels::createLump);
+        event.registerLayerDefinition(SolaceModels.LANTERN, SolaceModels::createLantern);
+    }
+
+    @SubscribeEvent
     public static void onKeys(RegisterKeyMappingsEvent event) {
         event.register(TALK_KEY);
     }

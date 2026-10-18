@@ -71,10 +71,14 @@ public class SolaceEntity extends PathfinderMob {
     public static final int FORM_NORMAL = 0;
     public static final int FORM_UNEASY = 1;
     public static final int FORM_HOLLOW = 2;
+    /** The true form, shown only for a few seconds at a time (big powers, strong feelings, story moments). */
+    public static final int FORM_LANTERN = 3;
 
     private static final EntityDataAccessor<Optional<UUID>> DATA_OWNER = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.OPTIONAL_UUID);
     private static final EntityDataAccessor<Integer> DATA_FORM = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_PRESENCE = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_LUMPS = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> DATA_AGITATED = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.BOOLEAN);
 
     public enum Mode { FOLLOW, STAY, WANDER }
 
@@ -89,6 +93,9 @@ public class SolaceEntity extends PathfinderMob {
     @Nullable
     private SolaceTask task;
     private int stareTicks;
+    private int lanternTicks;
+    private int formBeforeLantern = FORM_NORMAL;
+    private int agitatedTicks;
 
     // Boss ("Hollow") state
     @Nullable
@@ -123,6 +130,8 @@ public class SolaceEntity extends PathfinderMob {
         builder.define(DATA_OWNER, Optional.empty());
         builder.define(DATA_FORM, FORM_NORMAL);
         builder.define(DATA_PRESENCE, Presence.WALK);
+        builder.define(DATA_LUMPS, 0);
+        builder.define(DATA_AGITATED, false);
     }
 
     @Override
@@ -241,6 +250,46 @@ public class SolaceEntity extends PathfinderMob {
         entityData.set(DATA_PRESENCE, behaviour);
     }
 
+    /** How many lumps move under its skin (the server sets this from the story chapter). */
+    public int getLumps() {
+        return entityData.get(DATA_LUMPS);
+    }
+
+    public void setLumps(int lumps) {
+        if (lumps != getLumps()) entityData.set(DATA_LUMPS, lumps);
+    }
+
+    /** Upset: the lumps pulse faster and the Lantern's tendrils thrash. */
+    public boolean isAgitated() {
+        return entityData.get(DATA_AGITATED);
+    }
+
+    public void agitate(int ticks) {
+        agitatedTicks = Math.max(agitatedTicks, ticks);
+        if (!isAgitated()) entityData.set(DATA_AGITATED, true);
+    }
+
+    /** The Lantern shape is drawn for the true form and for the Hollow. */
+    public boolean isLanternForm() {
+        return getForm() == FORM_LANTERN || getForm() == FORM_HOLLOW;
+    }
+
+    public boolean isShowingLantern() {
+        return lanternTicks > 0;
+    }
+
+    /** Shows the true form for a moment, then goes back to looking like a person. */
+    public void showLantern(int ticks) {
+        if (isHollow()) return;
+        if (lanternTicks <= 0) formBeforeLantern = getForm();
+        lanternTicks = Math.max(lanternTicks, ticks);
+        setForm(FORM_LANTERN);
+        if (level() instanceof ServerLevel level) {
+            level.sendParticles(ParticleTypes.SOUL, getX(), getY() + 2, getZ(), 30, 0.8, 1.5, 0.8, 0.02);
+            Sounds.playAt(this, "block.beacon.activate", 0.8F, 0.5F);
+        }
+    }
+
     public boolean isHollow() {
         return getForm() == FORM_HOLLOW;
     }
@@ -312,6 +361,11 @@ public class SolaceEntity extends PathfinderMob {
             return;
         }
         if (hurtReactCooldown > 0) hurtReactCooldown--;
+        if (agitatedTicks > 0 && --agitatedTicks == 0) entityData.set(DATA_AGITATED, false);
+        if (lanternTicks > 0 && --lanternTicks == 0 && getForm() == FORM_LANTERN) {
+            setForm(formBeforeLantern);
+            ((ServerLevel) level()).sendParticles(ParticleTypes.ASH, getX(), getY() + 1.5, getZ(), 40, 0.6, 1.2, 0.6, 0.02);
+        }
         // A stale copy (e.g. one left in an unloaded chunk after Solace was re-summoned) removes itself.
         if ((tickCount == 1 || tickCount % 100 == 0) && !SolaceManager.isCurrent(this)) {
             if (bossEvent != null) bossEvent.removeAllPlayers();
@@ -446,6 +500,24 @@ public class SolaceEntity extends PathfinderMob {
     @Override
     public boolean causeFallDamage(float distance, float multiplier, DamageSource source) {
         return false;
+    }
+
+    /** The Hollow is the huge Lantern shape, so it's much taller. */
+    @Override
+    public net.minecraft.world.entity.EntityDimensions getDefaultDimensions(net.minecraft.world.entity.Pose pose) {
+        return isHollow() ? net.minecraft.world.entity.EntityDimensions.scalable(1.4F, 3.6F) : super.getDefaultDimensions(pose);
+    }
+
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+        if (DATA_FORM.equals(key)) refreshDimensions();
+    }
+
+    /** It's mostly smoke and light: ceilings don't suffocate it. */
+    @Override
+    public boolean isInWall() {
+        return !isHollow() && super.isInWall();
     }
 
     /** Solace makes no footstep sounds. */
@@ -630,7 +702,7 @@ public class SolaceEntity extends PathfinderMob {
         tag.put("Pockets", inventory.createTag(registryAccess()));
         tag.putString("Mode", mode.name());
         tag.putBoolean("Guard", guard);
-        tag.putInt("Form", getForm() == FORM_HOLLOW ? FORM_UNEASY : getForm());
+        tag.putInt("Form", getForm() == FORM_HOLLOW ? FORM_UNEASY : getForm() == FORM_LANTERN ? formBeforeLantern : getForm());
         if (stayPos != null) tag.putLong("StayPos", stayPos.asLong());
     }
 
@@ -646,7 +718,8 @@ public class SolaceEntity extends PathfinderMob {
         }
         guard = tag.getBoolean("Guard");
         // The boss form is never saved, so make sure the boss stats aren't either.
-        setForm(tag.getInt("Form") == FORM_HOLLOW ? FORM_UNEASY : tag.getInt("Form"));
+        int form = tag.getInt("Form");
+        setForm(form == FORM_HOLLOW || form == FORM_LANTERN ? FORM_UNEASY : form);
         resetAttributes();
         if (getHealth() > getMaxHealth()) setHealth(getMaxHealth());
         if (tag.contains("StayPos")) stayPos = BlockPos.of(tag.getLong("StayPos"));

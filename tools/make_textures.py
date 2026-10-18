@@ -121,6 +121,51 @@ def eyes_only(name, color, slim=False):
     img.save(OUT / name)
 
 
+def lump(name, base, vein, seed=5):
+    """The lumps that move under the Mimic's skin: pale flesh with darker veins."""
+    rng = random.Random(seed)
+    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    px = img.load()
+    for x in range(16):
+        for y in range(16):
+            n = rng.randint(-10, 10)
+            px[x, y] = tuple(max(0, min(255, c + n)) for c in base) + (255,)
+    for _ in range(3):  # a few wandering veins
+        x, y = rng.randint(0, 15), rng.randint(0, 15)
+        for _ in range(12):
+            px[x % 16, y % 16] = tuple(vein) + (255,)
+            x += rng.choice((-1, 0, 1))
+            y += rng.choice((-1, 0, 1))
+    img.save(OUT / name)
+
+
+def lantern(name, mass, edge, alpha, seed=6):
+    """The Lantern's see-through tendril mass. Everything uses the same noisy colour, so the UVs don't matter."""
+    rng = random.Random(seed)
+    img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    px = img.load()
+    for x in range(64):
+        for y in range(64):
+            t = rng.random()
+            c = edge if t < 0.18 else mass
+            n = rng.randint(-14, 14)
+            a = max(40, min(255, alpha + rng.randint(-40, 30)))
+            px[x, y] = tuple(max(0, min(255, v + n)) for v in c) + (a,)
+    img.save(OUT / name)
+
+
+def core(name, inner, outer, seed=7):
+    """The bright core. Drawn glowing (full brightness), with a soft edge."""
+    rng = random.Random(seed)
+    img = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    px = img.load()
+    for x in range(32):
+        for y in range(32):
+            c = inner if rng.random() < 0.6 else outer
+            px[x, y] = tuple(max(0, min(255, v + rng.randint(-10, 10))) for v in c) + (rng.randint(170, 235),)
+    img.save(OUT / name)
+
+
 def logo():
     size = 256
     img = Image.new("RGBA", (size, size), (8, 10, 16, 255))
@@ -150,6 +195,11 @@ if __name__ == "__main__":
            tears=(120, 0, 0), cracks=(140, 0, 0), seed=3)
     figure("watcher.png", skin=(200, 204, 210), hair=(150, 140, 130), cloak=(185, 190, 198), pants=(165, 170, 178), eyes=(0, 0, 0),
            slim=True, alpha=150, seed=4)
+    lump("solace_lump.png", base=(205, 196, 196), vein=(120, 80, 96))
+    lantern("lantern.png", mass=(46, 196, 190), edge=(150, 255, 245), alpha=120)
+    lantern("lantern_hollow.png", mass=(14, 18, 22), edge=(70, 10, 14), alpha=200, seed=8)
+    core("lantern_core.png", inner=(235, 255, 250), outer=(120, 255, 235))
+    core("lantern_core_hollow.png", inner=(255, 90, 70), outer=(200, 10, 10), seed=9)
     eyes_only("solace_eyes.png", (127, 232, 255))
     eyes_only("solace_hollow_eyes.png", (255, 50, 50))
     logo()

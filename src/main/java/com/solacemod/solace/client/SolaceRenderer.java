@@ -18,6 +18,7 @@ import net.minecraft.world.phys.Vec3;
 /** Draws Solace as a player-shaped figure with glowing eyes. Its look changes as the story darkens. */
 public class SolaceRenderer extends HumanoidMobRenderer<SolaceEntity, PlayerModel<SolaceEntity>> {
     private float frozenBob;
+    private final LanternRenderer lantern;
     private static final ResourceLocation NORMAL = Solace.id("textures/entity/solace.png");
     private static final ResourceLocation UNEASY = Solace.id("textures/entity/solace_uneasy.png");
     private static final ResourceLocation HOLLOW = Solace.id("textures/entity/solace_hollow.png");
@@ -25,6 +26,8 @@ public class SolaceRenderer extends HumanoidMobRenderer<SolaceEntity, PlayerMode
     public SolaceRenderer(EntityRendererProvider.Context context) {
         super(context, new SolaceModel(context.bakeLayer(ModelLayers.PLAYER)), 0.5F);
         addLayer(new Eyes(this));
+        addLayer(new LumpLayer(this, context.getModelSet()));
+        lantern = new LanternRenderer(context);
     }
 
     @Override
@@ -41,6 +44,10 @@ public class SolaceRenderer extends HumanoidMobRenderer<SolaceEntity, PlayerMode
     public void render(SolaceEntity entity, float entityYaw, float partialTick, PoseStack poseStack,
                        net.minecraft.client.renderer.MultiBufferSource buffer, int packedLight) {
         float t = entity.tickCount + partialTick;
+        if (entity.isLanternForm()) {
+            lantern.render(entity, partialTick, poseStack, buffer, packedLight);
+            return;
+        }
         int presence = entity.getPresence();
         if (presence == Presence.FLICKER) {
             // Gone for a few frames, back, gone again. Sometimes it's drawn slightly to one side.
@@ -73,15 +80,14 @@ public class SolaceRenderer extends HumanoidMobRenderer<SolaceEntity, PlayerMode
         poseStack.pushPose();
         float bob = entity.getPresence() == Presence.FREEZE ? frozenBob : (float) (Math.sin(t * 0.06) * 0.06);
         frozenBob = bob;
-        poseStack.translate(0.0, entity.isHollow() ? 0.3 : 0.12 + bob, 0.0);
+        poseStack.translate(0.0, 0.12 + bob, 0.0);
         super.render(entity, entityYaw, partialTick, poseStack, buffer, packedLight);
         poseStack.popPose();
     }
 
     @Override
     protected void scale(SolaceEntity entity, PoseStack poseStack, float partialTick) {
-        float s = entity.isHollow() ? 1.35F : 0.9375F; // same size as a player model
-        poseStack.scale(s, s, s);
+        poseStack.scale(0.9375F, 0.9375F, 0.9375F); // same size as a player model
     }
 
     /** Eyes that glow in the dark, like an Enderman's. */

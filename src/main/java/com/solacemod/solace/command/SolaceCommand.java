@@ -122,6 +122,13 @@ public final class SolaceCommand {
                                             solace.presence.start(p, kind);
                                             return msg(ctx, "Done.");
                                         }))))
+                        .then(Commands.literal("lantern").then(Commands.argument("player", EntityArgument.player()).executes(ctx -> {
+                            ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
+                            SolaceEntity solace = SolaceManager.find(ctx.getSource().getServer(), story(ctx, p));
+                            if (solace == null) return fail(ctx, "Solace isn't around.");
+                            solace.showLantern(20 * 10);
+                            return msg(ctx, "Showing the Lantern form for 10 seconds.");
+                        })))
                         .then(Commands.literal("question").then(Commands.argument("player", EntityArgument.player()).executes(ctx -> {
                             ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
                             PlayerStory s = story(ctx, p);
