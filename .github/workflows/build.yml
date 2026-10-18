@@ -7,8 +7,6 @@ on:
     branches: ["**"]
     tags: ["v*"]
   pull_request:
-  release:
-    types: [published]
   workflow_dispatch:
 
 # Needed so the workflow can create Releases.
@@ -127,16 +125,18 @@ jobs:
           name: solace-mod
           path: build/libs/*.jar
 
-      # Publishing a Release on GitHub (or pushing a tag like v1.0.1) attaches the jar to that Release.
-      - name: Attach jar to release
-        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+      # On every push to main: if there's no Release yet for the version in gradle.properties, publish one with the jar.
+      # To release a new version, change mod_version in gradle.properties and push.
+      - name: Publish release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="${{ github.event.release.tag_name }}"
-          [ -z "$TAG" ] && TAG="${GITHUB_REF_NAME}"
+          VERSION=$(grep '^mod_version=' gradle.properties | cut -d= -f2)
+          TAG="v${VERSION}"
           if gh release view "$TAG" > /dev/null 2>&1; then
-            gh release upload "$TAG" build/libs/*.jar --clobber
+            echo "Release $TAG already exists. Change mod_version in gradle.properties to publish a new one."
           else
-            gh release create "$TAG" build/libs/*.jar --title "Solace $TAG" --generate-notes
+            gh release create "$TAG" build/libs/*.jar --target "$GITHUB_SHA" --title "Solace $TAG" --notes-file .github/release-notes.md
+            echo "::notice title=Release::Published $TAG"
           fi

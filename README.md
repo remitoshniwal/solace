@@ -105,7 +105,7 @@ The mod ends up in `build/libs/`. Other useful commands:
 - `./gradlew aiTest` runs the AI self-tests (no Minecraft, no API key, no cost)
 - `python3 tools/make_textures.py` regenerates the textures (or edit the PNGs in `src/main/resources/assets/solace/textures/entity/`, they use the normal player-skin layout)
 
-Pushing to GitHub builds and tests the mod automatically (see `.github/workflows/build.yml`). To publish a new version: change `mod_version` in `gradle.properties`, then on GitHub go to **Releases → Draft a new release**, make a tag like `v1.0.1`, and click **Publish**. The jar is attached automatically a few minutes later.
+Pushing to GitHub builds and tests the mod automatically (see `.github/workflows/build.yml`). To publish a new version: change `mod_version` in `gradle.properties`, and push to `main`. After the tests pass, a new Release (like `v1.0.1`) with the jar appears on the Releases page automatically.
 
 ### Where things are
 
