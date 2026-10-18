@@ -47,6 +47,11 @@ public class LlmException extends RuntimeException {
     public String hint() {
         String base = baseHint();
         String detail = providerMessage();
+        if (status == 403 && detail != null && detail.toLowerCase().contains("denied access")) {
+            // Google (and others) block whole accounts/projects. Nothing in the mod can fix that.
+            return "The provider has blocked this account or project (403). This can't be fixed from the mod. "
+                    + "Pick a different provider, or contact the provider's support. Provider says: \"" + detail + "\"";
+        }
         if (detail == null || detail.isBlank()) return base;
         String d = detail.length() > 220 ? detail.substring(0, 220) + "..." : detail;
         return base + " Provider says: \"" + d + "\"";

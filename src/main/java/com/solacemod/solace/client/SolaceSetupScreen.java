@@ -267,6 +267,12 @@ public final class SolaceSetupScreen extends Screen {
         labels.add(new Label(Component.literal(text), left(), rowY(row) + 6, 0xFFFFFFFF));
     }
 
+    /** Adds a (possibly multi-line) note at y and returns the y just below it. */
+    private int stack(int y, Component text, int color) {
+        labels.add(new Label(text, left(), y, color));
+        return y + Math.max(1, font.split(text, panelWidth()).size()) * 10 + 3;
+    }
+
     private void note(int y, Component text) {
         labels.add(new Label(text, left(), y, 0xFFAAAAAA));
     }
@@ -336,13 +342,14 @@ public final class SolaceSetupScreen extends Screen {
             addRenderableWidget(test);
             row++;
         }
+        // Stack the notes so long (wrapped) messages never overlap the next one.
         int y = rowY(row) + 2;
-        note(y, Component.literal(PROVIDER_NOTES.getOrDefault(provider, "")));
-        if (!status.getString().isEmpty()) labels.add(new Label(status, left(), y + 12, 0xFFFFFFFF));
-        if (!scripted && needsKey) note(y + 24, Component.literal("Your key is like a password: never share it or show it on stream.").withStyle(ChatFormatting.GOLD));
+        y = stack(y, Component.literal(PROVIDER_NOTES.getOrDefault(provider, "")), 0xFFAAAAAA);
+        if (!status.getString().isEmpty()) y = stack(y, status, 0xFFFFFFFF);
+        if (!scripted && needsKey) y = stack(y, Component.literal("Your key is like a password: never share it or show it on stream.").withStyle(ChatFormatting.GOLD), 0xFFAAAAAA);
         if (isRemoteServer()) {
-            note(y + 36, Component.literal("You're on a server: the server owner sets Solace's AI there. This only changes your own worlds.")
-                    .withStyle(ChatFormatting.YELLOW));
+            stack(y, Component.literal("You're on a server: the server owner sets Solace's AI there. This only changes your own worlds.")
+                    .withStyle(ChatFormatting.YELLOW), 0xFFAAAAAA);
         }
     }
 
