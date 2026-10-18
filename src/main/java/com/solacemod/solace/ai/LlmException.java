@@ -23,7 +23,7 @@ public class LlmException extends RuntimeException {
         return switch (status) {
             case 400 -> "The provider rejected the request (400). The model name may be wrong for this provider.";
             case 401, 403 -> "The API key was rejected (" + status + "). Check your API key in Solace setup.";
-            case 404 -> "Not found (404). The model name or base URL is probably wrong.";
+            case 404 -> "Model not found (404). The provider may have retired it. In Solace setup, put a current model name in the Model box (check the provider's website).";
             case 429 -> "Rate limited or out of credits (429). Wait a bit, or check your plan with the provider.";
             case 500, 502, 503, 504, 529 -> "The provider is having problems (" + status + "). Try again later.";
             default -> status > 0 ? "Request failed with HTTP " + status + "." : "Could not reach the provider: " + getMessage();

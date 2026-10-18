@@ -22,11 +22,67 @@ public final class GeminiProvider implements LlmProvider {
         return settings;
     }
 
+    /** Set when Google says the configured model doesn't exist and we switched to one that does. */
+    private volatile String replacementModel;
+
     @Override
     public CompletableFuture<String> complete(LlmRequest request) {
-        String url = settings.baseUrl() + "/v1beta/models/" + URLEncoder.encode(settings.model(), StandardCharsets.UTF_8) + ":generateContent";
+        return send(request, replacementModel != null ? replacementModel : settings.model(), true);
+    }
+
+    /** The model actually being used (may differ from the config if the configured one was retired). */
+    public String activeModel() {
+        return replacementModel != null ? replacementModel : settings.model();
+    }
+
+    private CompletableFuture<String> send(LlmRequest request, String model, boolean mayRecover) {
+        String url = settings.baseUrl() + "/v1beta/models/" + URLEncoder.encode(model, StandardCharsets.UTF_8) + ":generateContent";
         return Http.postJson(url, Map.of("x-goog-api-key", settings.apiKey()), buildBody(request), settings.timeoutSeconds())
-                .thenApply(GeminiProvider::extractText);
+                .thenApply(GeminiProvider::extractText)
+                .exceptionallyCompose(error -> {
+                    Throwable cause = Http.unwrap(error);
+                    // Google retires model names regularly. If this one is gone, ask Google which models exist and use one.
+                    if (mayRecover && cause instanceof LlmException e && e.status() == 404) {
+                        return findWorkingModel().thenCompose(found -> {
+                            if (found == null || found.equals(model)) return CompletableFuture.failedFuture(cause);
+                            replacementModel = found;
+                            return send(request, found, false);
+                        });
+                    }
+                    return CompletableFuture.failedFuture(cause);
+                });
+    }
+
+    /** Lists the models this key can use and picks the best Flash model (fast and on the free tier). */
+    CompletableFuture<String> findWorkingModel() {
+        return Http.getJson(settings.baseUrl() + "/v1beta/models?pageSize=200", Map.of("x-goog-api-key", settings.apiKey()), settings.timeoutSeconds())
+                .thenApply(GeminiProvider::pickModel)
+                .exceptionally(err -> null);
+    }
+
+    static String pickModel(JsonObject list) {
+        if (!list.has("models")) return null;
+        java.util.List<String> usable = new java.util.ArrayList<>();
+        for (JsonElement el : list.getAsJsonArray("models")) {
+            JsonObject m = el.getAsJsonObject();
+            String name = m.has("name") ? m.get("name").getAsString().replace("models/", "") : "";
+            boolean canChat = false;
+            if (m.has("supportedGenerationMethods")) {
+                for (JsonElement method : m.getAsJsonArray("supportedGenerationMethods")) {
+                    if ("generateContent".equals(method.getAsString())) canChat = true;
+                }
+            }
+            if (canChat && !name.isEmpty()) usable.add(name);
+        }
+        if (usable.contains("gemini-flash-latest")) return "gemini-flash-latest";
+        // Otherwise the newest plain "flash" model (skip image, speech, live and preview variants).
+        java.util.List<String> flash = usable.stream()
+                .filter(n -> n.startsWith("gemini-") && n.contains("flash"))
+                .filter(n -> !n.matches(".*(image|tts|audio|live|embedding|exp|preview|thinking).*"))
+                .toList();
+        return flash.stream().filter(n -> !n.contains("lite")).max(java.util.Comparator.naturalOrder())
+                .or(() -> flash.stream().max(java.util.Comparator.naturalOrder()))
+                .orElse(usable.stream().filter(n -> n.startsWith("gemini-")).max(java.util.Comparator.naturalOrder()).orElse(null));
     }
 
     JsonObject buildBody(LlmRequest request) {

@@ -54,6 +54,28 @@ public final class Http {
                 });
     }
 
+    /** GETs JSON (used to look up which models a provider has). */
+    public static CompletableFuture<JsonObject> getJson(String url, Map<String, String> headers, int timeoutSeconds) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
+                .timeout(Duration.ofSeconds(Math.max(5, timeoutSeconds)))
+                .header("User-Agent", "Solace-Minecraft-Mod/1.0")
+                .GET();
+        headers.forEach(builder::header);
+        return CLIENT.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofString())
+                .handle((response, error) -> {
+                    if (error != null) {
+                        Throwable cause = error.getCause() != null ? error.getCause() : error;
+                        throw new LlmException(cause.getClass().getSimpleName() + ": " + cause.getMessage(), cause);
+                    }
+                    if (response.statusCode() / 100 != 2) {
+                        throw new LlmException(response.statusCode(), "HTTP " + response.statusCode() + ": " + shorten(response.body()));
+                    }
+                    JsonElement parsed = JsonParser.parseString(response.body());
+                    if (!parsed.isJsonObject()) throw new LlmException(response.statusCode(), "Response was not a JSON object");
+                    return parsed.getAsJsonObject();
+                });
+    }
+
     /** POSTs raw bytes (used for audio) and returns the raw response bytes. */
     public static CompletableFuture<byte[]> postForBytes(String url, Map<String, String> headers, byte[] body, String contentType, int timeoutSeconds) {
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))

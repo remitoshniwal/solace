@@ -64,6 +64,27 @@ public final class AiSelfTest {
             text.addProperty("text", "```json\n" + reply + "\n```");
             respond(ex, 200, "{\"candidates\":[{\"content\":{\"parts\":[{\"thought\":true,\"text\":\"hmm\"}," + text + "]}}]}");
         });
+        // A Gemini server where the configured model was retired: 404 for it, a model list, and a working newer model.
+        server.createContext("/gem2/v1beta/models", ex -> {
+            String path = ex.getRequestURI().getPath();
+            if (ex.getRequestMethod().equals("GET")) {
+                respond(ex, 200, "{\"models\":["
+                        + "{\"name\":\"models/gemini-3.5-flash-lite\",\"supportedGenerationMethods\":[\"generateContent\"]},"
+                        + "{\"name\":\"models/gemini-3.5-flash\",\"supportedGenerationMethods\":[\"generateContent\"]},"
+                        + "{\"name\":\"models/gemini-3.5-flash-image\",\"supportedGenerationMethods\":[\"generateContent\"]},"
+                        + "{\"name\":\"models/text-embedding-004\",\"supportedGenerationMethods\":[\"embedContent\"]}]}");
+                return;
+            }
+            read(ex);
+            lastPath.set(path);
+            if (path.contains("gemini-2.5-flash")) {
+                respond(ex, 404, "{\"error\":{\"code\":404,\"message\":\"models/gemini-2.5-flash is not found\"}}");
+                return;
+            }
+            JsonObject text = new JsonObject();
+            text.addProperty("text", reply);
+            respond(ex, 200, "{\"candidates\":[{\"content\":{\"parts\":[" + text + "]}}]}");
+        });
         server.createContext("/bad/chat/completions", ex -> {
             read(ex);
             respond(ex, 401, "{\"error\":\"invalid key\"}");
@@ -104,6 +125,14 @@ public final class AiSelfTest {
         check("gemini: assistant mapped to model role", lastBody.get().contains("\"role\":\"model\""));
         SolaceReply gr = ReplyParser.parse(out);
         check("gemini: fenced json parsed", gr.say().equals("Hello, friend.") && gr.actions().size() == 1);
+
+        // Gemini: retired model is replaced automatically
+        ProviderSettings retired = ProviderSettings.resolve("gemini", "g-test", "gemini-2.5-flash", base + "/gem2", 10, "");
+        com.solacemod.solace.ai.GeminiProvider gp = (com.solacemod.solace.ai.GeminiProvider) LlmProvider.create(retired);
+        out = gp.complete(req).get();
+        check("gemini: recovers from retired model", out.equals(reply) && lastPath.get().endsWith("gemini-3.5-flash:generateContent"));
+        check("gemini: remembers working model", gp.activeModel().equals("gemini-3.5-flash"));
+        check("gemini: default model is the auto-updating alias", ProviderSettings.resolve("gemini", "k", "", "", 10, "").model().equals("gemini-flash-latest"));
 
         // Errors
         ProviderSettings bad = ProviderSettings.resolve("custom", "nope", "m", base + "/bad", 10, "");
