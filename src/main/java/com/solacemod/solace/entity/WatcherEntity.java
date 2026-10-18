@@ -31,12 +31,29 @@ public class WatcherEntity extends PathfinderMob {
     private int lookedAtTicks;
     private int fragmentToLeave = -1;
     private Consumer<WatcherEntity> onVanish;
+    /** A "mimic" Watcher looks exactly like Solace (for the "two places" event). */
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Boolean> DATA_MIMIC =
+            net.minecraft.network.syncher.SynchedEntityData.defineId(WatcherEntity.class, net.minecraft.network.syncher.EntityDataSerializers.BOOLEAN);
 
     public WatcherEntity(EntityType<? extends WatcherEntity> type, Level level) {
         super(type, level);
         setInvulnerable(true);
         setSilent(true);
         setNoAi(false);
+    }
+
+    @Override
+    protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_MIMIC, false);
+    }
+
+    public boolean isMimic() {
+        return entityData.get(DATA_MIMIC);
+    }
+
+    public void setMimic(boolean mimic) {
+        entityData.set(DATA_MIMIC, mimic);
     }
 
     public static AttributeSupplier.Builder createAttributes() {

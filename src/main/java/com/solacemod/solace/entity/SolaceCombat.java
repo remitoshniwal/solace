@@ -119,7 +119,7 @@ public final class SolaceCombat {
 
     @Nullable
     public static Mob nearestThreat(SolaceEntity solace, LivingEntity around, double radius) {
-        return solace.level().getEntitiesOfClass(Mob.class, around.getBoundingBox().inflate(radius), m -> m.isAlive() && m instanceof Enemy)
+        return around.level().getEntitiesOfClass(Mob.class, around.getBoundingBox().inflate(radius), m -> m.isAlive() && m instanceof Enemy)
                 .stream().min(Comparator.comparingDouble(around::distanceToSqr)).orElse(null);
     }
 }

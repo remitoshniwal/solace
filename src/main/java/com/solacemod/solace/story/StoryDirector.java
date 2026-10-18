@@ -90,6 +90,7 @@ public final class StoryDirector {
             SolaceBrain.event(player, prompt, true);
             // Like Maren's journal: come back after a long time and the lights are out.
             if (late && story.act >= 3 && awayMinutes >= 60) HorrorDirector.torchesOut(player, 6, false);
+            if (late) com.solacemod.solace.horror.OnItsOwn.builtWhileAway(player, story, awayMinutes);
         });
     }
 

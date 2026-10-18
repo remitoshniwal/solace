@@ -15,14 +15,30 @@ import javax.annotation.Nullable;
 /** Draws the Watcher: a faded, see-through, player-shaped figure. */
 public class WatcherRenderer extends HumanoidMobRenderer<WatcherEntity, PlayerModel<WatcherEntity>> {
     private static final ResourceLocation TEXTURE = Solace.id("textures/entity/watcher.png");
+    private static final ResourceLocation SOLACE = Solace.id("textures/entity/solace.png");
+    private final PlayerModel<WatcherEntity> slim;
+    private final PlayerModel<WatcherEntity> wide;
 
     public WatcherRenderer(EntityRendererProvider.Context context) {
         super(context, new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER_SLIM), true), 0.0F);
+        slim = getModel();
+        wide = new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER), false);
+    }
+
+    /** A mimic is drawn as a solid copy of Solace, hovering like it does. */
+    @Override
+    public void render(WatcherEntity entity, float entityYaw, float partialTick, PoseStack poseStack,
+                       net.minecraft.client.renderer.MultiBufferSource buffer, int packedLight) {
+        model = entity.isMimic() ? wide : slim;
+        poseStack.pushPose();
+        if (entity.isMimic()) poseStack.translate(0.0, 0.12 + Math.sin((entity.tickCount + partialTick) * 0.06) * 0.06, 0.0);
+        super.render(entity, entityYaw, partialTick, poseStack, buffer, packedLight);
+        poseStack.popPose();
     }
 
     @Override
     public ResourceLocation getTextureLocation(WatcherEntity entity) {
-        return TEXTURE;
+        return entity.isMimic() ? SOLACE : TEXTURE;
     }
 
     @Override
@@ -33,7 +49,7 @@ public class WatcherRenderer extends HumanoidMobRenderer<WatcherEntity, PlayerMo
     @Nullable
     @Override
     protected RenderType getRenderType(WatcherEntity entity, boolean bodyVisible, boolean translucent, boolean glowing) {
-        return RenderType.entityTranslucent(getTextureLocation(entity));
+        return entity.isMimic() ? RenderType.entityCutoutNoCull(SOLACE) : RenderType.entityTranslucent(getTextureLocation(entity));
     }
 
     @Override

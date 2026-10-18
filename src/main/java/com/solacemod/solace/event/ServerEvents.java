@@ -99,6 +99,8 @@ public final class ServerEvents {
                 if (story.met) {
                     if (tick % 40 == 0) SolaceManager.tick(player, story);
                     HorrorDirector.tick(player, story);
+                    com.solacemod.solace.horror.OnItsOwn.tickSleep(player, story);
+                    com.solacemod.solace.horror.OnItsOwn.tickGifts(player, story);
                     AmbientChatter.tick(player, story);
                 }
             } catch (RuntimeException e) {
@@ -109,8 +111,16 @@ public final class ServerEvents {
     }
 
     @SubscribeEvent
+    public static void onWake(net.neoforged.neoforge.event.entity.player.PlayerWakeUpEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || player.getServer() == null) return;
+        PlayerStory story = StoryData.get(player.getServer()).getIfPresent(player.getUUID());
+        if (story != null && story.met) com.solacemod.solace.horror.OnItsOwn.onWake(player, story);
+    }
+
+    @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
         Scheduler.clear();
+        com.solacemod.solace.horror.OnItsOwn.reset();
         SolaceBrain.reset();
         StoryDirector.reset();
     }

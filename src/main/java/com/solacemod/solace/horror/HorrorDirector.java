@@ -51,7 +51,11 @@ import java.util.List;
 public final class HorrorDirector {
     private static final RandomSource RANDOM = RandomSource.create();
 
-    private enum Kind { FOOTSTEPS, CAVE, WHISPER, WATCHER, DOOR, FAKE_CHAT, GLITCH, STARE, MINING, TORCHES, DARKNESS, TITLE, RENAME, SIGN, CORRUPT, FAKE_CRASH }
+    private enum Kind {
+        FOOTSTEPS, CAVE, WHISPER, WATCHER, DOOR, FAKE_CHAT, GLITCH, STARE, MINING, TORCHES, DARKNESS, TITLE, RENAME, SIGN, CORRUPT, FAKE_CRASH,
+        // Things Solace does on its own (see OnItsOwn)
+        FALL, TWO_PLACES, GIFT, REARRANGE, ECHO_STEPS, TIME_SLIP, MIRROR
+    }
 
     private static final List<String> TITLES = List.of("it remembers", "don't promise", "she's still here", "turn around", "you can log off. can't you?", "it was never static");
     private static final List<String> FAKE_LINES = List.of("help", "it's listening", "don't trust it", "is anyone there", "i can see you", "LOG OFF");
@@ -73,7 +77,7 @@ public final class HorrorDirector {
         if (server == null || player.isSpectator() || !player.isAlive()) return;
         boolean erased = story.ending == Ending.ERASE;
         if (story.ending != Ending.NONE && !erased) return;
-        if (story.act < 2 && !erased) return;
+        if (story.chapter() < 2 && !erased) return;
 
         long now = server.getTickCount();
         if (story.nextHorrorTick == 0) {
@@ -94,6 +98,7 @@ public final class HorrorDirector {
     private static long scheduleGap(PlayerStory story) {
         double minutes = switch (story.ending == Ending.ERASE ? 0 : story.act) {
             case 0 -> 15 + RANDOM.nextDouble() * 10;
+            case 1 -> 6 + RANDOM.nextDouble() * 4;
             case 2 -> 4 + RANDOM.nextDouble() * 3;
             case 3 -> 2.5 + RANDOM.nextDouble() * 2;
             default -> 1.5 + RANDOM.nextDouble() * 1.5;
@@ -109,6 +114,24 @@ public final class HorrorDirector {
         boolean world = SolaceConfig.ALLOW_WORLD_CHANGES.get();
         boolean chat = SolaceConfig.ALLOW_FAKE_MESSAGES.get();
         boolean screen = SolaceConfig.ALLOW_SCREEN_EFFECTS.get();
+        int chapter = story.chapter();
+        if (world) add(bag, Kind.GIFT, chapter <= 3 ? 2 : 1);
+        add(bag, Kind.TWO_PLACES, 2);
+        if (chapter >= 3) {
+            add(bag, Kind.FALL, 1);
+            add(bag, Kind.ECHO_STEPS, 2);
+        }
+        if (chapter >= 4) add(bag, Kind.REARRANGE, 2);
+        if (chapter >= 5) {
+            add(bag, Kind.TIME_SLIP, 1);
+            add(bag, Kind.MIRROR, 1);
+        }
+        // Chapter 2 is quiet: only small wrong things, nothing outright scary yet.
+        if (chapter < 3) {
+            add(bag, Kind.FOOTSTEPS, 1);
+            add(bag, Kind.STARE, 1);
+            return bag.get(RANDOM.nextInt(bag.size()));
+        }
         add(bag, Kind.FOOTSTEPS, 3);
         add(bag, Kind.CAVE, 2);
         add(bag, Kind.WHISPER, 1);
@@ -190,6 +213,22 @@ public final class HorrorDirector {
                         + "or something about what's behind them, or about them leaving. Don't explain it.", false);
             }
             case FAKE_CRASH -> fakeCrash(player);
+            // Each of these has a chance of not happening at all, so they never become a pattern.
+            case FALL -> {
+                if (RANDOM.nextFloat() < 0.8F) OnItsOwn.fall(player, story);
+            }
+            case TWO_PLACES -> {
+                if (RANDOM.nextFloat() < 0.8F) OnItsOwn.twoPlaces(player, story);
+            }
+            case GIFT -> OnItsOwn.gift(player, story);
+            case REARRANGE -> {
+                if (RANDOM.nextFloat() < 0.8F) OnItsOwn.rearrange(player, story);
+            }
+            case ECHO_STEPS -> OnItsOwn.echoSteps(player, story);
+            case TIME_SLIP -> {
+                if (RANDOM.nextFloat() < 0.8F) OnItsOwn.timeSlip(player, story);
+            }
+            case MIRROR -> OnItsOwn.mirror(player, story);
         }
         if (player.getServer() != null) StoryData.get(player.getServer()).setDirty();
     }
@@ -309,7 +348,7 @@ public final class HorrorDirector {
         }
     }
 
-    private static void toggleDoor(ServerPlayer player) {
+    static void toggleDoor(ServerPlayer player) {
         ServerLevel level = player.serverLevel();
         BlockPos origin = player.blockPosition();
         for (int i = 0; i < 400; i++) {
