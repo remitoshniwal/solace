@@ -500,7 +500,9 @@ public class SolaceEntity extends PathfinderMob {
         }
         player.setItemInHand(hand, leftover);
         Sounds.playAt(this, "entity.item.pickup", 0.6F, 1.2F);
-        SolaceBrain.onGift((ServerPlayer) player, this, copy.getHoverName().getString(), given);
+        ItemStack gift = copy.copy();
+        gift.setCount(given);
+        SolaceBrain.onGift((ServerPlayer) player, this, gift);
         return InteractionResult.CONSUME;
     }
 

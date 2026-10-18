@@ -81,6 +81,14 @@ public final class SolaceCommand {
                                     story(ctx, p).trust = IntegerArgumentType.getInteger(ctx, "value");
                                     return msg(ctx, "Trust set.");
                                 }))))
+                        .then(Commands.literal("bond").then(Commands.argument("player", EntityArgument.player())
+                                .then(Commands.argument("tether", IntegerArgumentType.integer(0, 1000))
+                                        .then(Commands.argument("debt", IntegerArgumentType.integer(0, 1000)).executes(ctx -> {
+                                            PlayerStory s = story(ctx, EntityArgument.getPlayer(ctx, "player"));
+                                            s.tether = Math.min(IntegerArgumentType.getInteger(ctx, "tether"), com.solacemod.solace.story.Bond.maxTether(s));
+                                            s.debt = IntegerArgumentType.getInteger(ctx, "debt");
+                                            return msg(ctx, "Tether " + (int) s.tether + ", debt " + (int) s.debt + ".");
+                                        })))))
                         .then(Commands.literal("fragment").then(Commands.argument("player", EntityArgument.player())
                                 .then(Commands.argument("page", IntegerArgumentType.integer(1, StoryText.FRAGMENT_COUNT)).executes(ctx -> {
                                     Fragments.giveTo(EntityArgument.getPlayer(ctx, "player"), IntegerArgumentType.getInteger(ctx, "page") - 1);
@@ -169,6 +177,8 @@ public final class SolaceCommand {
         if (!s.met) return msg(ctx, "You haven't met Solace yet.");
         msg(ctx, "Story: act " + s.act + ", " + Math.round(s.playMinutes()) + " minutes together, pages found " + s.fragmentsFound.size() + "/" + StoryText.FRAGMENT_COUNT
                 + (s.ending.name().equals("NONE") ? "" : ", ending: " + s.ending));
+        msg(ctx, "Solace's strength (Tether): " + (int) s.tether + "/" + (int) com.solacemod.solace.story.Bond.maxTether(s)
+                + ". Your debt to Solace: " + (int) s.debt + (s.request != null ? ". It asked you: \"" + s.request.text + "\"" : ""));
         msg(ctx, "Trust: " + s.trust + ". Things Solace remembers about you: " + s.facts.size()
                 + ". Endings discovered: " + GlobalMemory.distinctEndings(player.getUUID()) + "/4");
         return 1;

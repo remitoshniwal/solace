@@ -47,11 +47,17 @@ import java.util.UUID;
 public final class Powers {
     private static final Map<String, Long> COOLDOWNS = new HashMap<>();
 
-    /** Power name -> cooldown in seconds. */
+    /** Power name -> cooldown in seconds (short: Tether is the real limit; this just stops spamming). */
     private static final Map<String, Integer> COOLDOWN_SECONDS = Map.ofEntries(
-            Map.entry("heal", 90), Map.entry("feed", 60), Map.entry("bless", 30), Map.entry("weather", 120), Map.entry("time", 180),
-            Map.entry("smite", 30), Map.entry("banish", 60), Map.entry("reveal", 45), Map.entry("find", 15), Map.entry("conjure", 30),
-            Map.entry("conjure_precious", 600), Map.entry("carry", 90), Map.entry("darken", 60), Map.entry("lights_out", 120), Map.entry("whisper", 20)
+            Map.entry("heal", 30), Map.entry("feed", 20), Map.entry("bless", 10), Map.entry("weather", 30), Map.entry("time", 60),
+            Map.entry("smite", 10), Map.entry("banish", 20), Map.entry("reveal", 15), Map.entry("find", 5), Map.entry("conjure", 5),
+            Map.entry("carry", 30), Map.entry("darken", 60), Map.entry("lights_out", 120), Map.entry("whisper", 20)
+    );
+
+    /** Power name -> Tether cost (docs/DESIGN.md section 4). Conjuring costs the item's value instead. */
+    public static final Map<String, Double> COSTS = Map.ofEntries(
+            Map.entry("find", 5.0), Map.entry("reveal", 5.0), Map.entry("bless", 8.0), Map.entry("feed", 10.0), Map.entry("weather", 10.0),
+            Map.entry("smite", 12.0), Map.entry("banish", 12.0), Map.entry("heal", 15.0), Map.entry("carry", 15.0), Map.entry("time", 20.0)
     );
 
     private static final Map<String, String> EFFECTS = Map.ofEntries(
@@ -66,11 +72,6 @@ public final class Powers {
     private static final Set<String> FORBIDDEN = Set.of("command_block", "chain_command_block", "repeating_command_block", "command_block_minecart",
             "structure_block", "structure_void", "jigsaw", "barrier", "light", "debug_stick", "bedrock", "spawner", "trial_spawner", "vault",
             "end_portal_frame", "reinforced_deepslate", "knowledge_book", "petrified_oak_slab", "test_block", "test_instance_block");
-
-    /** Precious things: only when Solace trusts you, one at a time, rarely. */
-    private static final List<String> PRECIOUS = List.of("netherite", "ancient_debris", "diamond", "elytra", "totem_of_undying",
-            "enchanted_golden_apple", "nether_star", "beacon", "dragon_egg", "dragon_head", "trident", "heart_of_the_sea", "shulker_box",
-            "mace", "heavy_core", "enchanted_book", "emerald_block", "experience_bottle", "conduit", "sniffer_egg", "trial_key", "wither_skeleton_skull");
 
     /** "find" targets that are structures, mapped to vanilla structure tags. */
     private static final Map<String, String> STRUCTURES = Map.ofEntries(
@@ -105,6 +106,12 @@ public final class Powers {
         Long ready = COOLDOWNS.get(key);
         if (ready != null && now < ready) return type + " isn't ready yet (" + (ready - now) / 20 + "s)";
 
+        double cost = COSTS.getOrDefault(type, 0.0);
+        if (cost > 0 && story.tether < cost) {
+            return "can't: you're too weak right now (your strength is " + (int) story.tether + ", " + type + " needs " + (int) cost
+                    + "). You grow stronger the longer they stay with you";
+        }
+
         String result = switch (type) {
             case "heal" -> heal(owner);
             case "feed" -> feed(owner);
@@ -115,7 +122,7 @@ public final class Powers {
             case "banish" -> banish(owner);
             case "reveal" -> reveal(owner);
             case "find" -> find(owner, str(a, "what"));
-            case "conjure" -> conjure(owner, story, str(a, "item"), num(a, "count", 1), now);
+            case "conjure" -> conjure(owner, story, str(a, "item"), num(a, "count", 1));
             case "carry" -> carry(owner, solace, story, str(a, "name"));
             case "darken" -> {
                 owner.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 120, 0, false, false));
@@ -135,7 +142,10 @@ public final class Powers {
         if (result == null) return null;
         boolean failed = result.startsWith("can't");
         // Only start the cooldown if the power actually did something.
-        if (!failed) COOLDOWNS.put(key, now + 20L * COOLDOWN_SECONDS.getOrDefault(type, 30));
+        if (!failed) {
+            COOLDOWNS.put(key, now + 20L * COOLDOWN_SECONDS.getOrDefault(type, 30));
+            if (cost > 0) Bond.spend(story, cost); // conjure pays for itself inside conjure()
+        }
         // Solace already announced what it was doing. Only follow up when there's news: what "find" found, or a failure.
         if (failed || type.equals("find")) return result;
         story.addEvent("you used your power: " + result);
@@ -275,29 +285,28 @@ public final class Powers {
         return "the nearest " + matcher.displayName() + " is " + describe(p, best, true);
     }
 
-    private static String conjure(ServerPlayer p, PlayerStory story, String name, int count, long now) {
+    private static String conjure(ServerPlayer p, PlayerStory story, String name, int count) {
         if (!SolaceConfig.ALLOW_CONJURING.get()) return "can't: conjuring is switched off in this world";
         Item item = ActionExecutor.item(name);
         if (item == null) return "can't: you don't know what '" + name + "' is";
         String id = BuiltInRegistries.ITEM.getKey(item).getPath();
         if (FORBIDDEN.contains(id) || id.endsWith("_spawn_egg")) return "can't: some things shouldn't exist in anyone's hands";
-        boolean precious = PRECIOUS.stream().anyMatch(id::contains);
-        int amount;
-        if (precious) {
-            if (story.trust < 60) return "can't: you don't trust them enough yet to make something that precious (trust " + story.trust + "/60)";
-            String key = p.getUUID() + ":conjure_precious";
-            Long ready = COOLDOWNS.get(key);
-            if (ready != null && now < ready) return "can't: making precious things drains you; wait " + (ready - now) / 20 + "s";
-            COOLDOWNS.put(key, now + 20L * COOLDOWN_SECONDS.get("conjure_precious"));
-            amount = 1;
-        } else {
-            amount = Math.max(1, Math.min(count, Math.min(32, new ItemStack(item).getMaxStackSize())));
+        if (story.trust <= -30) return "can't: you don't want to give them anything (they've hurt you too much)";
+        // No hard cap on what Solace can make. It just costs strength: torches are nearly free, netherite takes a huge bond.
+        double unit = ItemValue.of(item);
+        int wanted = Math.max(1, Math.min(count, Math.min(64, new ItemStack(item).getMaxStackSize())));
+        int amount = (int) Math.min(wanted, Math.floor(story.tether / unit));
+        if (amount < 1) {
+            return "can't: making even one " + new ItemStack(item).getHoverName().getString() + " needs " + Math.round(unit)
+                    + " strength and you only have " + (int) story.tether + " (max " + (int) Bond.maxTether(story) + " right now)";
         }
+        Bond.spend(story, unit * amount);
         ItemStack stack = new ItemStack(item, amount);
         if (!p.getInventory().add(stack)) p.drop(stack, false);
         aura(p, ParticleTypes.END_ROD, 20);
         Sounds.playFor(p, p.position(), Sounds.get("block.respawn_anchor.charge"), 0.7F, 1.4F);
-        return "conjured " + amount + " " + new ItemStack(item).getHoverName().getString() + " out of nothing into their hands";
+        String made = "conjured " + amount + " " + new ItemStack(item).getHoverName().getString() + " out of nothing into their hands";
+        return amount < wanted ? made + " (you were only strong enough for " + amount + ")" : made;
     }
 
     private static String carry(ServerPlayer p, SolaceEntity solace, PlayerStory story, String name) {

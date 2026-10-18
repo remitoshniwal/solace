@@ -35,6 +35,52 @@ public final class PlayerStory {
     public boolean bossActive;
     public long defiantUntilTick;
 
+    // The bond (see docs/DESIGN.md section 4)
+    /** How strong Solace is right now. Grows with time together; powers spend it. */
+    public double tether = 10;
+    /** What the player "owes" for Solace's gifts. High debt: it asks for things, then it collects. */
+    public double debt;
+    /** Total Tether Solace has ever spent on this player (used by the endings). */
+    public double totalGiven;
+    /** Solace's current request, or null. */
+    public BondRequest request;
+    public BlockPos meetPos = BlockPos.ZERO;
+    public String meetDim = "minecraft:overworld";
+
+    /** Something Solace asked the player to do. */
+    public static final class BondRequest {
+        public String kind;     // bring, stay_until_morning, go_to, spend_time, dont_leave
+        public String detail;   // item id, place name, or minutes
+        public String text;     // how Solace phrased it
+        public long createdTick; // game time
+        public double progress; // minutes/ticks accumulated
+
+        public CompoundTag save() {
+            CompoundTag t = new CompoundTag();
+            t.putString("Kind", kind);
+            t.putString("Detail", detail);
+            t.putString("Text", text);
+            t.putLong("Created", createdTick);
+            t.putDouble("Progress", progress);
+            return t;
+        }
+
+        public static BondRequest load(CompoundTag t) {
+            BondRequest r = new BondRequest();
+            r.kind = t.getString("Kind");
+            r.detail = t.getString("Detail");
+            r.text = t.getString("Text");
+            r.createdTick = t.getLong("Created");
+            r.progress = t.getDouble("Progress");
+            return r;
+        }
+    }
+
+    // Transient bond timers
+    public long lastTalkTetherTick;
+    public int talkTetherThisMinute;
+    public long lastCollectCheck;
+
     // Memory
     public final List<String> facts = new ArrayList<>();
     public final List<Turn> history = new ArrayList<>();
@@ -152,6 +198,12 @@ public final class PlayerStory {
         CompoundTag m = new CompoundTag();
         marks.forEach(m::putString);
         t.put("Marks", m);
+        t.putDouble("Tether", tether);
+        t.putDouble("Debt", debt);
+        t.putDouble("TotalGiven", totalGiven);
+        if (request != null) t.put("Request", request.save());
+        t.putLong("MeetPos", meetPos.asLong());
+        t.putString("MeetDim", meetDim);
         return t;
     }
 
@@ -196,6 +248,12 @@ public final class PlayerStory {
         s.lastDim = t.contains("LastDim") ? t.getString("LastDim") : "minecraft:overworld";
         CompoundTag m = t.getCompound("Marks");
         for (String k : m.getAllKeys()) s.marks.put(k, m.getString(k));
+        s.tether = t.contains("Tether") ? t.getDouble("Tether") : 10;
+        s.debt = t.getDouble("Debt");
+        s.totalGiven = t.getDouble("TotalGiven");
+        if (t.contains("Request")) s.request = BondRequest.load(t.getCompound("Request"));
+        s.meetPos = BlockPos.of(t.getLong("MeetPos"));
+        s.meetDim = t.contains("MeetDim") ? t.getString("MeetDim") : "minecraft:overworld";
         return s;
     }
 

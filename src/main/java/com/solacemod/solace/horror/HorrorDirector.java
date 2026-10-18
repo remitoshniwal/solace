@@ -98,7 +98,9 @@ public final class HorrorDirector {
             case 3 -> 2.5 + RANDOM.nextDouble() * 2;
             default -> 1.5 + RANDOM.nextDouble() * 1.5;
         };
-        return (long) (minutes * 1200 / Math.max(0.1, intensity()));
+        // The more the player owes Solace, the more often strange things happen.
+        double debtFactor = 1.0 + Math.min(2.0, story.debt / 60.0);
+        return (long) (minutes * 1200 / Math.max(0.1, intensity()) / debtFactor);
     }
 
     @Nullable

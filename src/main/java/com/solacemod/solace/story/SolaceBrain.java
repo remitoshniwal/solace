@@ -107,6 +107,7 @@ public final class SolaceBrain {
         PlayerStory story = StoryData.get(server).get(player.getUUID());
         if (!story.met || !story.solaceShouldExist()) return;
         story.lastInteractionTick = server.getTickCount();
+        Bond.onTalk(story, server.getTickCount());
         String line = player.getGameProfile().getName() + ": " + text;
         if (BUSY.contains(player.getUUID())) {
             PENDING.computeIfAbsent(player.getUUID(), k -> new ArrayList<>()).add(line);
@@ -352,13 +353,14 @@ public final class SolaceBrain {
 
     // ---------- Reactions to game events ----------
 
-    public static void onGift(ServerPlayer player, SolaceEntity solace, String itemName, int count) {
+    public static void onGift(ServerPlayer player, SolaceEntity solace, net.minecraft.world.item.ItemStack gift) {
         MinecraftServer server = player.getServer();
         if (server == null) return;
         PlayerStory story = StoryData.get(server).get(player.getUUID());
         story.giftsGiven++;
         if (story.giftsGiven % 3 == 1) story.changeTrust(2);
-        event(player, "The player gave you " + count + " " + itemName + ". It's now in your pockets.", false);
+        Bond.onGift(player, story, gift);
+        event(player, "The player gave you " + gift.getCount() + " " + gift.getHoverName().getString() + ". It's now in your pockets.", false);
     }
 
     public static void onOwnerHurtSolace(ServerPlayer player, SolaceEntity solace) {
@@ -366,6 +368,7 @@ public final class SolaceBrain {
         if (server == null) return;
         PlayerStory story = StoryData.get(server).get(player.getUUID());
         story.timesHurtSolace++;
+        Bond.onHit(story);
         long now = server.getTickCount();
         if (now - story.lastHurtCommentTick < 20 * 20) return;
         story.lastHurtCommentTick = now;

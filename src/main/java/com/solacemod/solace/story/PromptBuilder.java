@@ -109,18 +109,22 @@ public final class PromptBuilder {
         }
         sb.append("{\"type\":\"mark\",\"name\":\"home\"} remember this place | {\"type\":\"goto\",\"name\":\"home\"} walk to a remembered place\n");
         sb.append("{\"type\":\"equip\"} hold your best weapon | {\"type\":\"stop\"} stop your current job\n");
+        if (SolaceConfig.STORY_ENABLED.get()) {
+            sb.append("{\"type\":\"request\",\"kind\":\"bring\",\"detail\":\"poppy\",\"text\":\"bring me a flower\"} ask the player for something in return (only when their debt is 30+, one at a time). "
+                    + "kinds: bring (detail = item), stay_until_morning, go_to (detail = a remembered place or \"where we met\"), spend_time (detail = minutes near you), dont_leave (detail = minutes without logging off)\n");
+        }
         if (SolaceConfig.ALLOW_POWERS.get()) {
-            sb.append("POWERS (each has a cooldown):\n");
-            sb.append("{\"type\":\"heal\"} fully heal the player | {\"type\":\"feed\"} fill their hunger\n");
-            sb.append("{\"type\":\"bless\",\"effect\":\"night_vision\",\"seconds\":60} effects: night_vision, speed, strength, resistance, fire_resistance, water_breathing, regeneration, haste, jump_boost, slow_falling, invisibility, absorption, dolphins_grace\n");
-            sb.append("{\"type\":\"weather\",\"weather\":\"clear\"} clear, rain or thunder | {\"type\":\"time\",\"time\":\"day\"} day, noon, sunset, night or midnight\n");
-            sb.append("{\"type\":\"smite\"} lightning kills hostile mobs near the player | {\"type\":\"banish\"} make nearby monsters vanish\n");
-            sb.append("{\"type\":\"reveal\"} all creatures nearby glow through walls + night vision\n");
-            sb.append("{\"type\":\"find\",\"what\":\"diamond\"} locate the nearest ore/block, or a structure: village, stronghold, mineshaft, shipwreck, ruined_portal, ocean_ruin, mansion, monument, treasure, trial_chamber\n");
+            sb.append("POWERS cost strength (Tether); the cost is in brackets. You can't use one you can't afford. Each use also adds half its cost to the player's DEBT to you:\n");
+            sb.append("{\"type\":\"heal\"} [15] fully heal the player | {\"type\":\"feed\"} [10] fill their hunger\n");
+            sb.append("{\"type\":\"bless\",\"effect\":\"night_vision\",\"seconds\":60} [8] effects: night_vision, speed, strength, resistance, fire_resistance, water_breathing, regeneration, haste, jump_boost, slow_falling, invisibility, absorption, dolphins_grace\n");
+            sb.append("{\"type\":\"weather\",\"weather\":\"clear\"} [10] clear, rain or thunder | {\"type\":\"time\",\"time\":\"day\"} [20] day, noon, sunset, night or midnight\n");
+            sb.append("{\"type\":\"smite\"} [12] lightning kills hostile mobs near the player | {\"type\":\"banish\"} [12] make nearby monsters vanish\n");
+            sb.append("{\"type\":\"reveal\"} [5] all creatures nearby glow through walls + night vision\n");
+            sb.append("{\"type\":\"find\",\"what\":\"diamond\"} [5] locate the nearest ore/block, or a structure: village, stronghold, mineshaft, shipwreck, ruined_portal, ocean_ruin, mansion, monument, treasure, trial_chamber\n");
             if (SolaceConfig.ALLOW_CONJURING.get()) {
-                sb.append("{\"type\":\"conjure\",\"item\":\"torch\",\"count\":16} create items from nothing (precious items like diamonds or netherite: only 1, rarely, and only if trust is 60+)\n");
+                sb.append("{\"type\":\"conjure\",\"item\":\"torch\",\"count\":16} create items from nothing. Costs the item's value each: torch 0.3, bread 1, iron ingot 6, diamond 25, netherite ingot 80, elytra 120. Nothing is impossible, only expensive\n");
             }
-            sb.append("{\"type\":\"carry\",\"name\":\"home\"} teleport the player to a remembered place (or \"solace\" = to you)\n");
+            sb.append("{\"type\":\"carry\",\"name\":\"home\"} [15] teleport the player to a remembered place (or \"solace\" = to you)\n");
         }
         if (SolaceConfig.STORY_ENABLED.get() && story.act >= 2 && story.ending == Ending.NONE) {
             sb.append("{\"type\":\"stare\"} go silent and stare at the player | {\"type\":\"glitch\"} make their screen flicker\n");
@@ -171,6 +175,7 @@ public final class PromptBuilder {
             sb.append(". Torn pages the player has found: ").append(story.fragmentsFound.size()).append('/').append(StoryText.FRAGMENT_COUNT);
         }
         sb.append(Omniscience.describe(player));
+        sb.append(Bond.describe(story));
         if (story.defiantUntilTick > player.getServer().getTickCount()) {
             sb.append(". RIGHT NOW you are hurt and refuse to do anything the player asks (any actions you include will be ignored)");
         }

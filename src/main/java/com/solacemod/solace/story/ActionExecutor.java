@@ -149,6 +149,9 @@ public final class ActionExecutor {
             case "goto", "go", "go_to" -> {
                 return goTo(owner, solace, story, a);
             }
+            case "request", "ask" -> {
+                return Bond.makeRequest(owner, story, str(a, "kind"), str(a, "detail"), str(a, "text"));
+            }
             case "equip" -> {
                 solace.equipBestWeapon();
                 return null;

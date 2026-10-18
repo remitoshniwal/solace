@@ -77,6 +77,7 @@ public final class StoryDirector {
 
         long awayMinutes = (System.currentTimeMillis() - story.lastLogoutMs) / 60_000;
         if (awayMinutes < 5) return;
+        Bond.onReturn(story, awayMinutes);
         String away = awayMinutes < 120 ? awayMinutes + " minutes" : (awayMinutes / 60) + " hours";
         story.addEvent("the player was gone (logged off) for " + away);
         boolean late = storyOn() && story.act >= 2 && story.ending == Ending.NONE;
@@ -121,6 +122,7 @@ public final class StoryDirector {
             return;
         }
         story.playTicks += 20;
+        Bond.tick(player, story, SolaceManager.find(server, story));
         scanForFragments(player, story);
         if (!storyOn()) return;
         redeliverLostPages(player, story, server);
@@ -163,6 +165,8 @@ public final class StoryDirector {
 
     private static void meet(ServerPlayer player, PlayerStory story) {
         story.met = true;
+        story.meetPos = player.blockPosition();
+        story.meetDim = player.level().dimension().location().toString();
         story.act = 1;
         story.playerName = player.getGameProfile().getName();
         GlobalMemory.Entry g = GlobalMemory.get(player.getUUID());

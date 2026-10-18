@@ -48,6 +48,7 @@ public final class ServerEvents {
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player && player.getServer() != null) {
+            com.solacemod.solace.horror.Phenomena.restore(player);
             PlayerStory story = StoryData.get(player.getServer()).getIfPresent(player.getUUID());
             if (story != null) StoryDirector.onLogout(player, story);
         }
