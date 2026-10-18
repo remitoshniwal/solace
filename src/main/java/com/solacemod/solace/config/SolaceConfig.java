@@ -85,7 +85,7 @@ public final class SolaceConfig {
         TEMPERATURE = b.comment("How creative/random replies are. 0.0 = predictable, 1.2 = wild.")
                 .defineInRange("temperature", 0.9, 0.0, 2.0);
         MAX_REPLY_TOKENS = b.comment("Maximum reply length in tokens (about 3/4 of a word each).")
-                .defineInRange("maxReplyTokens", 400, 64, 8000);
+                .defineInRange("maxReplyTokens", 800, 64, 8000);
         TIMEOUT_SECONDS = b.comment("How long to wait for a reply before giving up.")
                 .defineInRange("timeoutSeconds", 45, 5, 180);
         ANTHROPIC_EFFORT = b.comment("Anthropic only: how hard Claude thinks. low = fastest and cheapest. low, medium, high")

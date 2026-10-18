@@ -183,6 +183,14 @@ public final class AiSelfTest {
         check("parser: strips 'Solace:' prefix", ReplyParser.cleanSay("Solace: hi").equals("hi"));
         check("parser: braces in chatter", ReplyParser.parse("use {curly} ok {\"say\":\"x\"}").say().equals("x"));
 
+        // Cut-off replies (length limit) are rescued instead of showing raw JSON
+        SolaceReply cut = ReplyParser.parse("{\"say\":\"I don't have any netherite right now, but I can \\\"help\\\" you.\",\"emotion\":\"calm\",\"actions\":[{\"type\":\"follow\"}],\"remember\":");
+        check("parser: rescues cut-off reply text", cut.say().equals("I don't have any netherite right now, but I can \"help\" you."));
+        check("parser: rescues finished actions from cut-off reply", cut.actions().size() == 1 && cut.emotion().equals("calm"));
+        SolaceReply cut2 = ReplyParser.parse("{\"say\":\"I was in the middle of saying");
+        check("parser: rescues reply cut inside the text", cut2.say().equals("I was in the middle of saying"));
+        check("parser: never shows raw JSON", !ReplyParser.parse("{\"emotion\":\"calm\",\"actio").say().contains("{"));
+
         server.stop(0);
         System.out.println();
         System.out.println(passed + " passed, " + failed + " failed");

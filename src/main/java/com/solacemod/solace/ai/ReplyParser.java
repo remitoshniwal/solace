@@ -29,7 +29,11 @@ public final class ReplyParser {
         if (raw == null) return SolaceReply.text("...");
         JsonObject obj = findJsonObject(raw);
         if (obj == null) {
-            return SolaceReply.text(cleanSay(raw));
+            // The reply may have been cut off mid-JSON (length limit). Rescue what we can instead of showing raw JSON.
+            JsonObject rescued = rescuePartial(raw);
+            if (rescued != null) obj = rescued;
+            else if (looksLikeJson(raw)) return SolaceReply.text("...");
+            else return SolaceReply.text(cleanSay(raw));
         }
         String say = obj.has("say") && obj.get("say").isJsonPrimitive() ? obj.get("say").getAsString() : "";
         String emotion = obj.has("emotion") && obj.get("emotion").isJsonPrimitive()
@@ -95,6 +99,42 @@ public final class ReplyParser {
             start = text.indexOf('{', start + 1);
         }
         return null;
+    }
+
+    private static final java.util.regex.Pattern SAY_FIELD = java.util.regex.Pattern.compile("\"say\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"?");
+    private static final java.util.regex.Pattern EMOTION_FIELD = java.util.regex.Pattern.compile("\"emotion\"\\s*:\\s*\"([a-z]+)\"");
+    private static final java.util.regex.Pattern ACTIONS_FIELD = java.util.regex.Pattern.compile("\"actions\"\\s*:\\s*(\\[.*?\\])", java.util.regex.Pattern.DOTALL);
+
+    /** Pulls "say", "emotion" and a complete "actions" list out of JSON that was cut off before the end. */
+    static JsonObject rescuePartial(String raw) {
+        java.util.regex.Matcher say = SAY_FIELD.matcher(raw);
+        if (!say.find()) return null;
+        JsonObject o = new JsonObject();
+        String text;
+        try {
+            // Let the JSON reader handle escapes like \" and \n.
+            text = JsonParser.parseString("\"" + say.group(1) + "\"").getAsString();
+        } catch (RuntimeException e) {
+            text = say.group(1).replace("\\\"", "\"").replace("\\n", " ");
+        }
+        o.addProperty("say", text);
+        java.util.regex.Matcher emo = EMOTION_FIELD.matcher(raw);
+        if (emo.find()) o.addProperty("emotion", emo.group(1));
+        java.util.regex.Matcher acts = ACTIONS_FIELD.matcher(raw);
+        if (acts.find()) {
+            try {
+                JsonElement arr = JsonParser.parseString(acts.group(1));
+                if (arr.isJsonArray()) o.add("actions", arr);
+            } catch (RuntimeException ignored) {
+                // actions list was cut off too; skip it
+            }
+        }
+        return o;
+    }
+
+    private static boolean looksLikeJson(String raw) {
+        String t = raw.replace("```json", "").replace("```", "").trim();
+        return t.startsWith("{") || t.contains("\"say\"");
     }
 
     /** Makes the text safe and tidy for Minecraft chat. */

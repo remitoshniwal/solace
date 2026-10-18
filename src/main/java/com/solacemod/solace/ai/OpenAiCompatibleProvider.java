@@ -97,7 +97,9 @@ public final class OpenAiCompatibleProvider implements LlmProvider {
             // Reasoning models spend some of this on hidden thinking, so give them room.
             body.addProperty("max_completion_tokens", Math.max(request.maxTokens(), 2000));
         } else {
-            body.addProperty("max_tokens", request.maxTokens());
+            // OpenRouter models may "think" first, and thinking counts toward the limit. Leave room so replies aren't cut off.
+            int limit = "openrouter".equals(settings.name()) ? Math.max(request.maxTokens(), 1500) : request.maxTokens();
+            body.addProperty("max_tokens", limit);
         }
         if (!skipTemperature) body.addProperty("temperature", request.temperature());
         if ("openrouter".equals(settings.name()) && !skipSpeedHints) {
