@@ -169,7 +169,13 @@ public final class OpenAiCompatibleProvider implements LlmProvider {
     JsonObject buildBody(LlmRequest request, String model) {
         JsonObject body = new JsonObject();
         body.addProperty("model", model);
-        boolean thinkingModel = model.contains("gpt-oss") || model.contains("qwen3") || model.contains("deepseek-r") || model.contains("reason");
+        String lower = model.toLowerCase();
+        // Models that "think" before answering. Thinking counts toward the length limit, so they need more room.
+        boolean thinkingModel = lower.contains("gpt-oss") || lower.contains("qwen3") || lower.contains("qwen-3") || lower.startsWith("gpt-5")
+                || lower.matches("o\\d.*") || lower.contains("deepseek-r") || lower.contains("deepseek-v4-pro") || lower.contains("reason")
+                || lower.startsWith("grok-4") || lower.contains("magistral");
+        // Of those, these accept reasoning_effort to keep thinking short (others would reject it).
+        boolean takesEffort = lower.contains("gpt-oss") || lower.startsWith("gpt-5") || lower.matches("o\\d.*");
         JsonArray messages = new JsonArray();
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
@@ -184,15 +190,15 @@ public final class OpenAiCompatibleProvider implements LlmProvider {
         body.add("messages", messages);
         if (useMaxCompletionTokens) {
             // Reasoning models spend some of this on hidden thinking, so give them room.
-            body.addProperty("max_completion_tokens", Math.max(request.maxTokens(), 2000));
+            body.addProperty("max_completion_tokens", Math.max(request.maxTokens(), thinkingModel ? 2000 : request.maxTokens()));
         } else {
             // OpenRouter models may "think" first, and thinking counts toward the limit. Leave room so replies aren't cut off.
             int limit = "openrouter".equals(settings.name()) || thinkingModel ? Math.max(request.maxTokens(), 1500) : request.maxTokens();
             body.addProperty("max_tokens", limit);
         }
         if (!skipTemperature) body.addProperty("temperature", request.temperature());
-        if (thinkingModel && !"openrouter".equals(settings.name()) && !skipSpeedHints) {
-            // Groq, Cerebras etc.: ask "thinking" models to think briefly. Removed automatically if the server rejects it.
+        if (takesEffort && !"openrouter".equals(settings.name()) && !skipSpeedHints) {
+            // Groq, Cerebras, OpenAI: ask "thinking" models to think briefly. Removed automatically if the server rejects it.
             body.addProperty("reasoning_effort", "low");
         }
         if ("openrouter".equals(settings.name()) && !skipSpeedHints) {

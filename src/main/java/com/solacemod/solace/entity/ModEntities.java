@@ -15,6 +15,7 @@ public final class ModEntities {
     public static final DeferredHolder<EntityType<?>, EntityType<SolaceEntity>> SOLACE = ENTITIES.register("solace",
             () -> EntityType.Builder.of(SolaceEntity::new, MobCategory.MISC)
                     .sized(0.6F, 1.8F)
+                    .fireImmune()
                     .eyeHeight(1.62F)
                     .clientTrackingRange(10)
                     .build("solace"));

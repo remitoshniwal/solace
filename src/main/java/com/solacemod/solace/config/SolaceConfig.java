@@ -59,26 +59,28 @@ public final class SolaceConfig {
     public static final ModConfigSpec.BooleanValue ALLOW_COMBAT;
     public static final ModConfigSpec.BooleanValue ALLOW_CRAFTING;
     public static final ModConfigSpec.BooleanValue DEFEND_AGAINST_PLAYERS;
+    public static final ModConfigSpec.BooleanValue ALLOW_POWERS;
+    public static final ModConfigSpec.BooleanValue ALLOW_CONJURING;
     public static final ModConfigSpec.IntValue MAX_MINE_COUNT;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
 
-        b.comment("Solace's AI brain. Leave provider as 'scripted' or apiKey blank to use pre-written lines (free, offline).",
+        b.comment("Solace's AI brain. Solace needs one to talk (free options: groq, gemini, ollama, lmstudio).",
                 "WARNING: Never share this file or include it in a modpack - it contains your API key.").push("ai");
         PROVIDER = b.comment("Which AI service to use. One of:",
                         "groq (free tier, fast), openai, anthropic, gemini (free tier), openrouter, deepseek, mistral, xai, together, cerebras,",
-                        "ollama (free, runs on your PC), lmstudio (free, runs on your PC), custom (any OpenAI-compatible server), scripted (no AI)")
+                        "ollama (free, runs on your PC), lmstudio (free, runs on your PC), custom (any OpenAI-compatible server)")
                 .define("provider", "groq");
         API_KEY = b.comment("Your API key for the provider above. Or write env:VARIABLE_NAME to read it from an environment variable.",
-                        "Not needed for ollama, lmstudio or scripted.")
+                        "Not needed for ollama or lmstudio.")
                 .define("apiKey", "");
         MODEL = b.comment("Model name. Leave blank for the provider's default. Check your provider's website for current model names.")
                 .define("model", "");
         BASE_URL = b.comment("Server address. Leave blank for the provider's default. Required for 'custom'.")
                 .define("baseUrl", "");
-        FALLBACK_PROVIDER = b.comment("Backup provider if the main one fails (same names as above). 'scripted' = pre-written lines.")
-                .define("fallbackProvider", "scripted");
+        FALLBACK_PROVIDER = b.comment("Backup provider if the main one fails (same names as above). 'none' = no backup.")
+                .define("fallbackProvider", "none");
         FALLBACK_API_KEY = b.define("fallbackApiKey", "");
         FALLBACK_MODEL = b.define("fallbackModel", "");
         FALLBACK_BASE_URL = b.define("fallbackBaseUrl", "");
@@ -95,7 +97,7 @@ public final class SolaceConfig {
         b.comment("Limits that protect you from surprise bills. Each Solace reply is one request.").push("cost_safety");
         MAX_REQUESTS_PER_MINUTE = b.comment("Most AI requests allowed per minute for the whole server.")
                 .defineInRange("maxRequestsPerMinute", 12, 1, 600);
-        DAILY_REQUEST_LIMIT = b.comment("Most AI requests allowed per real-world day. After this Solace uses scripted lines. 0 = no limit.")
+        DAILY_REQUEST_LIMIT = b.comment("Most AI requests allowed per real-world day. After this Solace goes quiet until tomorrow. 0 = no limit.")
                 .defineInRange("dailyRequestLimit", 400, 0, 1_000_000);
         b.pop();
 
@@ -151,6 +153,11 @@ public final class SolaceConfig {
                 .define("defendAgainstPlayers", false);
         MAX_MINE_COUNT = b.comment("Most blocks Solace will mine for one request.")
                 .defineInRange("maxMineCount", 32, 1, 256);
+        ALLOW_POWERS = b.comment("Solace's powers: heal you, bless you with effects, change weather and time, strike or banish monsters,",
+                        "reveal hidden creatures, find ores and structures, carry you to saved places.")
+                .define("allowPowers", true);
+        ALLOW_CONJURING = b.comment("Solace can create items out of nothing (precious items only when it trusts you, and rarely).")
+                .define("allowConjuring", true);
         b.pop();
 
         SPEC = b.build();

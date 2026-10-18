@@ -8,8 +8,10 @@ Solace shows up about 30 seconds after you join a world. It's a quiet, pale figu
 
 ## What it can do
 
-- **Talks like a real person.** Chat normally near Solace, or start a message with "Solace". It can use almost any AI service (see below), or pre-written lines if you don't have one.
-- **Does what you ask.** "follow me", "stay here", "guard me", "mine 10 iron", "chop some wood", "pick up the items", "build a shelter", "craft a stone pickaxe", "light this place up", "give me your cobblestone", "remember this place as home", "go home"
+- **Talks like a real person.** Chat normally near Solace, or start a message with "Solace". Every word comes from an AI (almost any AI service works, see below). Nothing is pre-written.
+- **Not a player. Something else.** Solace can't be hurt, hovers, moves silently and blinks in and out of existence. It sees everything: where you are, what you carry, what's buried in the stone around you, how many times you've died, even what time it is in the real world.
+- **Has powers.** It can heal you, bless you with effects, change the weather and time, strike monsters with lightning or banish them, make hidden creatures glow, find any ore or structure, conjure items out of nothing, and carry you home.
+- **Does what you ask.** "follow me", "stay here", "guard me", "mine 10 iron", "chop some wood", "pick up the items", "build a shelter", "craft a stone pickaxe", "light this place up", "give me your cobblestone", "remember this place as home", "take me home", "where's the nearest village?", "make it day", "heal me"
 - **Remembers you.** Your name, what you like, what you did, how you treated it. It even remembers you **across different worlds**.
 - **Voice chat (optional).** Hold **G** to talk with your mic, and hear Solace speak.
 - **A real story.** 4 acts, 7 journal pages, the Watcher, a boss fight, and **4 endings** (one is secret).
@@ -21,7 +23,7 @@ Solace shows up about 30 seconds after you join a world. It's a quiet, pale figu
 2. Download `solace-1.0.0.jar` from the [Releases page](https://github.com/remitoshniwal/solace/releases/latest) and put it in your `.minecraft/mods` folder.
 3. Start Minecraft with the NeoForge profile, open a world, wait 30 seconds.
 
-It works right away with pre-written lines. To give it a real AI brain, keep reading.
+Solace needs an AI brain to talk. Setting one up takes about two minutes and can be free; see below.
 
 ## Give Solace an AI brain
 
@@ -40,7 +42,6 @@ No files to edit. Everything is in game:
 | OpenRouter | Some free models, many paid |
 | OpenAI, Anthropic (Claude), DeepSeek, Mistral, xAI, Together, Cerebras | Paid (some have free tiers) |
 | Custom | Any other "OpenAI-compatible" server |
-| No AI | Free, pre-written lines |
 
 The other pages set up **Voice**, **Story & Horror** (turn scares down or off) and **Abilities & Chat**. **Advanced...** shows every setting.
 
@@ -54,7 +55,7 @@ More detail, including recommended models and costs: [docs/PROVIDERS.md](docs/PR
   - Don't show it on stream or in screenshots (the setup screen hides it unless you click **Show**).
   - It's saved in `config/solace-common.toml` in your Minecraft folder: **never share that file** or put it in a modpack.
 - **Paid providers charge per message.** Each Solace reply is one request. Built-in limits stop surprise bills:
-  - **Daily limit** on the AI Brain page (default 400 replies a day; after that Solace uses pre-written lines until tomorrow)
+  - **Daily limit** on the AI Brain page (default 400 replies a day; after that Solace goes quiet until tomorrow)
   - At most 12 requests a minute (change in **Advanced...**)
   - **Talks on its own** (Abilities & Chat page) also uses requests. Turn it off to save more.
 - Check `/solace status` to see how many requests were used today.

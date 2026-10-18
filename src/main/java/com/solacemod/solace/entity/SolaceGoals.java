@@ -114,10 +114,11 @@ public final class SolaceGoals {
             solace.getLookControl().setLookAt(owner, 10F, solace.getMaxHeadXRot());
             if (--repathTimer > 0) return;
             repathTimer = 10;
-            if (solace.distanceToSqr(owner) > 24 * 24) {
-                teleportNear(solace, owner);
+            // Solace doesn't chase you across the world. It just... appears behind you.
+            if (solace.distanceToSqr(owner) > 14 * 14 || (solace.getNavigation().isDone() && solace.distanceToSqr(owner) > 8 * 8)) {
+                solace.blinkBehind(owner);
             } else {
-                solace.getNavigation().moveTo(owner, solace.distanceToSqr(owner) > 12 * 12 ? 1.35 : 1.1);
+                solace.getNavigation().moveTo(owner, 1.15);
             }
         }
     }

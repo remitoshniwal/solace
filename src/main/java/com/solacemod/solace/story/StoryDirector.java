@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Runs the story: when Solace first appears, when each act starts, the scripted "beats" (pages, the Watcher,
+ * Runs the story: when Solace first appears, when each act starts, the timed story "beats" (pages, the Watcher,
  * fake messages...), the final question, and the four endings.
  */
 public final class StoryDirector {
@@ -84,10 +84,9 @@ public final class StoryDirector {
         String prompt = late
                 ? "The player just logged back in after being gone for " + away + ". You waited and counted every second. React (clingy, hurt, relieved)."
                 : "The player just came back after " + away + " away. Greet them warmly.";
-        String line = ScriptedBrain.pick(late ? StoryText.ON_RETURN_LATE : StoryText.ON_RETURN);
         Scheduler.later(60, () -> {
             if (player.isRemoved()) return;
-            SolaceBrain.event(player, prompt, line, true);
+            SolaceBrain.event(player, prompt, true);
             // Like Maren's journal: come back after a long time and the lights are out.
             if (late && story.act >= 3 && awayMinutes >= 60) HorrorDirector.torchesOut(player, 6, false);
         });
@@ -174,12 +173,9 @@ public final class StoryDirector {
 
         SolaceEntity solace = SolaceManager.spawnNear(player, story, true);
         if (solace != null) Sounds.playFor(player, solace.position(), Sounds.get("block.amethyst_block.resonate"), 1.0F, 0.5F);
-        String prompt = metBefore
-                ? "You just appeared in this new world, behind the player. You recognize them from another world. Greet them; let them notice that you remember."
-                : "You just appeared for the very first time in this world, a few blocks behind the player. They can see you. Introduce yourself shyly and ask their name.";
-        String line = metBefore ? StoryText.MEET_AGAIN : StoryText.MEET;
+        String prompt = metBefore ? StoryText.MEET_AGAIN : StoryText.MEET;
         Scheduler.later(40, () -> {
-            if (!player.isRemoved()) SolaceBrain.event(player, prompt, line, true);
+            if (!player.isRemoved()) SolaceBrain.event(player, prompt, true);
         });
         if (!AiService.configured() && SolaceBrain.isAdmin(player)) {
             Scheduler.later(120, () -> player.sendSystemMessage(SolaceBrain.setupMessage(StoryText.SETUP_HINT)));
@@ -190,19 +186,16 @@ public final class StoryDirector {
         switch (act) {
             case 2 -> {
                 HorrorDirector.glitchScreen(player, 0, 25, "");
-                SolaceBrain.event(player, "For a second the whole world flickered. You feel like you've been here before. Mention it, then insist you're fine.",
-                        "Did the world just... flicker? Nevermind. I'm fine.", true);
+                SolaceBrain.event(player, "For a second the whole world flickered. You feel like you've been here before. Mention it, then insist you're fine.", true);
             }
-            case 3 -> SolaceBrain.event(player, "You've decided to tell the player part of the truth: there was someone here before them. Maren. She left. Say it.",
-                    "There was someone before you. Her name was Maren. She left. Everyone leaves.", true);
+            case 3 -> SolaceBrain.event(player, "You've decided to tell the player part of the truth: there was someone here before them. Maren. She left. Say it.", true);
             case 4 -> {
                 if (story.trust <= -40) {
                     forcedHollow(player, story);
                     return;
                 }
                 deliverFragment(player, story, 6, Delivery.WATCHER_CLOSE);
-                SolaceBrain.event(player, "You can tell the player is about to learn everything about you and Maren. You feel cornered and frightened.",
-                        "You know now. Don't you.", true);
+                SolaceBrain.event(player, "You can tell the player is about to learn everything about you and Maren. You feel cornered and frightened.", true);
             }
             default -> {
             }
@@ -211,20 +204,17 @@ public final class StoryDirector {
 
     private static void runBeat(ServerPlayer player, PlayerStory story, String id) {
         switch (id) {
-            case "ask_name" -> SolaceBrain.event(player, "Ask the player what you should call them, or ask about something they like. Be curious.",
-                    "What should I call you? I want to remember.", true);
+            case "ask_name" -> SolaceBrain.event(player, "Ask the player what you should call them, or ask about something they like. Be curious.", true);
             case "first_footsteps" -> {
                 HorrorDirector.footsteps(player);
-                Scheduler.later(80, () -> SolaceBrain.event(player, "You both just heard footsteps that weren't the player's. Say something nervous, then brush it off.",
-                        "Did you hear that? ...Probably nothing.", true));
+                Scheduler.later(80, () -> SolaceBrain.event(player, "You both just heard footsteps that weren't the player's. Say something nervous, then brush it off.", true));
             }
             case "frag1" -> deliverFragment(player, story, 0, Delivery.GROUND);
             case "watcher1" -> HorrorDirector.spawnWatcher(player, 40, 60, 20 * 40, 22, -1);
             case "frag2" -> deliverFragment(player, story, 1, Delivery.POCKET);
             case "fake_join" -> {
                 HorrorDirector.fakeJoin(player, "Maren");
-                Scheduler.later(120, () -> SolaceBrain.event(player, "A chat message just said 'Maren joined the game', then she left again. The player may ask. Deny knowing her.",
-                        "Who? I don't know anyone called that. It's just static.", true));
+                Scheduler.later(120, () -> SolaceBrain.event(player, "A chat message just said 'Maren joined the game', then she left again. The player may ask. Deny knowing her.", true));
             }
             case "frag3" -> deliverFragment(player, story, 2, Delivery.WATCHER_FAR);
             case "sign1" -> HorrorDirector.placeSign(player, new String[]{"DON'T", "PROMISE", "IT", "ANYTHING"});
@@ -234,8 +224,7 @@ public final class StoryDirector {
             case "defiant" -> {
                 MinecraftServer server = player.getServer();
                 if (server != null) story.defiantUntilTick = server.getTickCount() + 20 * 60 * 5;
-                SolaceBrain.event(player, "You're hurt and upset, and for the next few minutes you don't want to do what the player asks. Tell them.",
-                        "I don't feel like helping right now.", true);
+                SolaceBrain.event(player, "You're hurt and upset, and for the next few minutes you won't do anything the player asks. Tell them.", true);
             }
             case "frag6" -> deliverFragment(player, story, 5, Delivery.WATCHER_FAR);
             default -> {
@@ -295,14 +284,9 @@ public final class StoryDirector {
             story.addEvent("the player found torn page " + (idx + 1) + " of Maren's journal");
             String excerpt = StoryText.FRAGMENTS.get(idx).replace('\n', ' ');
             if (excerpt.length() > 160) excerpt = excerpt.substring(0, 160) + "...";
-            String scripted = switch (Math.min(story.act, 4)) {
-                case 1, 2 -> "Where did you get that? Throw it away. It's just old paper.";
-                case 3 -> "Stop reading those. She didn't understand.";
-                default -> "So now you know.";
-            };
             if (storyOn()) {
                 SolaceBrain.event(player, "The player just picked up torn page " + (idx + 1) + "/7 of Maren's journal. It reads: \"" + excerpt
-                        + "\" React according to your current act.", scripted, true);
+                        + "\" React according to your current act.", true);
             }
             return;
         }
@@ -318,10 +302,9 @@ public final class StoryDirector {
         story.lastChoicePromptTick = server.getTickCount();
         SolaceEntity solace = SolaceManager.find(server, story);
         if (again) {
-            SolaceBrain.event(player, "The player still hasn't answered your question (will they stay with you forever?). Ask again, more desperate.",
-                    "Please. I asked you something.", true);
+            SolaceBrain.event(player, "The player still hasn't answered your question (will they stay with you forever?). Ask again, more desperate.", true);
         } else {
-            SolaceBrain.sayScripted(player, solace, StoryText.QUESTION, "sad");
+            SolaceBrain.event(player, StoryText.QUESTION, true);
         }
         Scheduler.later(again ? 80 : 30, () -> sendChoices(player, story));
     }
@@ -365,7 +348,7 @@ public final class StoryDirector {
         switch (option) {
             case "stay" -> {
                 story.ending = Ending.FOREVER;
-                SolaceBrain.sayScripted(player, s, StoryText.END_FOREVER_SOLACE, "happy");
+                SolaceBrain.event(player, StoryText.END_FOREVER, true);
                 SolaceManager.updateForm(s, story);
                 Scheduler.later(60, () -> {
                     HorrorDirector.spawnWatcher(player, 18, 24, 20 * 12, 8, -1);
@@ -375,7 +358,7 @@ public final class StoryDirector {
             }
             case "erase" -> {
                 story.ending = Ending.ERASE;
-                SolaceBrain.sayScripted(player, s, StoryText.END_ERASE_SOLACE, "sad");
+                SolaceBrain.lastWords(player, StoryText.END_ERASE);
                 Scheduler.later(60, () -> SolaceManager.remove(server, story));
                 Scheduler.later(120, () -> finishEnding(player, story, Ending.ERASE, "Solace is gone. The world is very quiet. Maren is still out there."));
                 Scheduler.later(20 * 60 * 5, () -> {
@@ -388,7 +371,7 @@ public final class StoryDirector {
                     return "Solace doesn't trust you enough for that.";
                 }
                 story.ending = Ending.TOGETHER;
-                SolaceBrain.sayScripted(player, s, StoryText.END_TOGETHER_SOLACE, "sad");
+                SolaceBrain.event(player, StoryText.END_TOGETHER, true);
                 SolaceManager.updateForm(s, story);
                 Scheduler.later(80, () -> {
                     HorrorDirector.spawnWatcher(player, 10, 14, 20 * 20, 4, Fragments.TOGETHER_LETTER);
@@ -398,7 +381,7 @@ public final class StoryDirector {
             }
             case "release" -> {
                 story.bossActive = true;
-                SolaceBrain.sayScripted(player, s, StoryText.END_RELEASE_START, "angry");
+                SolaceBrain.event(player, StoryText.END_RELEASE_START, true);
                 Scheduler.later(50, () -> startBoss(player, story, s));
             }
             default -> {
@@ -416,7 +399,7 @@ public final class StoryDirector {
         if (solace == null) solace = SolaceManager.summon(player, story);
         if (solace == null) return;
         story.bossActive = true;
-        SolaceBrain.sayScripted(player, solace, StoryText.FORCED_HOLLOW, "angry");
+        SolaceBrain.event(player, StoryText.FORCED_HOLLOW, true);
         final SolaceEntity s = solace;
         Scheduler.later(60, () -> startBoss(player, story, s));
     }
@@ -449,7 +432,7 @@ public final class StoryDirector {
         Fragments.dropAt(level, solace.position(), Fragments.RELEASE_LETTER);
         ServerPlayer player = server.getPlayerList().getPlayer(ownerId);
         if (player == null) return;
-        SolaceBrain.display(player, null, story, StoryText.END_RELEASE_WIN, "sad");
+        SolaceBrain.lastWords(player, StoryText.END_RELEASE_WIN);
         Scheduler.later(100, () -> {
             HorrorDirector.spawnWatcher(player, 10, 14, 20 * 15, 4, -1);
             Scheduler.later(80, () -> HorrorDirector.fakeChat(player, "Maren", "thank you."));
@@ -467,7 +450,7 @@ public final class StoryDirector {
         player.serverLevel().setWeatherParameters(20 * 60 * 5, 0, false, false);
         if (died) {
             story.changeTrust(-5);
-            Scheduler.later(60, () -> SolaceBrain.sayScripted(player, solace, StoryText.BOSS_PLAYER_DIED, "glitch"));
+            Scheduler.later(60, () -> SolaceBrain.event(player, StoryText.BOSS_PLAYER_DIED, true));
         }
     }
 

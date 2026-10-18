@@ -284,7 +284,16 @@ public class SolaceEntity extends PathfinderMob {
     @Override
     public void tick() {
         super.tick();
-        if (level().isClientSide) return;
+        if (level().isClientSide) {
+            // Ash drifting off Solace. Thicker as the story darkens.
+            int chance = getForm() == FORM_NORMAL ? 6 : 2;
+            if (random.nextInt(chance) == 0) {
+                level().addParticle(getForm() == FORM_NORMAL ? ParticleTypes.WHITE_ASH : ParticleTypes.ASH,
+                        getRandomX(0.6), getRandomY(), getRandomZ(0.6), 0, 0.02, 0);
+            }
+            return;
+        }
+        if (hurtReactCooldown > 0) hurtReactCooldown--;
         // A stale copy (e.g. one left in an unloaded chunk after Solace was re-summoned) removes itself.
         if ((tickCount == 1 || tickCount % 100 == 0) && !SolaceManager.isCurrent(this)) {
             if (bossEvent != null) bossEvent.removeAllPlayers();
@@ -319,7 +328,7 @@ public class SolaceEntity extends PathfinderMob {
         if (!phaseTwo && getHealth() < getMaxHealth() * 0.5F) {
             phaseTwo = true;
             getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.4);
-            SolaceBrain.sayScripted(owner, this, "Why won't you just STAY?", "glitch");
+            SolaceBrain.event(owner, com.solacemod.solace.story.StoryText.BOSS_PHASE_TWO, true);
             spawnVisualLightning(level, owner.blockPosition());
         }
         if (--abilityCooldown > 0) return;
@@ -380,19 +389,71 @@ public class SolaceEntity extends PathfinderMob {
 
     // ---------- Damage / death ----------
 
+    private int hurtReactCooldown;
+
+    /**
+     * Solace can't be hurt. Hitting it does nothing except make it notice (and blink behind you).
+     * Only its boss form, the Hollow, can be damaged, so the "Free Maren" ending can be won.
+     */
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        if (level().isClientSide || isInvulnerableTo(source)) return super.hurt(source, amount);
-        if (!isHollow() && amount >= getHealth() && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
-            // Solace can't really die. It vanishes... and comes back later.
-            SolaceManager.fakeDeath(this);
-            return false;
-        }
-        boolean result = super.hurt(source, amount);
-        if (result && !isHollow() && source.getEntity() instanceof ServerPlayer player && isOwner(player)) {
+        if (isHollow()) return super.hurt(source, amount);
+        if (level().isClientSide) return false;
+        if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) return super.hurt(source, amount); // /kill or the void; it returns anyway
+        if (source.getEntity() instanceof ServerPlayer player && isOwner(player) && hurtReactCooldown <= 0) {
+            hurtReactCooldown = 60;
+            ServerLevel level = (ServerLevel) level();
+            level.sendParticles(ParticleTypes.SMOKE, getX(), getY() + 1, getZ(), 15, 0.3, 0.6, 0.3, 0.01);
+            Sounds.playAt(this, "entity.enderman.teleport", 0.6F, 0.4F);
+            blinkBehind(player);
             SolaceBrain.onOwnerHurtSolace(player, this);
         }
-        return result;
+        return false;
+    }
+
+    @Override
+    public boolean isInvulnerableTo(DamageSource source) {
+        if (isHollow()) return super.isInvulnerableTo(source);
+        return !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY);
+    }
+
+    @Override
+    public void knockback(double strength, double x, double z) {
+        if (isHollow()) super.knockback(strength, x, z);
+    }
+
+    @Override
+    public boolean causeFallDamage(float distance, float multiplier, DamageSource source) {
+        return false;
+    }
+
+    /** Solace makes no footstep sounds. */
+    @Override
+    protected void playStepSound(BlockPos pos, BlockState state) {
+    }
+
+    /** Vanishes and reappears just behind the target, where they aren't looking. */
+    public void blinkBehind(LivingEntity target) {
+        ServerLevel level = (ServerLevel) level();
+        Vec3 back = target.getLookAngle().multiply(-1, 0, -1);
+        if (back.lengthSqr() < 1.0E-4) back = new Vec3(0, 0, 1);
+        back = back.normalize();
+        for (double dist : new double[]{2.5, 3.5, 1.8}) {
+            Vec3 dest = target.position().add(back.scale(dist));
+            BlockPos bp = BlockPos.containing(dest);
+            for (int dy = 1; dy >= -2; dy--) {
+                BlockPos p = bp.above(dy);
+                if (level.getBlockState(p.below()).getCollisionShape(level, p.below()).isEmpty()) continue;
+                Vec3 to = new Vec3(p.getX() + 0.5, p.getY(), p.getZ() + 0.5);
+                if (!level.noCollision(this, getBoundingBox().move(to.subtract(position())))) continue;
+                level.sendParticles(ParticleTypes.ASH, getX(), getY() + 1, getZ(), 25, 0.3, 0.8, 0.3, 0.01);
+                getNavigation().stop();
+                moveTo(to.x, to.y, to.z, target.getYRot(), 0);
+                level.sendParticles(ParticleTypes.ASH, to.x, to.y + 1, to.z, 25, 0.3, 0.8, 0.3, 0.01);
+                return;
+            }
+        }
+        SolaceGoals.teleportNear(this, target);
     }
 
     @Override
@@ -415,7 +476,7 @@ public class SolaceEntity extends PathfinderMob {
 
     @Override
     public boolean isPushable() {
-        return !isHollow();
+        return false;
     }
 
     // ---------- Interaction ----------
@@ -434,7 +495,7 @@ public class SolaceEntity extends PathfinderMob {
         ItemStack leftover = inventory.addItem(copy);
         int given = copy.getCount() - leftover.getCount();
         if (given <= 0) {
-            SolaceBrain.sayScripted((ServerPlayer) player, this, "My pockets are full.", "calm");
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("Solace's pockets are full."), true);
             return InteractionResult.CONSUME;
         }
         player.setItemInHand(hand, leftover);

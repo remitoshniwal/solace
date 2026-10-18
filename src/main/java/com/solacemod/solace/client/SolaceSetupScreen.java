@@ -5,7 +5,6 @@ import com.solacemod.solace.ai.Http;
 import com.solacemod.solace.ai.LlmException;
 import com.solacemod.solace.ai.LlmProvider;
 import com.solacemod.solace.ai.LlmRequest;
-import com.solacemod.solace.ai.Protocol;
 import com.solacemod.solace.ai.ProviderPreset;
 import com.solacemod.solace.ai.ProviderSettings;
 import com.solacemod.solace.config.ClientConfig;
@@ -55,7 +54,6 @@ public final class SolaceSetupScreen extends Screen {
         PROVIDER_NOTES.put("together", "Paid.");
         PROVIDER_NOTES.put("cerebras", "Paid, has a free tier. Very fast.");
         PROVIDER_NOTES.put("custom", "Any OpenAI-compatible server. Fill in Server URL and Model.");
-        PROVIDER_NOTES.put("scripted", "No AI. Pre-written lines. Free and offline.");
     }
 
     private static final List<Double> SPEEDS = List.of(0.5, 1.0, 2.0, 5.0, 10.0);
@@ -98,6 +96,8 @@ public final class SolaceSetupScreen extends Screen {
     private boolean building;
     private boolean combat;
     private boolean crafting;
+    private boolean powers;
+    private boolean conjuring;
     private String listenMode;
     private boolean ambient;
     private boolean crossWorld;
@@ -142,6 +142,8 @@ public final class SolaceSetupScreen extends Screen {
         building = SolaceConfig.ALLOW_BUILDING.get();
         combat = SolaceConfig.ALLOW_COMBAT.get();
         crafting = SolaceConfig.ALLOW_CRAFTING.get();
+        powers = SolaceConfig.ALLOW_POWERS.get();
+        conjuring = SolaceConfig.ALLOW_CONJURING.get();
         listenMode = SolaceConfig.LISTEN_MODE.get();
         ambient = SolaceConfig.AMBIENT_CHATTER.get();
         crossWorld = SolaceConfig.CROSS_WORLD_MEMORY.get();
@@ -164,6 +166,8 @@ public final class SolaceSetupScreen extends Screen {
         SolaceConfig.ALLOW_BUILDING.set(building);
         SolaceConfig.ALLOW_COMBAT.set(combat);
         SolaceConfig.ALLOW_CRAFTING.set(crafting);
+        SolaceConfig.ALLOW_POWERS.set(powers);
+        SolaceConfig.ALLOW_CONJURING.set(conjuring);
         SolaceConfig.LISTEN_MODE.set(listenMode);
         SolaceConfig.AMBIENT_CHATTER.set(ambient);
         SolaceConfig.CROSS_WORLD_MEMORY.set(crossWorld);
@@ -290,7 +294,7 @@ public final class SolaceSetupScreen extends Screen {
                 }));
 
         ProviderPreset preset = ProviderPreset.get(provider);
-        boolean scripted = preset != null && preset.protocol() == Protocol.SCRIPTED;
+        boolean scripted = preset == null; // unknown provider: nothing to fill in
         boolean needsKey = preset != null && preset.needsKey();
         int row = 1;
         if (!scripted) {
@@ -430,22 +434,27 @@ public final class SolaceSetupScreen extends Screen {
         addRenderableWidget(toggle(controlX() + half + 3, rowY(0), half, "Build", building, v -> building = v, "Build shelters, walls, bridges, place torches."));
         addRenderableWidget(toggle(controlX(), rowY(1), half, "Fight", combat, v -> combat = v, "Fight mobs and protect you."));
         addRenderableWidget(toggle(controlX() + half + 3, rowY(1), half, "Craft", crafting, v -> crafting = v, "Craft items from what's in its pockets."));
-        label(2, "Hears you when");
+        label(2, "Powers");
+        addRenderableWidget(toggle(controlX(), rowY(2), half, "Powers", powers, v -> powers = v,
+                "Heal, bless, weather, time, smite and banish monsters, reveal, find anything, carry you home."));
+        addRenderableWidget(toggle(controlX() + half + 3, rowY(2), half, "Conjure items", conjuring, v -> conjuring = v,
+                "Create items out of nothing. Precious items only when Solace trusts you."));
+        label(3, "Hears you when");
         addRenderableWidget(CycleButton.<String>builder(v -> Component.literal(switch (v) {
                     case "prefix" -> "Message starts with \"Solace\"";
                     case "always" -> "Every chat message";
                     default -> "It's nearby or you say its name";
                 })).withValues(List.of("nearby", "prefix", "always")).withInitialValue(listenMode).displayOnlyValue()
-                .create(controlX(), rowY(2), controlWidth(), 20, Component.literal("Hears you"), (b, v) -> listenMode = v));
-        label(3, "Talks on its own");
+                .create(controlX(), rowY(3), controlWidth(), 20, Component.literal("Hears you"), (b, v) -> listenMode = v));
+        label(4, "Talks on its own");
         addRenderableWidget(CycleButton.onOffBuilder(ambient)
                 .withTooltip(v -> Tooltip.create(Component.literal("Comments on night falling, low health, caves... Uses AI requests.")))
-                .create(controlX(), rowY(3), controlWidth(), 20, Component.literal("Talks on its own"), (b, v) -> ambient = v));
-        label(4, "Remembers you");
+                .create(controlX(), rowY(4), controlWidth(), 20, Component.literal("Talks on its own"), (b, v) -> ambient = v));
+        label(5, "Remembers you");
         addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "Across all worlds" : "Only in this world"))
                 .withValues(List.of(true, false)).withInitialValue(crossWorld).displayOnlyValue()
-                .create(controlX(), rowY(4), controlWidth(), 20, Component.literal("Memory"), (b, v) -> crossWorld = v));
-        note(rowY(5) + 2, Component.literal("Give Solace items by right-clicking it while holding them."));
+                .create(controlX(), rowY(5), controlWidth(), 20, Component.literal("Memory"), (b, v) -> crossWorld = v));
+        note(rowY(6) + 2, Component.literal("Give Solace items by right-clicking it while holding them."));
     }
 
     // ---------- Widgets ----------
@@ -493,7 +502,7 @@ public final class SolaceSetupScreen extends Screen {
             case "together" -> "Together AI";
             case "cerebras" -> "Cerebras";
             case "custom" -> "Custom (OpenAI-compatible)";
-            default -> "No AI (pre-written lines)";
+            default -> id;
         });
     }
 

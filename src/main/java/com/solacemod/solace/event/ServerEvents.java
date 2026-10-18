@@ -5,12 +5,10 @@ import com.solacemod.solace.command.SolaceCommand;
 import com.solacemod.solace.horror.HorrorDirector;
 import com.solacemod.solace.story.PlayerStory;
 import com.solacemod.solace.story.Scheduler;
-import com.solacemod.solace.story.ScriptedBrain;
 import com.solacemod.solace.story.SolaceBrain;
 import com.solacemod.solace.story.SolaceManager;
 import com.solacemod.solace.story.StoryData;
 import com.solacemod.solace.story.StoryDirector;
-import com.solacemod.solace.story.StoryText;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -71,8 +69,7 @@ public final class ServerEvents {
         if (!(event.getEntity() instanceof ServerPlayer player) || event.isEndConquered() || player.getServer() == null) return;
         PlayerStory story = StoryData.get(player.getServer()).getIfPresent(player.getUUID());
         if (story == null || !story.met || story.bossActive) return;
-        Scheduler.later(40, () -> SolaceBrain.event(player, "The player just died and respawned (death #" + story.deaths + "). React.",
-                ScriptedBrain.pick(StoryText.ON_DEATH), true));
+        Scheduler.later(40, () -> SolaceBrain.event(player, "The player just died and respawned (death #" + story.deaths + "). React.", true));
     }
 
     @SubscribeEvent
@@ -82,7 +79,7 @@ public final class ServerEvents {
         holder.value().display().ifPresent(display -> {
             if (!display.shouldAnnounceChat()) return;
             String title = display.getTitle().getString();
-            SolaceBrain.event(player, "The player just earned the advancement \"" + title + "\". Comment briefly.", null, false);
+            SolaceBrain.event(player, "The player just earned the advancement \"" + title + "\". Comment briefly.", false);
         });
     }
 

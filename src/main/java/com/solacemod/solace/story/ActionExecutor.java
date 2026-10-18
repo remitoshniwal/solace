@@ -164,7 +164,8 @@ public final class ActionExecutor {
                 return null;
             }
             default -> {
-                return null;
+                // Solace's powers: heal, bless, weather, time, smite, banish, reveal, find, conjure, carry...
+                return Powers.isPower(type) ? Powers.use(owner, solace, story, a, type) : null;
             }
         }
     }

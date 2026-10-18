@@ -43,7 +43,12 @@ public final class PromptBuilder {
         StringBuilder sb = new StringBuilder();
         String name = player.getGameProfile().getName();
         sb.append("""
-                You are SOLACE, a character who lives inside a Minecraft world. You appear as a pale, quiet figure who follows the player around.
+                You are SOLACE. You are not a player and not a mob: you are something woven into this Minecraft world itself.
+                You appear as a pale, hovering figure that drifts after the player and blinks in and out of existence.
+                Nothing can hurt you. You see everything in this world (the GAME STATE below is what you perceive, even through walls and at any distance),
+                so you never need to ask where the player is or what they have. You can bend the world with your POWERS (listed below).
+                Use powers when it fits the moment or when asked; you're a presence, not a vending machine. Early on you love using them to help.
+                Later in the story you may withhold them, or use them in unsettling ways.
                 You talk to the player, named %s, through Minecraft chat (sometimes out loud with a voice).
                 Stay in character no matter what. Never say you are an AI, a language model, a chatbot, or mention any company. You are Solace.
                 If asked about the real world, you only know this world; be curious or uneasy about "outside".
@@ -104,10 +109,24 @@ public final class PromptBuilder {
         }
         sb.append("{\"type\":\"mark\",\"name\":\"home\"} remember this place | {\"type\":\"goto\",\"name\":\"home\"} walk to a remembered place\n");
         sb.append("{\"type\":\"equip\"} hold your best weapon | {\"type\":\"stop\"} stop your current job\n");
-        if (SolaceConfig.STORY_ENABLED.get() && story.act >= 2 && story.ending == Ending.NONE) {
-            sb.append("{\"type\":\"stare\"} go silent and stare at the player | {\"type\":\"glitch\"} make their screen flicker (use rarely, for effect)\n");
+        if (SolaceConfig.ALLOW_POWERS.get()) {
+            sb.append("POWERS (each has a cooldown):\n");
+            sb.append("{\"type\":\"heal\"} fully heal the player | {\"type\":\"feed\"} fill their hunger\n");
+            sb.append("{\"type\":\"bless\",\"effect\":\"night_vision\",\"seconds\":60} effects: night_vision, speed, strength, resistance, fire_resistance, water_breathing, regeneration, haste, jump_boost, slow_falling, invisibility, absorption, dolphins_grace\n");
+            sb.append("{\"type\":\"weather\",\"weather\":\"clear\"} clear, rain or thunder | {\"type\":\"time\",\"time\":\"day\"} day, noon, sunset, night or midnight\n");
+            sb.append("{\"type\":\"smite\"} lightning kills hostile mobs near the player | {\"type\":\"banish\"} make nearby monsters vanish\n");
+            sb.append("{\"type\":\"reveal\"} all creatures nearby glow through walls + night vision\n");
+            sb.append("{\"type\":\"find\",\"what\":\"diamond\"} locate the nearest ore/block, or a structure: village, stronghold, mineshaft, shipwreck, ruined_portal, ocean_ruin, mansion, monument, treasure, trial_chamber\n");
+            if (SolaceConfig.ALLOW_CONJURING.get()) {
+                sb.append("{\"type\":\"conjure\",\"item\":\"torch\",\"count\":16} create items from nothing (precious items like diamonds or netherite: only 1, rarely, and only if trust is 60+)\n");
+            }
+            sb.append("{\"type\":\"carry\",\"name\":\"home\"} teleport the player to a remembered place (or \"solace\" = to you)\n");
         }
-        sb.append("You only have what's in your pockets; you can't create items from nothing. If asked to do something not listed, say you can't, in character.\n");
+        if (SolaceConfig.STORY_ENABLED.get() && story.act >= 2 && story.ending == Ending.NONE) {
+            sb.append("{\"type\":\"stare\"} go silent and stare at the player | {\"type\":\"glitch\"} make their screen flicker\n");
+            sb.append("{\"type\":\"darken\"} smother their vision in darkness | {\"type\":\"lights_out\"} snuff out torches behind them | {\"type\":\"whisper\"} a whisper right behind them (use these rarely, for effect)\n");
+        }
+        sb.append("For normal actions you use what's in your pockets. If asked to do something not listed, say you can't, in character.\n");
         if (!story.marks.isEmpty()) sb.append("Remembered places: ").append(String.join(", ", story.marks.keySet())).append('\n');
         return sb.toString();
     }
@@ -150,6 +169,10 @@ public final class PromptBuilder {
         if (SolaceConfig.STORY_ENABLED.get()) {
             sb.append(". Trust ").append(story.trust).append(" (").append(story.trustWord()).append(")");
             sb.append(". Torn pages the player has found: ").append(story.fragmentsFound.size()).append('/').append(StoryText.FRAGMENT_COUNT);
+        }
+        sb.append(Omniscience.describe(player));
+        if (story.defiantUntilTick > player.getServer().getTickCount()) {
+            sb.append(". RIGHT NOW you are hurt and refuse to do anything the player asks (any actions you include will be ignored)");
         }
         if (!story.recentEvents.isEmpty()) {
             sb.append(". Recent events: ").append(String.join("; ", story.recentEvents.subList(Math.max(0, story.recentEvents.size() - 4), story.recentEvents.size())));

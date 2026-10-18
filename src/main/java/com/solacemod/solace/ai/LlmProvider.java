@@ -19,7 +19,6 @@ public interface LlmProvider {
             case OPENAI -> new OpenAiCompatibleProvider(settings);
             case ANTHROPIC -> new AnthropicProvider(settings);
             case GEMINI -> new GeminiProvider(settings);
-            case SCRIPTED -> throw new IllegalArgumentException("Scripted mode has no network provider");
         };
     }
 }

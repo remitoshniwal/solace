@@ -144,6 +144,13 @@ public final class AiSelfTest {
         check("groq: thinking model asked to think briefly", JsonParser.parseString(lastBody.get()).getAsJsonObject().get("reasoning_effort").getAsString().equals("low"));
         check("groq: default is gpt-oss-120b", ProviderSettings.resolve("groq", "k", "", "", 10, "").model().equals("openai/gpt-oss-120b"));
 
+        // Provider defaults match current documentation
+        check("deepseek: v4 model, no /v1", ProviderSettings.resolve("deepseek", "k", "", "", 10, "").model().equals("deepseek-v4-flash")
+                && ProviderSettings.resolve("deepseek", "k", "", "", 10, "").baseUrl().equals("https://api.deepseek.com"));
+        check("xai: grok-4.3", ProviderSettings.resolve("xai", "k", "", "", 10, "").model().equals("grok-4.3"));
+        check("openai: gpt-5.4-mini", ProviderSettings.resolve("openai", "k", "", "", 10, "").model().equals("gpt-5.4-mini"));
+        check("scripted provider is gone", ProviderSettings.resolve("scripted", "", "", "", 10, "") == null);
+
         // Anthropic
         ProviderSettings an = ProviderSettings.resolve("anthropic", "ak-test", "", base + "/anthropic", 10, "low");
         out = LlmProvider.create(an).complete(req).get();

@@ -5,7 +5,6 @@ import com.solacemod.solace.ai.Http;
 import com.solacemod.solace.ai.LlmException;
 import com.solacemod.solace.ai.LlmProvider;
 import com.solacemod.solace.ai.LlmRequest;
-import com.solacemod.solace.ai.Protocol;
 import com.solacemod.solace.ai.ProviderSettings;
 import com.solacemod.solace.config.SolaceConfig;
 import net.minecraft.server.MinecraftServer;
@@ -38,14 +37,13 @@ public final class AiService {
     }
 
     private static boolean usable(ProviderSettings s) {
-        return s != null && s.protocol() != Protocol.SCRIPTED && s.problem() == null;
+        return s != null && s.problem() == null;
     }
 
     /** A human readable reason the AI isn't set up, or null if it is. */
     public static String setupProblem() {
         ProviderSettings s = primarySettings();
-        if (s == null) return "Unknown provider '" + SolaceConfig.PROVIDER.get() + "'. Pick one in Solace setup.";
-        if (s.protocol() == Protocol.SCRIPTED) return "Provider is set to 'scripted' (no AI).";
+        if (s == null) return "No AI provider chosen. Pick one in Solace setup.";
         return s.problem();
     }
 
@@ -56,7 +54,7 @@ public final class AiService {
     public static String describe() {
         ProviderSettings s = primarySettings();
         String problem = setupProblem();
-        return problem == null ? s.toString() : "scripted (" + problem + ")";
+        return problem == null ? s.toString() : "not set up (" + problem + ")";
     }
 
     /** Checks the cost limits. Counts the request if allowed. */

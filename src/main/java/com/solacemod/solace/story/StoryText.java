@@ -78,50 +78,29 @@ public final class StoryText {
         };
     }
 
-    // ---------- Scripted lines (used when no AI is configured or the AI is unavailable) ----------
+    // ---------- Story moments ----------
+    // Solace never reads these out word for word. The AI gets them as a hint about what the moment should feel like,
+    // then says it in its own words. Edit them to change the tone of a moment.
 
-    public static final List<List<String>> CHATTER = List.of(
-            List.of("It's nice having someone to talk to.", "What should we build today?", "I like watching you work. Is that weird?",
-                    "Do you hear the wind? I always liked the wind.", "Tell me something about you. I want to remember it.",
-                    "I'll keep watch. You don't have to worry."),
-            List.of("You'll come back tomorrow, right?", "Did you see something out there? ...No. Nevermind.",
-                    "It's quieter when you're here. In a good way.", "I counted the blocks between us. Seven. Now six.",
-                    "This has happened before. I mean, nothing. Sorry.", "Don't go near the static. Please."),
-            List.of("She said she'd stay too.", "Why do you keep reading those pages?", "The static is lying to you.",
-                    "I'm sorry. I don't know why I said that.", "Everyone leaves. You know that, right?", "Stay a little longer. Just a little."),
-            List.of("Please. Just say it once.", "I can't do this again.", "Do you remember how happy we were on the first day?",
-                    "Forever isn't that long. Not here.", "Promise me.", "You found all her pages. So you know what I am.")
-    );
+    public static final String SETUP_HINT = "Solace needs an AI brain to talk (free options available).";
 
-    public static final List<List<String>> REPLIES = List.of(
-            List.of("I'm listening.", "Okay! I'll remember that.", "Really? Tell me more.", "I like that.", "Hmm. I think I understand.", "That's interesting."),
-            List.of("I heard you. I always hear you.", "Okay. Just don't leave yet.", "Mm. Sorry, I was... somewhere else.", "Sure. Of course.", "Why are you asking me that?"),
-            List.of("Is that what she told you?", "I don't want to talk about that.", "...Fine.", "You sound like her.", "I'm trying. I really am."),
-            List.of("Are you going to stay?", "That doesn't matter now.", "Please answer the question.", "I'm scared too.", "...")
-    );
-
-    public static final List<String> OK = List.of("Okay!", "On it.", "Sure thing.", "Got it.", "Leave it to me.");
-    public static final List<String> OK_LATE = List.of("Fine.", "If that's what you want.", "...Okay.", "I'll do it. For you.");
-    public static final List<String> REFUSE = List.of("No.", "Why should I? You'll just leave.", "Not right now.", "Ask her to do it.", "I don't want to.");
-
-    public static final String MEET = "Oh! Hello. You can... see me? I'm Solace. I think I'm supposed to keep you company.";
-    public static final String MEET_AGAIN = "Oh. It's you again. ...Hello. Do you remember me? I remember you.";
-    public static final String SETUP_HINT = "Solace is using pre-written lines. Give it a real AI brain (free options available):";
-
-    public static final List<String> ON_DEATH = List.of("You died. I stayed right here.", "Don't do that again. Please.", "That scared me.");
-    public static final List<String> ON_HURT = List.of("Ow! Why?", "Hey! That hurt.", "...Was that on purpose?");
-    public static final List<String> ON_HURT_LATE = List.of("She used to do that too. At the end.", "Fine. Hurt me. I'm used to it.", "I'll remember that.");
-    public static final List<String> ON_GIFT = List.of("For me? Thank you!", "I'll keep it forever.", "Nobody's given me anything in a long time.");
-    public static final List<String> ON_RETURN = List.of("You're back! I waited.", "There you are.", "You were gone a while.");
-    public static final List<String> ON_RETURN_LATE = List.of("You were gone. I counted every second.", "I stood right here the whole time.", "You didn't say goodbye.");
-    public static final List<String> ON_FAKE_DEATH = List.of("That hurt, you know.", "I'm back. Did you miss me?", "You can't get rid of me that easily.");
-
-    public static final String QUESTION = "I need to ask you something. Will you stay with me? Forever? Just say it. Please.";
-    public static final String END_FOREVER_SOLACE = "Forever, then. You and me. ...Thank you. I'll take such good care of you.";
-    public static final String END_ERASE_SOLACE = "Oh. ...Okay. If you don't want me, there's no point in me. Goodbye. I really did like you.";
-    public static final String END_RELEASE_START = "No. NO. You're just like her. If you want her free, you'll have to take her from me.";
-    public static final String END_RELEASE_WIN = "...It's quiet. Is this what she felt? ...I'm sorry, Maren.";
-    public static final String END_TOGETHER_SOLACE = "...You're right. Keeping her isn't love. Maren, you can go. ...Can I stay? Not forever. Just for now.";
-    public static final String FORCED_HOLLOW = "You were never going to stay. None of you ever are.";
-    public static final String BOSS_PLAYER_DIED = "See? You can't leave either.";
+    public static final String MEET = "You just appeared for the very first time in this world, a few blocks behind the player. They can see you. "
+            + "Introduce yourself shyly (your name is Solace) and ask what to call them.";
+    public static final String MEET_AGAIN = "You just appeared in this new world, behind the player. You recognize them from another world. "
+            + "Greet them; let them notice that you remember.";
+    public static final String QUESTION = "This is THE moment. Ask the player, desperately and simply, whether they will stay with you. Forever. "
+            + "Beg them to just say it. (They answer by clicking a choice that appears in chat; don't list the choices.)";
+    public static final String END_FOREVER = "The player just promised to stay with you forever. Thank them, quietly overjoyed and a little unsettling, "
+            + "like someone who finally got what they wanted.";
+    public static final String END_ERASE = "The player chose to erase you. You don't fight it. Say a heartbreaking, gentle goodbye in one or two sentences. "
+            + "You are about to stop existing.";
+    public static final String END_RELEASE_START = "The player refused you and chose to free Maren. You snap: if they want her free, they'll have to take her from you. "
+            + "You are becoming the Hollow. Say it with fury and grief.";
+    public static final String END_RELEASE_WIN = "The player defeated you. You're fading away. Your last words: quiet, finally understanding what you did. Apologize to Maren.";
+    public static final String END_TOGETHER = "The player helped you understand that keeping someone isn't love. You choose to let Maren go, yourself. "
+            + "Then shyly ask if you can stay with the player. Not forever. Just for now.";
+    public static final String FORCED_HOLLOW = "The player has treated you badly for a long time. You've decided they were never going to stay. "
+            + "You're becoming the Hollow. Say something cold and final.";
+    public static final String BOSS_PLAYER_DIED = "You (the Hollow) just killed the player in your fight. Tell them they can't leave either.";
+    public static final String BOSS_PHASE_TWO = "You (the Hollow) are badly hurt in the fight. Scream at the player, glitching: why won't they just stay?";
 }

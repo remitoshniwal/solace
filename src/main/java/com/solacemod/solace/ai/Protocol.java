@@ -7,7 +7,5 @@ public enum Protocol {
     /** POST {baseUrl}/v1/messages. Anthropic (Claude). */
     ANTHROPIC,
     /** POST {baseUrl}/v1beta/models/{model}:generateContent. Google Gemini. */
-    GEMINI,
-    /** No network at all: pre-written lines and simple keyword commands. */
-    SCRIPTED
+    GEMINI
 }

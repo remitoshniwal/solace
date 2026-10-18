@@ -2,7 +2,6 @@ package com.solacemod.solace.event;
 
 import com.solacemod.solace.config.SolaceConfig;
 import com.solacemod.solace.story.PlayerStory;
-import com.solacemod.solace.story.ScriptedBrain;
 import com.solacemod.solace.story.SolaceBrain;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -34,6 +33,6 @@ final class AmbientChatter {
             return;
         }
         story.lastAmbientTick = now;
-        SolaceBrain.event(player, situation, ScriptedBrain.chatterLine(story), false);
+        SolaceBrain.event(player, situation, false);
     }
 }

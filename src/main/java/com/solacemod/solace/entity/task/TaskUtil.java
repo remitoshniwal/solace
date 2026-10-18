@@ -10,10 +10,10 @@ final class TaskUtil {
     private TaskUtil() {
     }
 
-    /** Solace tells its owner how a job went (pre-written, no AI request). */
+    /** Lets the AI know how a job went, so Solace can tell the player in its own words. */
     static void report(SolaceEntity solace, String text) {
         ServerPlayer owner = solace.getServerOwner();
-        if (owner != null) SolaceBrain.sayScripted(owner, solace, text, "calm");
+        if (owner != null) SolaceBrain.reportJob(owner, text);
     }
 
     /** Starts walking toward a block. Returns false if there's no way to get there. */

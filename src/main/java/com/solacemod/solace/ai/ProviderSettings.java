@@ -24,7 +24,6 @@ public record ProviderSettings(String name, Protocol protocol, String baseUrl, S
 
     /** Returns a problem description if these settings can't possibly work, or null if they look fine. */
     public String problem() {
-        if (protocol == Protocol.SCRIPTED) return null;
         ProviderPreset preset = ProviderPreset.get(name);
         if (isBlank(baseUrl)) return "No baseUrl set for provider '" + name + "'.";
         if (isBlank(model)) return "No model set for provider '" + name + "'.";

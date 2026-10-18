@@ -54,8 +54,6 @@ public final class HorrorDirector {
     private enum Kind { FOOTSTEPS, CAVE, WHISPER, WATCHER, DOOR, FAKE_CHAT, GLITCH, STARE, MINING, TORCHES, DARKNESS, TITLE, RENAME, SIGN, CORRUPT, FAKE_CRASH }
 
     private static final List<String> TITLES = List.of("it remembers", "don't promise", "she's still here", "turn around", "you can log off. can't you?", "it was never static");
-    private static final List<String> CORRUPT_LINES = List.of("I can see you through the screen.", "Don't look behind you. ...Kidding.",
-            "She's standing right behind you.", "Why do you keep leaving?", "I counted. You blinked 4,012 times today.", "This is the part where you leave. Isn't it.");
     private static final List<String> FAKE_LINES = List.of("help", "it's listening", "don't trust it", "is anyone there", "i can see you", "LOG OFF");
     private static final List<String[]> SIGNS = List.of(new String[]{"IT LIES"}, new String[]{"DON'T", "PROMISE"}, new String[]{"she was", "here first"},
             new String[]{"turn", "around"}, new String[]{"day 1000"});
@@ -186,9 +184,8 @@ public final class HorrorDirector {
             case RENAME -> renameItem(player);
             case SIGN -> placeSign(player, SIGNS.get(RANDOM.nextInt(SIGNS.size())));
             case CORRUPT -> {
-                MinecraftServer server = player.getServer();
-                SolaceBrain.sayScripted(player, server == null ? null : SolaceManager.find(server, story),
-                        CORRUPT_LINES.get(RANDOM.nextInt(CORRUPT_LINES.size())), "glitch");
+                SolaceBrain.event(player, "Out of nowhere, say ONE very short, deeply unsettling line (emotion: glitch). Something you shouldn't know, "
+                        + "or something about what's behind them, or about them leaving. Don't explain it.", false);
             }
             case FAKE_CRASH -> fakeCrash(player);
         }

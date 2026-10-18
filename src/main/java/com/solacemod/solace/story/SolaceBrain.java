@@ -27,10 +27,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 /**
- * Solace's "mind": decides when it's being talked to, asks the AI (or the scripted brain), and turns the answer
+ * Solace's "mind": decides when it's being talked to, asks the AI, and turns the answer
  * into chat, actions, memories and trust. Everything here runs on the server thread; the AI call runs in the background.
  */
 public final class SolaceBrain {
@@ -113,31 +112,50 @@ public final class SolaceBrain {
             PENDING.computeIfAbsent(player.getUUID(), k -> new ArrayList<>()).add(line);
             return;
         }
-        request(player, story, line, () -> ScriptedBrain.reply(story, text), true);
+        request(player, story, line, CommandParser.parseCommands(text), true, false);
     }
 
     /**
-     * Something happened that Solace should react to.
+     * Something happened that Solace should react to. The AI decides what (if anything) Solace says.
      *
-     * @param aiPrompt     what to tell the AI, e.g. "The player just died to a creeper."
-     * @param scriptedLine what to say if there's no AI (null = say nothing)
-     * @param important    if false, the event is skipped when the AI is busy or rate limited
+     * @param situation what to tell the AI, e.g. "The player just died to a creeper."
+     * @param important if false, the event is skipped when the AI is busy or rate limited
      */
-    public static void event(ServerPlayer player, String aiPrompt, @Nullable String scriptedLine, boolean important) {
+    public static void event(ServerPlayer player, String situation, boolean important) {
         MinecraftServer server = player.getServer();
         if (server == null) return;
         PlayerStory story = StoryData.get(server).get(player.getUUID());
         if (!story.met || !story.solaceShouldExist()) return;
         if (BUSY.contains(player.getUUID())) {
-            if (important) PENDING.computeIfAbsent(player.getUUID(), k -> new ArrayList<>()).add("[EVENT] " + aiPrompt);
+            if (important) PENDING.computeIfAbsent(player.getUUID(), k -> new ArrayList<>()).add("[EVENT] " + situation);
             return;
         }
-        request(player, story, "[EVENT] " + aiPrompt, () -> scriptedLine == null ? null : SolaceReply.text(scriptedLine), important);
+        request(player, story, "[EVENT] " + situation, List.of(), important, false);
+    }
+
+    /** Solace's final words, spoken even though Solace is leaving the world (used by endings). */
+    public static void lastWords(ServerPlayer player, String situation) {
+        MinecraftServer server = player.getServer();
+        if (server == null) return;
+        PlayerStory story = StoryData.get(server).get(player.getUUID());
+        request(player, story, "[EVENT] " + situation, List.of(), true, true);
+    }
+
+    /** A job (mining, building...) finished or failed. Solace tells the player in its own words. */
+    public static void reportJob(ServerPlayer owner, String result) {
+        MinecraftServer server = owner.getServer();
+        if (server != null) StoryData.get(server).get(owner.getUUID()).addEvent("your job: " + result);
+        event(owner, "Your job just ended. What happened: \"" + result + "\" Tell the player in your own words, briefly.", true);
     }
 
     // ---------- The request ----------
 
-    private static void request(ServerPlayer player, PlayerStory story, String userContent, Supplier<SolaceReply> scripted, boolean important) {
+    /**
+     * @param fallbackActions actions to still carry out (silently) if the AI can't answer, so basic commands keep working
+     * @param ignoreExistence speak even if Solace is gone (last words of an ending)
+     */
+    private static void request(ServerPlayer player, PlayerStory story, String userContent, List<JsonObject> fallbackActions,
+                                boolean important, boolean ignoreExistence) {
         MinecraftServer server = player.getServer();
         if (server == null) return;
         AiService.Gate gate = AiService.gate(server);
@@ -146,12 +164,13 @@ public final class SolaceBrain {
                 player.sendSystemMessage(setupMessage(StoryText.SETUP_HINT));
             }
             if (gate == AiService.Gate.DAILY_LIMIT && HINTED.add(player.getUUID())) {
-                player.sendSystemMessage(Component.literal("[Solace] Daily AI request limit reached (cost_safety.dailyRequestLimit). Using pre-written lines until tomorrow.")
+                player.sendSystemMessage(Component.literal("[Solace] Daily AI request limit reached (change it in Solace setup). Solace is quiet until tomorrow.")
                         .withStyle(ChatFormatting.GRAY));
             }
-            if (!important && gate == AiService.Gate.RATE_LIMITED) return;
-            SolaceReply reply = scripted.get();
-            if (reply != null) apply(player, story, userContent, reply);
+            if (gate == AiService.Gate.RATE_LIMITED && important) {
+                player.displayClientMessage(Component.literal("Solace is overwhelmed. Try again in a moment.").withStyle(ChatFormatting.DARK_GRAY), true);
+            }
+            runSilently(player, story, fallbackActions);
             return;
         }
 
@@ -166,21 +185,28 @@ public final class SolaceBrain {
             if (live == null) return;
             live.displayClientMessage(Component.empty(), true); // clear "thinking..."
             PlayerStory liveStory = StoryData.get(server).get(id);
-            if (!liveStory.solaceShouldExist()) return;
-            SolaceReply reply;
+            if (!ignoreExistence && !liveStory.solaceShouldExist()) return;
             if (err != null) {
                 notifyError(live, err);
-                reply = scripted.get();
+                runSilently(live, liveStory, fallbackActions);
             } else {
-                reply = ReplyParser.parse(text);
+                apply(live, liveStory, userContent, ReplyParser.parse(text));
             }
-            if (reply != null) apply(live, liveStory, userContent, reply);
             List<String> queued = PENDING.remove(id);
             if (queued != null && !queued.isEmpty()) {
                 String combined = String.join("\n", queued.subList(Math.max(0, queued.size() - 4), queued.size()));
-                request(live, liveStory, combined, () -> ScriptedBrain.reply(liveStory, combined), true);
+                request(live, liveStory, combined, CommandParser.parseCommands(combined), true, false);
             }
         }));
+    }
+
+    /** When the AI can't answer, still do what the player clearly asked ("follow me", "mine iron"), without words. */
+    private static void runSilently(ServerPlayer player, PlayerStory story, List<JsonObject> actions) {
+        if (actions.isEmpty() || player.getServer() == null) return;
+        SolaceEntity solace = SolaceManager.find(player.getServer(), story);
+        if (solace == null) solace = SolaceManager.summon(player, story);
+        if (solace == null || solace.isHollow()) return;
+        for (String result : ActionExecutor.execute(player, solace, story, actions)) story.addEvent("tried to help: " + result);
     }
 
     private static void notifyError(ServerPlayer player, Throwable err) {
@@ -216,21 +242,17 @@ public final class SolaceBrain {
 
         List<JsonObject> actions = reply.actions();
         String say = reply.say();
-        boolean defiant = story.defiantUntilTick > server.getTickCount() && !actions.isEmpty() && RANDOM.nextFloat() < 0.6F;
-        if (defiant) {
-            actions = List.of();
-            say = ScriptedBrain.pick(StoryText.REFUSE);
-        }
+        // While Solace is upset (a story moment), it refuses to act. The AI is told about this in the game state.
+        if (story.defiantUntilTick > server.getTickCount()) actions = List.of();
 
         if (!say.isEmpty()) display(player, solace, story, say, reply.emotion());
         if (solace == null && !actions.isEmpty() && story.respawnAtTick < 0) {
             // Solace is far away in an unloaded area (e.g. told to stay). Being asked to act calls it back.
             solace = SolaceManager.summon(player, story);
         }
+        List<String> results = new ArrayList<>();
         if (solace != null && !actions.isEmpty() && !solace.isHollow()) {
-            for (String feedback : ActionExecutor.execute(player, solace, story, actions)) {
-                display(player, solace, story, feedback, "calm");
-            }
+            results.addAll(ActionExecutor.execute(player, solace, story, actions));
         }
         for (String fact : reply.remember()) {
             story.addFact(fact);
@@ -246,6 +268,14 @@ public final class SolaceBrain {
         story.history.add(new PlayerStory.Turn("assistant", saved.toString()));
         trimHistory(player, story);
         StoryData.get(server).setDirty();
+
+        // Some actions have results Solace should mention ("I don't have any diamonds", "found a village at...").
+        // Tell the AI so it can say it naturally. Results of results don't chain, so this can't loop.
+        if (!results.isEmpty() && !userContent.startsWith("[EVENT] Results")) {
+            String joined = String.join(" | ", results);
+            results.forEach(r -> story.addEvent("action result: " + r));
+            event(player, "Results of what you just tried to do: " + joined + ". Tell the player briefly, in your own words.", true);
+        }
     }
 
     /** Keeps history short. Old turns get summarized into long-term memory (if enabled). */
@@ -277,14 +307,6 @@ public final class SolaceBrain {
     }
 
     // ---------- Output ----------
-
-    /** Says a pre-written line (no AI request). */
-    public static void sayScripted(ServerPlayer owner, @Nullable SolaceEntity solace, String text, String emotion) {
-        MinecraftServer server = owner.getServer();
-        if (server == null) return;
-        PlayerStory story = StoryData.get(server).get(owner.getUUID());
-        display(owner, solace, story, text, emotion);
-    }
 
     /** Shows Solace's line in chat and sends it to the player's game for text-to-speech. */
     public static void display(ServerPlayer owner, @Nullable SolaceEntity solace, PlayerStory story, String text, String emotion) {
@@ -336,7 +358,7 @@ public final class SolaceBrain {
         PlayerStory story = StoryData.get(server).get(player.getUUID());
         story.giftsGiven++;
         if (story.giftsGiven % 3 == 1) story.changeTrust(2);
-        event(player, "The player gave you " + count + " " + itemName + ". It's now in your pockets.", ScriptedBrain.pick(StoryText.ON_GIFT), false);
+        event(player, "The player gave you " + count + " " + itemName + ". It's now in your pockets.", false);
     }
 
     public static void onOwnerHurtSolace(ServerPlayer player, SolaceEntity solace) {
@@ -349,7 +371,6 @@ public final class SolaceBrain {
         story.lastHurtCommentTick = now;
         story.changeTrust(-4);
         story.addEvent("the player hit you");
-        String line = ScriptedBrain.pick(story.act >= 3 ? StoryText.ON_HURT_LATE : StoryText.ON_HURT);
-        event(player, "The player just hit you (" + story.timesHurtSolace + " times total). React.", line, true);
+        event(player, "The player just tried to hit you (" + story.timesHurtSolace + " times total). It can't hurt you; nothing can. React.", true);
     }
 }

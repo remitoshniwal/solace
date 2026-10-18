@@ -1,8 +1,6 @@
 package com.solacemod.solace.story;
 
 import com.google.gson.JsonObject;
-import com.solacemod.solace.ai.SolaceReply;
-import net.minecraft.util.RandomSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,11 +9,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Solace without an AI: picks pre-written lines and understands simple commands like
- * "follow me", "stay", "mine 10 iron", "give me cobblestone", "build a shelter", "craft torches".
+ * Backup for when the AI can't answer (down, rate limited, out of daily requests): understands simple commands like
+ * "follow me", "stay", "mine 10 iron", "give me cobblestone", "build a shelter", "craft torches" so Solace still helps.
+ * It never makes Solace say anything; only the AI speaks.
  */
-public final class ScriptedBrain {
-    private static final RandomSource RANDOM = RandomSource.create();
+public final class CommandParser {
     private static final Pattern NUMBER = Pattern.compile("\\b(\\d{1,3})\\b");
     private static final Pattern MINE = Pattern.compile("\\b(?:mine|dig|get|gather|collect|chop|find)\\s+(?:me\\s+)?(?:some\\s+|\\d+\\s+)?([a-z_ ]+?)(?:\\s+(?:for|please|now)\\b|$)");
     private static final Pattern GIVE = Pattern.compile("\\bgive\\s+(?:me\\s+)?(?:your\\s+|the\\s+|some\\s+|\\d+\\s+)?([a-z_ ]+?)(?:\\s+(?:please|now)\\b|$)");
@@ -25,26 +23,7 @@ public final class ScriptedBrain {
     private static final Pattern MARK = Pattern.compile("\\b(?:remember this (?:place|spot) as|mark (?:this|here) as|mark)\\s+([a-z0-9_ ]+)");
     private static final Pattern GOTO = Pattern.compile("\\bgo (?:to|back to)\\s+(?:the\\s+|my\\s+)?([a-z0-9_ ]+)");
 
-    private ScriptedBrain() {
-    }
-
-    public static String pick(List<String> lines) {
-        return lines.get(RANDOM.nextInt(lines.size()));
-    }
-
-    public static String chatterLine(PlayerStory story) {
-        return pick(StoryText.CHATTER.get(Math.max(0, Math.min(3, story.act - 1))));
-    }
-
-    /** A reply to something the player said. */
-    public static SolaceReply reply(PlayerStory story, String text) {
-        List<JsonObject> actions = parseCommands(text);
-        int a = Math.max(0, Math.min(3, story.act - 1));
-        if (story.ending == Ending.TOGETHER) a = 0;
-        String say;
-        if (!actions.isEmpty()) say = pick(a >= 2 ? StoryText.OK_LATE : StoryText.OK);
-        else say = pick(StoryText.REPLIES.get(a));
-        return SolaceReply.of(say, a >= 3 ? "sad" : "calm", actions);
+    private CommandParser() {
     }
 
     /** Turns a sentence into actions using simple keyword rules. */

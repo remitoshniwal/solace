@@ -108,16 +108,7 @@ public final class SolaceManager {
             if (solace != null && !solace.isHollow()) remove(server, story);
             return;
         }
-        if (story.respawnAtTick >= 0) {
-            if (server.getTickCount() >= story.respawnAtTick && !player.isSpectator()) {
-                SolaceEntity back = spawnNear(player, story, true);
-                if (back != null) {
-                    String line = ScriptedBrain.pick(StoryText.ON_FAKE_DEATH);
-                    SolaceBrain.event(player, "You 'died' earlier but you always come back. You just reappeared behind the player.", line, true);
-                }
-            }
-            return;
-        }
+        story.respawnAtTick = -1; // (older saves) Solace can't die anymore, so there's nothing to wait for
         if (solace == null) {
             // Not loaded anywhere. In stay mode, wait for the player to come back; otherwise catch up.
             if (!"STAY".equals(story.mode) && !player.isSpectator()) spawnNear(player, story, true);
@@ -169,26 +160,6 @@ public final class SolaceManager {
         if (solace == null) return spawnNear(player, story, false);
         solace.setMode(SolaceEntity.Mode.FOLLOW);
         return bringTo(solace, player, story);
-    }
-
-    /** Solace "dies": it vanishes and comes back a minute later. */
-    public static void fakeDeath(SolaceEntity solace) {
-        MinecraftServer server = solace.getServer();
-        UUID owner = solace.getOwnerUUID();
-        if (server == null || owner == null) {
-            solace.discard();
-            return;
-        }
-        PlayerStory story = StoryData.get(server).get(owner);
-        backup(solace, story);
-        story.respawnAtTick = server.getTickCount() + 20 * 60;
-        story.addEvent("you were 'killed' and vanished for a while");
-        ServerLevel level = (ServerLevel) solace.level();
-        level.sendParticles(ParticleTypes.ASH, solace.getX(), solace.getY() + 1, solace.getZ(), 60, 0.4, 0.9, 0.4, 0.02);
-        level.sendParticles(ParticleTypes.SOUL, solace.getX(), solace.getY() + 1, solace.getZ(), 10, 0.3, 0.6, 0.3, 0.02);
-        com.solacemod.solace.util.Sounds.playAt(solace, "particle.soul_escape", 1.0F, 0.6F);
-        solace.discard();
-        StoryData.get(server).setDirty();
     }
 
     /** Removes Solace for good (used by endings and /solace reset). */

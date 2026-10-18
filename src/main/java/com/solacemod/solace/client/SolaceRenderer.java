@@ -31,6 +31,17 @@ public class SolaceRenderer extends HumanoidMobRenderer<SolaceEntity, PlayerMode
         };
     }
 
+    /** Solace hovers a little above the ground and slowly bobs, like it isn't quite part of the world. */
+    @Override
+    public void render(SolaceEntity entity, float entityYaw, float partialTick, PoseStack poseStack,
+                       net.minecraft.client.renderer.MultiBufferSource buffer, int packedLight) {
+        poseStack.pushPose();
+        float t = entity.tickCount + partialTick;
+        poseStack.translate(0.0, entity.isHollow() ? 0.3 : 0.12 + Math.sin(t * 0.06) * 0.06, 0.0);
+        super.render(entity, entityYaw, partialTick, poseStack, buffer, packedLight);
+        poseStack.popPose();
+    }
+
     @Override
     protected void scale(SolaceEntity entity, PoseStack poseStack, float partialTick) {
         float s = entity.isHollow() ? 1.35F : 0.9375F; // same size as a player model
