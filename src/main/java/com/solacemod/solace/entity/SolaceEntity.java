@@ -74,12 +74,15 @@ public class SolaceEntity extends PathfinderMob {
 
     private static final EntityDataAccessor<Optional<UUID>> DATA_OWNER = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.OPTIONAL_UUID);
     private static final EntityDataAccessor<Integer> DATA_FORM = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_PRESENCE = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.INT);
 
     public enum Mode { FOLLOW, STAY, WANDER }
 
     public final SimpleContainer inventory = new SimpleContainer(27);
     /** How Solace behaves in your fights: it watches, cheers, and now and then one-taps something. */
     public final SolaceCombat combat = new SolaceCombat(this);
+    /** How Solace moves right now: mostly like a player, but sometimes wrong (see Presence). */
+    public final Presence presence = new Presence(this);
     private Mode mode = Mode.FOLLOW;
     private boolean guard;
     private BlockPos stayPos;
@@ -119,12 +122,14 @@ public class SolaceEntity extends PathfinderMob {
         super.defineSynchedData(builder);
         builder.define(DATA_OWNER, Optional.empty());
         builder.define(DATA_FORM, FORM_NORMAL);
+        builder.define(DATA_PRESENCE, Presence.WALK);
     }
 
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new SolaceGoals.StareGoal(this));
+        this.goalSelector.addGoal(1, new SolaceGoals.PresenceGoal(this));
         this.goalSelector.addGoal(2, new SolaceGoals.TaskGoal(this));
         // Only the Hollow (the boss) fights like a monster. Normally Solace watches and one-taps (see SolaceCombat).
         this.goalSelector.addGoal(3, new MeleeAttackGoal(this, 1.25, true) {
@@ -228,12 +233,21 @@ public class SolaceEntity extends PathfinderMob {
         if (getForm() != form) this.entityData.set(DATA_FORM, form);
     }
 
+    public int getPresence() {
+        return entityData.get(DATA_PRESENCE);
+    }
+
+    void setPresence(int behaviour) {
+        entityData.set(DATA_PRESENCE, behaviour);
+    }
+
     public boolean isHollow() {
         return getForm() == FORM_HOLLOW;
     }
 
     /** Turns Solace into the boss for the "Free Maren" ending. */
     public void becomeHollow() {
+        presence.end();
         setTask(null);
         setGuard(false);
         this.mode = Mode.FOLLOW;
@@ -315,6 +329,7 @@ public class SolaceEntity extends PathfinderMob {
             tickBoss();
         } else {
             combat.tick();
+            presence.tick();
             if (tickCount % 40 == 0) equipBestWeapon();
         }
     }
@@ -407,6 +422,7 @@ public class SolaceEntity extends PathfinderMob {
         if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) return super.hurt(source, amount); // /kill or the void; it returns anyway
         if (source.getEntity() instanceof ServerPlayer player && isOwner(player) && hurtReactCooldown <= 0) {
             hurtReactCooldown = 60;
+            presence.end();
             ServerLevel level = (ServerLevel) level();
             level.sendParticles(ParticleTypes.SMOKE, getX(), getY() + 1, getZ(), 15, 0.3, 0.6, 0.3, 0.01);
             Sounds.playAt(this, "entity.enderman.teleport", 0.6F, 0.4F);

@@ -2,7 +2,9 @@ package com.solacemod.solace.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.solacemod.solace.Solace;
+import com.solacemod.solace.entity.Presence;
 import com.solacemod.solace.entity.SolaceEntity;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.RenderType;
@@ -10,15 +12,18 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.client.renderer.entity.layers.EyesLayer;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 
 /** Draws Solace as a player-shaped figure with glowing eyes. Its look changes as the story darkens. */
 public class SolaceRenderer extends HumanoidMobRenderer<SolaceEntity, PlayerModel<SolaceEntity>> {
+    private float frozenBob;
     private static final ResourceLocation NORMAL = Solace.id("textures/entity/solace.png");
     private static final ResourceLocation UNEASY = Solace.id("textures/entity/solace_uneasy.png");
     private static final ResourceLocation HOLLOW = Solace.id("textures/entity/solace_hollow.png");
 
     public SolaceRenderer(EntityRendererProvider.Context context) {
-        super(context, new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER), false), 0.5F);
+        super(context, new SolaceModel(context.bakeLayer(ModelLayers.PLAYER)), 0.5F);
         addLayer(new Eyes(this));
     }
 
@@ -35,9 +40,40 @@ public class SolaceRenderer extends HumanoidMobRenderer<SolaceEntity, PlayerMode
     @Override
     public void render(SolaceEntity entity, float entityYaw, float partialTick, PoseStack poseStack,
                        net.minecraft.client.renderer.MultiBufferSource buffer, int packedLight) {
-        poseStack.pushPose();
         float t = entity.tickCount + partialTick;
-        poseStack.translate(0.0, entity.isHollow() ? 0.3 : 0.12 + Math.sin(t * 0.06) * 0.06, 0.0);
+        int presence = entity.getPresence();
+        if (presence == Presence.FLICKER) {
+            // Gone for a few frames, back, gone again. Sometimes it's drawn slightly to one side.
+            int frame = (int) (t / 2);
+            int noise = (frame * 73856093) ^ (entity.getId() * 19349663);
+            if (Math.floorMod(noise, 3) == 0) return;
+            if (Math.floorMod(noise, 7) == 0) {
+                poseStack.pushPose();
+                poseStack.translate(Math.floorMod(noise, 2) == 0 ? 0.4 : -0.4, 0, 0);
+                renderBody(entity, entityYaw, partialTick, poseStack, buffer, packedLight, t);
+                poseStack.popPose();
+                return;
+            }
+        }
+        if (presence == Presence.HEAD_TURN) {
+            // Point the head at the camera, however far round that is.
+            Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+            double dx = cam.x - Mth.lerp(partialTick, entity.xo, entity.getX());
+            double dz = cam.z - Mth.lerp(partialTick, entity.zo, entity.getZ());
+            float toCamera = (float) (Mth.atan2(dz, dx) * (180F / Math.PI)) - 90F;
+            ((SolaceModel) getModel()).forcedHeadYaw = Mth.wrapDegrees(toCamera - Mth.rotLerp(partialTick, entity.yBodyRotO, entity.yBodyRot));
+        } else {
+            ((SolaceModel) getModel()).forcedHeadYaw = Float.NaN;
+        }
+        renderBody(entity, entityYaw, partialTick, poseStack, buffer, packedLight, t);
+    }
+
+    private void renderBody(SolaceEntity entity, float entityYaw, float partialTick, PoseStack poseStack,
+                            net.minecraft.client.renderer.MultiBufferSource buffer, int packedLight, float t) {
+        poseStack.pushPose();
+        float bob = entity.getPresence() == Presence.FREEZE ? frozenBob : (float) (Math.sin(t * 0.06) * 0.06);
+        frozenBob = bob;
+        poseStack.translate(0.0, entity.isHollow() ? 0.3 : 0.12 + bob, 0.0);
         super.render(entity, entityYaw, partialTick, poseStack, buffer, packedLight);
         poseStack.popPose();
     }

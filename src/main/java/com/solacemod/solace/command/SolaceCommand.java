@@ -105,6 +105,23 @@ public final class SolaceCommand {
                                             boolean ok = HorrorDirector.run(p, story(ctx, p), StringArgumentType.getString(ctx, "event"));
                                             return ok ? msg(ctx, "Done.") : fail(ctx, "Unknown event. Options: " + HorrorDirector.kinds());
                                         }))))
+                        .then(Commands.literal("presence").then(Commands.argument("player", EntityArgument.player())
+                                .then(Commands.argument("behaviour", StringArgumentType.word())
+                                        .suggests((ctx, b) -> {
+                                            b.suggest("blink");
+                                            for (String s : com.solacemod.solace.entity.Presence.NAMES) b.suggest(s);
+                                            return b.buildFuture();
+                                        })
+                                        .executes(ctx -> {
+                                            ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
+                                            int kind = com.solacemod.solace.entity.Presence.byName(StringArgumentType.getString(ctx, "behaviour"));
+                                            if (kind == -2) return fail(ctx, "Unknown. Options: blink " + String.join(" ", com.solacemod.solace.entity.Presence.NAMES));
+                                            SolaceEntity solace = SolaceManager.find(ctx.getSource().getServer(), story(ctx, p));
+                                            if (solace == null || solace.level() != p.level()) return fail(ctx, "Solace isn't near " + p.getGameProfile().getName() + ".");
+                                            solace.presence.end();
+                                            solace.presence.start(p, kind);
+                                            return msg(ctx, "Done.");
+                                        }))))
                         .then(Commands.literal("question").then(Commands.argument("player", EntityArgument.player()).executes(ctx -> {
                             ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
                             PlayerStory s = story(ctx, p);

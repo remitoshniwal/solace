@@ -122,6 +122,18 @@ public final class PlayerStory {
         return playTicks / 1200.0;
     }
 
+    /** Which of the 8 chapters (docs/DESIGN.md section 7) the story is in. */
+    public int chapter() {
+        double min = playMinutes() * com.solacemod.solace.config.SolaceConfig.STORY_SPEED.get();
+        if (ending != Ending.NONE || choicePending) return 8;
+        return switch (act) {
+            case 1 -> min < 20 ? 1 : 2;
+            case 2 -> min < 70 ? 3 : 4;
+            case 3 -> min < 130 ? 5 : 6;
+            default -> 7;
+        };
+    }
+
     public boolean storyOver() {
         return ending != Ending.NONE;
     }

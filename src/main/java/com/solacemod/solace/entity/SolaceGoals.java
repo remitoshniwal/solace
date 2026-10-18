@@ -40,6 +40,26 @@ public final class SolaceGoals {
         }
     }
 
+    /** Holds Solace still (or lets Presence move it) while one of its wrong movements is playing. */
+    public static final class PresenceGoal extends Goal {
+        private final SolaceEntity solace;
+
+        public PresenceGoal(SolaceEntity solace) {
+            this.solace = solace;
+            setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
+        }
+
+        @Override
+        public boolean canUse() {
+            return !solace.isHollow() && solace.presence.controlsMovement();
+        }
+
+        @Override
+        public boolean requiresUpdateEveryTick() {
+            return true;
+        }
+    }
+
     /** Runs the current job (mining, building, collecting...). Pauses while fighting. */
     public static final class TaskGoal extends Goal {
         private final SolaceEntity solace;
