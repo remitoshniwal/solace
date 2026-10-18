@@ -87,7 +87,7 @@ public final class SolaceConfig {
         MAX_REPLY_TOKENS = b.comment("Maximum reply length in tokens (about 3/4 of a word each).")
                 .defineInRange("maxReplyTokens", 400, 64, 8000);
         TIMEOUT_SECONDS = b.comment("How long to wait for a reply before giving up.")
-                .defineInRange("timeoutSeconds", 30, 5, 180);
+                .defineInRange("timeoutSeconds", 45, 5, 180);
         ANTHROPIC_EFFORT = b.comment("Anthropic only: how hard Claude thinks. low = fastest and cheapest. low, medium, high")
                 .define("anthropicEffort", "low");
         b.pop();
@@ -101,7 +101,7 @@ public final class SolaceConfig {
 
         b.push("memory");
         HISTORY_MESSAGES = b.comment("How many recent chat lines Solace sees each time. More = smarter but each request costs more.")
-                .defineInRange("historyMessages", 16, 2, 100);
+                .defineInRange("historyMessages", 10, 2, 100);
         SUMMARIZE_MEMORY = b.comment("When old messages fall out of history, ask the AI to summarize them into long-term memory (1 extra request now and then).")
                 .define("summarizeMemory", true);
         CROSS_WORLD_MEMORY = b.comment("Solace remembers you across different worlds. Stored in the 'solace' folder of your game directory.")

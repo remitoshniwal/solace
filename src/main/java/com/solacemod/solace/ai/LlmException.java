@@ -65,7 +65,15 @@ public class LlmException extends RuntimeException {
             case 404 -> "Model not found (404). The provider may have retired it. In Solace setup, put a current model name in the Model box (check the provider's website).";
             case 429 -> "Rate limited or out of credits (429). Wait a bit, or check your plan with the provider.";
             case 500, 502, 503, 504, 529 -> "The provider is having problems (" + status + "). Try again later.";
-            default -> status > 0 ? "Request failed with HTTP " + status + "." : "Could not reach the provider: " + getMessage();
+            default -> {
+                if (status > 0) yield "Request failed with HTTP " + status + ".";
+                String m = getMessage() == null ? "" : getMessage().toLowerCase();
+                if (m.contains("timeout") || m.contains("timed out")) {
+                    yield "The AI took too long to answer. Free models are often slow or busy: try a faster model, "
+                            + "or raise timeoutSeconds in Solace setup > Advanced.";
+                }
+                yield "Could not reach the provider: " + getMessage();
+            }
         };
     }
 }

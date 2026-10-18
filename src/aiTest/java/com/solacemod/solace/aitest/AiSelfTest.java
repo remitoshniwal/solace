@@ -110,6 +110,15 @@ public final class AiSelfTest {
         check("openai: system message first", JsonParser.parseString(lastBody.get()).getAsJsonObject()
                 .getAsJsonArray("messages").get(0).getAsJsonObject().get("role").getAsString().equals("system"));
 
+        // OpenRouter gets speed hints
+        ProviderSettings or = ProviderSettings.resolve("openrouter", "or-test", "some/model", base + "/openai", 10, "");
+        openAiCalls = 0;
+        LlmProvider.create(or).complete(req).get();
+        JsonObject orBody = JsonParser.parseString(lastBody.get()).getAsJsonObject();
+        check("openrouter: fastest-server routing", orBody.has("provider") && orBody.getAsJsonObject("provider").get("sort").getAsString().equals("latency"));
+        check("openrouter: low reasoning effort", orBody.has("reasoning") && orBody.getAsJsonObject("reasoning").get("effort").getAsString().equals("low"));
+        check("timeout: friendly hint", new LlmException("HttpTimeoutException: request timed out", null).hint().contains("took too long"));
+
         // Anthropic
         ProviderSettings an = ProviderSettings.resolve("anthropic", "ak-test", "", base + "/anthropic", 10, "low");
         out = LlmProvider.create(an).complete(req).get();

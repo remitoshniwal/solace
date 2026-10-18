@@ -53,6 +53,14 @@ public final class SolaceBrain {
         SUMMARIZING.clear();
     }
 
+    /** Shows "Solace is thinking..." above the hotbar while a reply is on its way (called once per second). */
+    public static void tickThinking(MinecraftServer server) {
+        for (UUID id : BUSY) {
+            ServerPlayer p = server.getPlayerList().getPlayer(id);
+            if (p != null) p.displayClientMessage(Component.literal("Solace is thinking...").withStyle(ChatFormatting.DARK_AQUA, ChatFormatting.ITALIC), true);
+        }
+    }
+
     // ---------- Input ----------
 
     /** Called for every chat message. Decides whether it was meant for Solace. */
@@ -151,10 +159,12 @@ public final class SolaceBrain {
         LlmRequest req = PromptBuilder.build(player, story, solace, userContent);
         UUID id = player.getUUID();
         BUSY.add(id);
+        player.displayClientMessage(Component.literal("Solace is thinking...").withStyle(ChatFormatting.DARK_AQUA, ChatFormatting.ITALIC), true);
         AiService.complete(req).whenComplete((text, err) -> server.execute(() -> {
             BUSY.remove(id);
             ServerPlayer live = server.getPlayerList().getPlayer(id);
             if (live == null) return;
+            live.displayClientMessage(Component.empty(), true); // clear "thinking..."
             PlayerStory liveStory = StoryData.get(server).get(id);
             if (!liveStory.solaceShouldExist()) return;
             SolaceReply reply;

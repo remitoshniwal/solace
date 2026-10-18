@@ -92,6 +92,7 @@ public final class ServerEvents {
         Scheduler.tick();
         int tick = server.getTickCount();
         if (tick % 20 != 0) return;
+        SolaceBrain.tickThinking(server);
         StoryData data = StoryData.get(server);
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             PlayerStory story = data.get(player.getUUID());

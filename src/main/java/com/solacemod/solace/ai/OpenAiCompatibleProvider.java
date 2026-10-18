@@ -18,6 +18,7 @@ public final class OpenAiCompatibleProvider implements LlmProvider {
     private final ProviderSettings settings;
     private volatile boolean useMaxCompletionTokens;
     private volatile boolean skipTemperature;
+    private volatile boolean skipSpeedHints;
 
     public OpenAiCompatibleProvider(ProviderSettings settings) {
         this.settings = settings;
@@ -70,6 +71,10 @@ public final class OpenAiCompatibleProvider implements LlmProvider {
             skipTemperature = true;
             changed = true;
         }
+        if ((msg.contains("reasoning") || msg.contains("provider")) && !skipSpeedHints) {
+            skipSpeedHints = true;
+            changed = true;
+        }
         return changed;
     }
 
@@ -95,6 +100,17 @@ public final class OpenAiCompatibleProvider implements LlmProvider {
             body.addProperty("max_tokens", request.maxTokens());
         }
         if (!skipTemperature) body.addProperty("temperature", request.temperature());
+        if ("openrouter".equals(settings.name()) && !skipSpeedHints) {
+            // Send the request to whichever server hosting this model answers fastest.
+            JsonObject provider = new JsonObject();
+            provider.addProperty("sort", "latency");
+            body.add("provider", provider);
+            // "Thinking" models can spend 20+ seconds reasoning first; chat replies don't need much. Ignored by other models.
+            JsonObject reasoning = new JsonObject();
+            reasoning.addProperty("effort", "low");
+            reasoning.addProperty("exclude", true);
+            body.add("reasoning", reasoning);
+        }
         return body;
     }
 
