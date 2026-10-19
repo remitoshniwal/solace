@@ -32,6 +32,11 @@ public final class SolaceModels {
             {0, -36, 0, 3.0F, 0}, {4, -34, 2, 2.8F, -0.3F}, {-4, -34, -2, 3.3F, 0.3F},
     };
     static final int SEGMENTS = 7;
+    static final int FERRO_BLOBS = 7;
+    static final int WAX_BLOBS = 5;
+    /** Which way each ferrofluid spike points (xRot, zRot). With no rotation a spike points straight up. */
+    static final float[][] SPIKES = {{0, 0}, {3.14F, 0}, {1.57F, 0}, {-1.57F, 0}, {0, 1.57F}, {0, -1.57F},
+            {0.8F, 0.8F}, {-0.8F, -0.8F}, {0.8F, -0.8F}, {-0.8F, 0.8F}, {2.3F, 0.8F}, {-2.3F, -0.8F}};
     static final float SEGMENT_LENGTH = 4.5F;
 
     private SolaceModels() {
@@ -131,6 +136,25 @@ public final class SolaceModels {
                 .texOffs(0, 0).addBox(-5, -34, -4.5F, 10, 8, 9)     // hood
                 .texOffs(0, 0).addBox(-3, -38, -3, 6, 4, 6),        // crown
                 PartPose.ZERO);
+        // The same mass, a little bigger, for the moving cyan energy around it.
+        root.addOrReplaceChild("mass_aura", CubeListBuilder.create()
+                .texOffs(0, 0).addBox(-6, -2, -4.5F, 12, 5, 9, new CubeDeformation(1.2F))
+                .texOffs(0, 0).addBox(-8, -16, -6, 16, 14, 12, new CubeDeformation(1.2F))
+                .texOffs(0, 0).addBox(-7, -26, -5, 14, 10, 10, new CubeDeformation(1.2F))
+                .texOffs(0, 0).addBox(-5, -34, -4.5F, 10, 8, 9, new CubeDeformation(1.2F)),
+                PartPose.ZERO);
+        // Ferrofluid: glossy black blobs covered in spikes, rising and sinking through the body like a lava lamp.
+        for (int i = 0; i < FERRO_BLOBS; i++) {
+            PartDefinition blob = root.addOrReplaceChild("ferro" + i, CubeListBuilder.create().texOffs(0, 0).addBox(-2, -2, -2, 4, 4, 4), PartPose.ZERO);
+            for (int k = 0; k < SPIKES.length; k++) {
+                blob.addOrReplaceChild("spike" + k, CubeListBuilder.create().texOffs(0, 0)
+                        .addBox(-0.5F, -4.0F, -0.5F, 1, 4, 1, new CubeDeformation(-0.2F)), PartPose.rotation(SPIKES[k][0], 0, SPIKES[k][1]));
+            }
+        }
+        // Lava-lamp wax: soft glowing cyan blobs drifting slowly up and down.
+        for (int i = 0; i < WAX_BLOBS; i++) {
+            root.addOrReplaceChild("wax" + i, CubeListBuilder.create().texOffs(0, 0).addBox(-2.5F, -2.5F, -2.5F, 5, 5, 5), PartPose.ZERO);
+        }
         root.addOrReplaceChild("core", CubeListBuilder.create().texOffs(0, 0).addBox(-4, -4, -4, 8, 8, 8), PartPose.offset(0, -14, 0));
         root.addOrReplaceChild("core_glow", CubeListBuilder.create().texOffs(0, 0).addBox(-4, -4, -4, 8, 8, 8, new CubeDeformation(3.0F)),
                 PartPose.offset(0, -14, 0));

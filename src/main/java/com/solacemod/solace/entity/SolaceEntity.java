@@ -565,13 +565,13 @@ public class SolaceEntity extends PathfinderMob {
     @Override
     public net.minecraft.world.phys.AABB getBoundingBoxForCulling() {
         int form = getForm();
-        return form == FORM_VAST ? getBoundingBox().inflate(10, 14, 10) : isLanternForm() ? getBoundingBox().inflate(2.5, 4, 2.5) : super.getBoundingBoxForCulling();
+        return form == FORM_VAST ? getBoundingBox().inflate(9, 12, 9) : isLanternForm() ? getBoundingBox().inflate(1.5, 2.5, 1.5) : super.getBoundingBoxForCulling();
     }
 
     /** The Hollow is the huge Lantern shape, so it's much taller. */
     @Override
     public net.minecraft.world.entity.EntityDimensions getDefaultDimensions(net.minecraft.world.entity.Pose pose) {
-        return isHollow() ? net.minecraft.world.entity.EntityDimensions.scalable(1.4F, 3.6F) : super.getDefaultDimensions(pose);
+        return isHollow() ? net.minecraft.world.entity.EntityDimensions.scalable(1.2F, 2.4F) : super.getDefaultDimensions(pose);
     }
 
     @Override

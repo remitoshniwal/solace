@@ -27,6 +27,15 @@ final class LanternRenderer {
     private final ModelPart mass;
     private final ModelPart core;
     private final ModelPart coreGlow;
+    private final ModelPart massAura;
+    private final ModelPart[] ferro = new ModelPart[SolaceModels.FERRO_BLOBS];
+    private final ModelPart[][] spikes = new ModelPart[SolaceModels.FERRO_BLOBS][SolaceModels.SPIKES.length];
+    private final ModelPart[] wax = new ModelPart[SolaceModels.WAX_BLOBS];
+    private static final ResourceLocation FERRO = Solace.id("textures/entity/lantern_ferro.png");
+    private static final ResourceLocation AURA = Solace.id("textures/entity/lantern_aura.png");
+    private static final ResourceLocation AURA_HOLLOW = Solace.id("textures/entity/lantern_aura_hollow.png");
+    /** The Lantern's size compared with the model as built (which is about 4 blocks tall). */
+    private static final float SIZE = 0.55F;
     private final ModelPart[][] tendrils;
     private final SolaceModel<SolaceEntity> figure;
 
@@ -35,6 +44,12 @@ final class LanternRenderer {
         mass = root.getChild("mass");
         core = root.getChild("core");
         coreGlow = root.getChild("core_glow");
+        massAura = root.getChild("mass_aura");
+        for (int i = 0; i < ferro.length; i++) {
+            ferro[i] = root.getChild("ferro" + i);
+            for (int k = 0; k < SolaceModels.SPIKES.length; k++) spikes[i][k] = ferro[i].getChild("spike" + k);
+        }
+        for (int i = 0; i < wax.length; i++) wax[i] = root.getChild("wax" + i);
         tendrils = new ModelPart[SolaceModels.TENDRILS.length][SolaceModels.SEGMENTS];
         for (int i = 0; i < tendrils.length; i++) {
             ModelPart seg = root.getChild("t" + i);
@@ -58,7 +73,8 @@ final class LanternRenderer {
 
         poseStack.pushPose();
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - Mth.rotLerp(partialTick, entity.yBodyRotO, entity.yBodyRot)));
-        if (entity.getForm() == SolaceEntity.FORM_VAST) poseStack.scale(3.0F, 3.0F, 3.0F);
+        float size = entity.getForm() == SolaceEntity.FORM_VAST ? 2.8F : SIZE;
+        poseStack.scale(size, size, size);
         poseStack.scale(-1.0F, -1.0F, 1.0F);
         // Model space: y points down and the ground is at 24 pixels. Float above the ground, bobbing slowly.
         poseStack.translate(0.0F, -1.501F - 0.65F - Mth.sin(t * 0.04F) * 0.08F, 0.0F);
@@ -66,11 +82,17 @@ final class LanternRenderer {
         // The tiny figure, curled up inside the light.
         poseStack.pushPose();
         poseStack.translate(0.0F, (-14.0F - 2.5F) / 16F, 0.0F);
-        poseStack.scale(0.2F, 0.2F, 0.2F);
+        poseStack.scale(0.32F, 0.32F, 0.32F);
         poseStack.mulPose(Axis.YP.rotationDegrees(t * 0.4F));
         figure.renderToBuffer(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(FIGURE)), LightTexture.FULL_BRIGHT, overlay);
         figure.renderEyes(poseStack, buffer.getBuffer(RenderType.eyes(FIGURE)), LightTexture.FULL_BRIGHT, overlay, -1);
         poseStack.popPose();
+
+        // Ferrofluid blobs inside, seen through the see-through mass.
+        float agitation = hollow || entity.isAgitated() ? 1.8F : 1.0F;
+        animateBlobs(t, agitation);
+        var ferroBuffer = buffer.getBuffer(RenderType.entityCutoutNoCull(FERRO));
+        for (ModelPart blob : ferro) blob.render(poseStack, ferroBuffer, LightTexture.FULL_BRIGHT, overlay);
 
         // The mass and tendrils: see-through glowing teal, or the Hollow's near-black.
         var consumer = buffer.getBuffer(hollow ? RenderType.entityTranslucent(MASS_HOLLOW) : RenderType.entityTranslucentEmissive(MASS));
@@ -78,6 +100,15 @@ final class LanternRenderer {
         mass.yScale = 1.0F + Mth.sin(t * 0.05F) * 0.03F;
         mass.render(poseStack, consumer, light, overlay);
         for (ModelPart[] tendril : tendrils) tendril[0].render(poseStack, consumer, light, overlay);
+
+        // Lava-lamp wax: soft glowing blobs, added on top so they shine through.
+        var waxBuffer = buffer.getBuffer(RenderType.eyes(hollow ? CORE_HOLLOW : CORE));
+        for (ModelPart w : wax) w.render(poseStack, waxBuffer, LightTexture.FULL_BRIGHT, overlay, SolaceRenderer.grey(0.55F));
+
+        // The moving energy over the whole shape: cyan streaks flowing up (dim red for the Hollow).
+        massAura.yScale = mass.yScale;
+        massAura.render(poseStack, buffer.getBuffer(RenderType.energySwirl(hollow ? AURA_HOLLOW : AURA, (t * 0.004F) % 1.0F, (t * -0.012F) % 1.0F)),
+                LightTexture.FULL_BRIGHT, overlay, SolaceRenderer.grey(0.6F));
 
         // The core, drawn last and added on top, so it shines through the mass. It breathes, with a soft glow around it.
         float beat = 1.0F + Mth.sin(t * (hollow ? 0.3F : 0.12F)) * 0.08F;
@@ -87,6 +118,41 @@ final class LanternRenderer {
         coreGlow.xScale = coreGlow.yScale = coreGlow.zScale = beat;
         coreGlow.render(poseStack, buffer.getBuffer(RenderType.eyes(coreTex)), LightTexture.FULL_BRIGHT, overlay, SolaceRenderer.grey(0.22F));
         poseStack.popPose();
+    }
+
+    /**
+     * Lava lamp and ferrofluid: each blob drifts up and down on its own slow cycle, squashing as it goes,
+     * and the black blobs' spikes stretch and shrink like ferrofluid near a magnet.
+     */
+    private void animateBlobs(float t, float agitation) {
+        for (int i = 0; i < ferro.length; i++) {
+            float sp = (0.018F + i * 0.004F) * agitation;
+            float phase = i * 1.9F;
+            float rise = 0.5F + 0.5F * Mth.sin(t * sp + phase);
+            ModelPart b = ferro[i];
+            b.x = Mth.sin(t * sp * 0.7F + phase * 2) * 6.0F;
+            b.z = Mth.cos(t * sp * 0.6F + phase) * 3.5F;
+            b.y = -4.0F - rise * 26.0F;
+            float size = 0.7F + (i % 3) * 0.3F;
+            float squash = Mth.sin(t * sp * 2 + phase) * 0.18F;
+            b.xScale = b.zScale = size * (1 + squash);
+            b.yScale = size * (1 - squash);
+            b.yRot = t * 0.01F * (i % 2 == 0 ? 1 : -1);
+            for (int k = 0; k < spikes[i].length; k++) {
+                spikes[i][k].yScale = 0.25F + 0.75F * Math.abs(Mth.sin(t * 0.09F * agitation + i * 1.3F + k * 0.7F));
+            }
+        }
+        for (int i = 0; i < wax.length; i++) {
+            float sp = (0.010F + i * 0.003F) * agitation;
+            float phase = i * 2.6F + 1.0F;
+            ModelPart w = wax[i];
+            w.x = Mth.cos(t * sp * 0.8F + phase) * 5.0F;
+            w.z = Mth.sin(t * sp * 0.5F + phase) * 3.0F;
+            w.y = -6.0F - (0.5F + 0.5F * Mth.sin(t * sp + phase)) * 24.0F;
+            float swell = 0.8F + 0.35F * Mth.sin(t * sp * 3 + phase);
+            w.xScale = w.zScale = swell * 1.1F;
+            w.yScale = swell * (0.8F + 0.4F * Mth.cos(t * sp * 2 + phase));
+        }
     }
 
     /** Every segment sways a little more than the one before it, so the tendrils drift like they're underwater. */

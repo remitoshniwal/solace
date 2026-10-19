@@ -365,6 +365,39 @@ def core(name, inner, outer, seed=7):
     img.save(OUT / name)
 
 
+def ferro(name, seed=51):
+    """Ferrofluid: glossy black with a cold cyan sheen here and there."""
+    rng = random.Random(seed)
+    img = Image.new("RGBA", (64, 64), (0, 0, 0, 255))
+    px = img.load()
+    for x in range(64):
+        for y in range(64):
+            v = rng.randint(4, 14)
+            px[x, y] = (v, v, v + 4, 255)
+    for _ in range(160):
+        x, y = rng.randint(0, 63), rng.randint(0, 63)
+        b = rng.randint(40, 120)
+        px[x, y] = (b // 4, b, b + 20 if b + 20 < 256 else 255, 255)
+    img.save(OUT / name)
+
+
+def flow(name, color, seed=61):
+    """The Lantern's moving energy: streaks of colour on black (black = nothing is drawn). Tiles, because it scrolls."""
+    rng = random.Random(seed)
+    img = Image.new("RGBA", (64, 64), (0, 0, 0, 255))
+    px = img.load()
+    for _ in range(55):
+        x, y = rng.randint(0, 63), rng.randint(0, 63)
+        length = rng.randint(8, 24)
+        peak = rng.uniform(0.35, 1.0)
+        for i in range(length):
+            k = (1 - abs(i - length / 2) / (length / 2)) * peak
+            xx, yy = (x + (i // 6)) % 64, (y + i) % 64
+            old = px[xx, yy]
+            px[xx, yy] = tuple(min(255, old[c] + int(color[c] * k)) for c in range(3)) + (255,)
+    img.save(OUT / name)
+
+
 def logo():
     size = 256
     img = Image.new("RGBA", (size, size), (8, 10, 16, 255))
@@ -398,6 +431,9 @@ if __name__ == "__main__":
     lantern("lantern.png", mass=(46, 196, 190), edge=(150, 255, 245), alpha=85)
     lantern("lantern_hollow.png", mass=(14, 18, 22), edge=(70, 10, 14), alpha=200, seed=8)
     core("lantern_core.png", inner=(235, 255, 250), outer=(120, 255, 235))
+    ferro("lantern_ferro.png")
+    flow("lantern_aura.png", (40, 230, 255))
+    flow("lantern_aura_hollow.png", (170, 20, 20), seed=62)
     core("lantern_core_hollow.png", inner=(255, 90, 70), outer=(200, 10, 10), seed=9)
     logo()
     print("Textures written to", OUT)

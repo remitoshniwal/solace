@@ -235,7 +235,7 @@ public class SolaceRenderer extends MobRenderer<SolaceEntity, SolaceModel<Solace
             model.renderEyes(poseStack, buffer.getBuffer(GLOW), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, grey(level));
             // A soft glow around each eye: the same eyes, bigger and dimmer, added on top.
             halo.copyPose(model);
-            halo.renderEyes(poseStack, buffer.getBuffer(GLOW), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, grey(level * 0.35F));
+            halo.renderEyes(poseStack, buffer.getBuffer(GLOW), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, grey(level * 0.22F));
         }
     }
 
