@@ -19,7 +19,11 @@ public class BbPreview {
     static final int W = 420, H = 720;
     static final String TEX = "src/main/resources/assets/solace/textures/entity/";
 
-    record Tri(float[] p, float[] uv, float light) {
+    /** color -1 = textured; otherwise a solid colour drawn with back faces hidden (the outline). */
+    record Tri(float[] p, float[] uv, float light, int color) {
+        Tri(float[] p, float[] uv, float light) {
+            this(p, uv, light, -1);
+        }
     }
 
     public static void main(String[] args) throws Exception {
@@ -52,6 +56,11 @@ public class BbPreview {
                 tris.add(new Tri(new float[]{pos[0], pos[1], pos[2], pos[3], pos[4], pos[5], pos[6], pos[7], pos[8]}, new float[]{uv[0], uv[1], uv[2], uv[3], uv[4], uv[5]}, l));
                 tris.add(new Tri(new float[]{pos[0], pos[1], pos[2], pos[6], pos[7], pos[8], pos[9], pos[10], pos[11]}, new float[]{uv[0], uv[1], uv[4], uv[5], uv[6], uv[7]}, l));
             }, mask, neg, 20, 0, 0xFFFFFFFF);
+            int rim = neg ? 0x000000 : 0xFFFFFF;
+            model.drawOutline(m, (pos, nrm, uv, argb) -> {
+                tris.add(new Tri(new float[]{pos[0], pos[1], pos[2], pos[3], pos[4], pos[5], pos[6], pos[7], pos[8]}, new float[6], 1, rim));
+                tris.add(new Tri(new float[]{pos[0], pos[1], pos[2], pos[6], pos[7], pos[8], pos[9], pos[10], pos[11]}, new float[6], 1, rim));
+            }, mask, neg, 0.3F, 0xFFFFFFFF);
             for (Tri tr : tris) raster(tr, neg ? negTex : tex, depth, px);
         }
         BufferedImage img = new BufferedImage(W, H, BufferedImage.TYPE_INT_RGB);
@@ -71,6 +80,7 @@ public class BbPreview {
         }
         float area = (sx[1] - sx[0]) * (sy[2] - sy[0]) - (sx[2] - sx[0]) * (sy[1] - sy[0]);
         if (Math.abs(area) < 1e-6) return;
+        if (t.color() != -1 && area > 0) return; // facing away (screen y points down, so facing us is negative)
         int minX = (int) Math.max(0, Math.floor(Math.min(sx[0], Math.min(sx[1], sx[2]))));
         int maxX = (int) Math.min(W - 1, Math.ceil(Math.max(sx[0], Math.max(sx[1], sx[2]))));
         int minY = (int) Math.max(0, Math.floor(Math.min(sy[0], Math.min(sy[1], sy[2]))));
@@ -85,6 +95,11 @@ public class BbPreview {
                 float z = w0 * sz[0] + w1 * sz[1] + w2 * sz[2];
                 int i = y * W + x;
                 if (z >= depth[i]) continue;
+                if (t.color() != -1) {
+                    depth[i] = z;
+                    px[i] = t.color();
+                    continue;
+                }
                 float u = w0 * t.uv[0] + w1 * t.uv[2] + w2 * t.uv[4], v = w0 * t.uv[1] + w1 * t.uv[3] + w2 * t.uv[5];
                 int tx = Math.max(0, Math.min(tex.getWidth() - 1, (int) (u * tex.getWidth())));
                 int ty = Math.max(0, Math.min(tex.getHeight() - 1, (int) (v * tex.getHeight())));

@@ -1,6 +1,7 @@
 package com.solacemod.solace.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.solacemod.solace.Solace;
 import com.solacemod.solace.client.model.BbModel;
 import com.solacemod.solace.client.model.Mat4;
@@ -15,16 +16,20 @@ import java.io.InputStream;
 
 /**
  * Solace's body: the Blockbench model in assets/solace/models/entity/solace.bbmodel (made with tools/models).
- * Headless and eyeless: a high coat collar stands round an empty hollow. The normal form is black with spiked
- * shoulders and a tattered cloak; the negative is a white flaming wraith with scythe blades. Both are the same
+ * A headless samurai with no eyes: a tall laced neck guard stands round an empty hollow. The normal form is black
+ * armour with red cords, a tattered cloak and claws, outlined in white; the negative is the same armour in white with
+ * black cords, shoulder flames and sword blades for hands, outlined in black. Both are the same
  * model: parts named n_... show only in the normal form, x_... only in the negative, and the texture sheet swaps.
  * Shared by Solace itself and its copy in the distance ("two places").
  */
 final class SolaceBody {
     static final ResourceLocation NORMAL = Solace.id("textures/entity/solace_shade.png");
-    private static final ResourceLocation NORMAL_GLOW = Solace.id("textures/entity/solace_shade_glow.png");
     private static final ResourceLocation NEGATIVE = Solace.id("textures/entity/solace_shade_negative.png");
     private static final ResourceLocation NEGATIVE_GLOW = Solace.id("textures/entity/solace_shade_negative_glow.png");
+    /** Plain white, coloured per vertex: a white outline round the normal form, a black one round the negative. */
+    private static final ResourceLocation OUTLINE = Solace.id("textures/entity/outline.png");
+    /** Outline thickness, in model pixels (16 to a block). */
+    private static final float OUTLINE_WIDTH = 0.3F;
     private static final String MODEL = "/assets/solace/models/entity/solace.bbmodel";
     private static final String[] FLAMES = {"x_flame_r", "x_flame_l", "x_flame_r2", "x_flame_l2"};
 
@@ -77,8 +82,8 @@ final class SolaceBody {
         m.bone("hand_r").rot(Mth.sin(t * 0.13F + seed) * 6, 0, 0);
         m.bone("hand_l").rot(Mth.sin(t * 0.12F + seed + 1) * 6, 0, 0);
         float spikes = 0.75F + 0.09F * Math.max(0, Math.min(4, stage));
-        m.bone("n_spikes_r").scale(spikes);
-        m.bone("n_spikes_l").scale(spikes);
+        m.bone("spikes_r").scale(spikes);
+        m.bone("spikes_l").scale(spikes);
         for (int i = 0; i < FLAMES.length; i++) {
             BbModel.Bone f = m.bone(FLAMES[i]);
             float lick = Mth.sin(t * 0.45F + i * 2.1F) + 0.5F * Mth.sin(t * 1.13F + i);
@@ -92,24 +97,25 @@ final class SolaceBody {
      * Draws the posed model.
      *
      * @param negativeMask which areas show the negative (BbModel.BODY, RIGHT_ARM, LEFT_ARM); 0 = none
-     * @param glow         brightness of the faint light on its edges in the normal form
+     * @param glow         brightness of the white outline round the normal form (it stutters like a bad bulb)
      * @param push         how hard its cloak is pushed back (walking speed)
      */
     static void draw(PoseStack poseStack, MultiBufferSource buffer, int light, int overlay, int negativeMask, float glow, float t, float push) {
         BbModel m = model();
         Mat4 base = BbModel.base();
         int full = LightTexture.FULL_BRIGHT;
+        // The outline: drawn with back faces hidden (entityCutout), which the inside-out trick needs.
+        VertexConsumer rim = buffer.getBuffer(RenderType.entityCutout(OUTLINE));
         if (negativeMask != BbModel.ALL) {
             m.draw(base, new MeshDraw(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(NORMAL)), light, overlay), negativeMask, false, t, push, 0xFFFFFFFF);
-            if (glow > 0) {
-                m.draw(base, new MeshDraw(poseStack, buffer.getBuffer(RenderType.eyes(NORMAL_GLOW)), full, OverlayTexture.NO_OVERLAY),
-                        negativeMask, false, t, push, grey(glow));
-            }
+            m.drawOutline(base, new MeshDraw(poseStack, rim, full, OverlayTexture.NO_OVERLAY), negativeMask, false, OUTLINE_WIDTH,
+                    grey(Math.min(1, 0.55F + glow * 0.6F)));
         }
         if (negativeMask != 0) {
             m.draw(base, new MeshDraw(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(NEGATIVE)), full, overlay), negativeMask, true, t, push, 0xFFFFFFFF);
             m.draw(base, new MeshDraw(poseStack, buffer.getBuffer(RenderType.eyes(NEGATIVE_GLOW)), full, OverlayTexture.NO_OVERLAY),
                     negativeMask, true, t, push, grey(0.8F + 0.2F * Mth.sin(t * 0.37F)));
+            m.drawOutline(base, new MeshDraw(poseStack, rim, full, OverlayTexture.NO_OVERLAY), negativeMask, true, OUTLINE_WIDTH, 0xFF000000);
         }
     }
 

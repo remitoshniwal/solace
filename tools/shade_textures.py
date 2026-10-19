@@ -212,67 +212,155 @@ def gradient_strip(w, h, base, tip, rng):
     return img
 
 
+def armor(w, h, base, light, dark, lace, rows=8):
+    """Samurai lamellar armour: rows of lacquered plates (lames), each with a lit top edge and a shadowed bottom,
+    laced together with cords running down in pairs. Crisp pixel art, no blur."""
+    img = Image.new("RGBA", (w, h), base + (255,))
+    d = ImageDraw.Draw(img)
+    rh = h // rows
+    for r in range(rows):
+        y0 = r * rh
+        d.line([(0, y0), (w - 1, y0)], fill=light + (255,))
+        d.line([(0, y0 + rh - 1), (w - 1, y0 + rh - 1)], fill=dark + (255,))
+        for x in range(4, w, 8):  # cord pairs crossing each plate
+            d.line([(x, y0 + 1), (x, y0 + rh - 2)], fill=lace + (255,))
+            d.line([(x + 1, y0 + 1), (x + 1, y0 + rh - 2)], fill=lace + (255,))
+            d.point((x - 1, y0 + rh // 2), fill=lace + (255,))
+            d.point((x + 2, y0 + rh // 2), fill=lace + (255,))
+    return img
+
+
+def katana(base, wrap, wrap_dark, metal, metal_dark):
+    """A 64x32 strip: the scabbard (top half, glossy lacquer) and the hilt (bottom half, diamond-wrapped)."""
+    img = Image.new("RGBA", (64, 32), base + (255,))
+    d = ImageDraw.Draw(img)
+    d.line([(0, 3), (63, 3)], fill=tuple(min(255, c + 30) for c in base) + (255,))  # a gloss line
+    for x in range(0, 64, 16):
+        d.rectangle([x, 0, x + 1, 15], fill=metal_dark + (255,))                     # bands round the scabbard
+    d.rectangle([0, 16, 63, 31], fill=wrap_dark + (255,))
+    for x in range(-16, 64, 6):                                                        # the criss-cross hilt wrap
+        d.line([(x, 16), (x + 15, 31)], fill=wrap + (255,), width=2)
+        d.line([(x + 15, 16), (x, 31)], fill=wrap + (255,), width=2)
+    d.rectangle([0, 16, 3, 31], fill=metal + (255,))
+    d.rectangle([60, 16, 63, 31], fill=metal + (255,))
+    return img
+
+
 def sheet(negative, seed=7):
     rng = random.Random(seed)
     main = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
     glow = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
     if negative:
-        body, light, rim = (236, 238, 242, 255), (255, 255, 255, 255), (255, 255, 255, 230)
         robe, robe_edge = (14, 14, 18, 255), (230, 230, 236, 255)
         tile = body_tile(64, 64, rng, (232, 234, 238), (205, 207, 214))
+        plates = armor(64, 64, (234, 234, 238), (255, 255, 255), (186, 186, 194), (16, 16, 20))
+        sword = katana((236, 236, 240), (20, 20, 24), (200, 200, 206), (60, 60, 66), (150, 150, 158))
     else:
-        body, light, rim = (12, 12, 15, 255), (44, 44, 52, 255), (200, 205, 220, 120)
         robe, robe_edge = (11, 11, 14, 255), (52, 52, 62, 255)
         tile = body_tile(64, 64, rng, (16, 16, 19), (32, 32, 38))
+        plates = armor(64, 64, (20, 20, 25), (52, 52, 62), (6, 6, 8), (128, 20, 26))
+        sword = katana((14, 14, 18), (128, 20, 26), (40, 8, 10), (150, 128, 70), (70, 60, 36))
     main.paste(tile, (0, 0))
-    for i in range(6):
-        w_img, w_glow = wisp(32, 64, rng, body, light, rim)
-        main.alpha_composite(w_img, (64 + i * 32, 0))
-        if w_glow:
-            glow.alpha_composite(w_glow, (64 + i * 32, 0))
+    main.paste(plates, (64, 0))
+    main.paste(sword, (128, 0))
     cloak = cloak_sheet(128, 128, rng, robe, robe_edge)
     main.alpha_composite(cloak, (0, 64))
-    if not negative:
-        glow.alpha_composite(rim_glow(cloak, (190, 200, 225), 150), (0, 64))  # the torn edges shine faintly in the dark
     if negative:
-        main.paste(gradient_strip(32, 64, (235, 236, 240), (255, 255, 255), rng), (128, 64))   # spikes (unused)
-        main.paste(gradient_strip(32, 64, (225, 226, 232), (255, 255, 255), rng), (160, 64))   # claws and bone
+        main.paste(gradient_strip(32, 64, (235, 236, 240), (255, 255, 255), rng), (128, 64))   # spikes
+        main.paste(gradient_strip(32, 64, (225, 226, 232), (255, 255, 255), rng), (160, 64))   # claws and blades
     else:
         main.paste(gradient_strip(32, 64, (14, 14, 17), (40, 40, 48), rng), (128, 64))         # spikes: black, edges catch a little light
-        tips = Image.new("RGBA", (32, 64), (0, 0, 0, 0))
-        ImageDraw.Draw(tips).rectangle([0, 48, 31, 63], fill=(170, 180, 205, 90))
-        glow.alpha_composite(tips.filter(ImageFilter.GaussianBlur(3)), (128, 64))       # and their tips glint
         main.paste(gradient_strip(32, 64, (20, 19, 23), (120, 116, 124), rng), (160, 64))     # claws: pale at the tips
-    band = Image.new("RGBA", (64, 32), (12, 12, 16, 255) if negative else (22, 22, 26, 255))
+    band = Image.new("RGBA", (64, 32), (12, 12, 16, 255) if negative else (96, 16, 22, 255))
     bd = ImageDraw.Draw(band)
     for y in range(0, 32, 5):
-        bd.line([(0, y), (63, y + 3)], fill=(30, 30, 36, 255))
+        bd.line([(0, y), (63, y + 3)], fill=(30, 30, 36, 255) if negative else (70, 10, 14, 255))
     main.paste(band, (192, 64))
     # Short over-skirt for the negative's robe: white tatters over the black.
     main.alpha_composite(cloak_sheet(64, 32, rng, (238, 238, 242, 255) if negative else robe, (255, 255, 255, 255) if negative else None), (192, 96))
-    for i in range(2):
-        img = canvas(64, 64)
-        d = ImageDraw.Draw(img)
-        for k in range(4):
-            cx = rng.uniform(0.3, 0.7) * 64
-            stroke(d, (cx * SS, 64 * SS), (rng.uniform(0, 64) * SS, 30 * SS), (rng.uniform(10, 54) * SS, rng.uniform(2, 14) * SS), 7 * SS, 0.5 * SS, body)
-        main.alpha_composite(shrink(img), (128 + i * 64, 128))
     for i in range(4):
         f = flame(32, 64, rng)
         if negative:
             main.alpha_composite(f, (i * 32, 192))
             glow.alpha_composite(f, (i * 32, 192))
-    for i in range(2):
-        b = blade(64, 64, rng, (245, 245, 250, 255), (255, 255, 255, 255))
-        if negative:
-            main.alpha_composite(b, (128 + i * 64, 192))
-            glow.alpha_composite(b, (128 + i * 64, 192))
     if negative:
         # In the negative, the body itself shines softly.
         g = tile.copy()
         g.putalpha(90)
         glow.alpha_composite(g, (0, 0))
     return main, glow
+
+
+def outline_tex():
+    """Plain white: the outline pass colours it white (normal form) or black (negative) per vertex."""
+    return Image.new("RGBA", (16, 16), (255, 255, 255, 255))
+
+
+def lantern_frames(seed, palette, outline, frames=12, size=32):
+    """
+    The Lantern as Minecraft-style pixel art: a ragged ball of plasma with a dark outline, a white-hot middle,
+    and lightning veins, in a handful of flat colours. A strip of frames played like a flipbook (like lava or
+    a nether portal), each a little different, so it churns.
+    """
+    field = fbm(128, seed, octaves=5, base=4)
+    ridge = 1 - np.abs(2 * fbm(128, seed + 1, octaves=5, base=6) - 1)
+    edge = fbm(128, seed + 2, octaves=3, base=3)
+    strip = Image.new("RGBA", (size * frames, size), (0, 0, 0, 0))
+    c = (size - 1) / 2
+    y, x = np.mgrid[0:size, 0:size]
+    dx, dy = (x - c) / c, (y - c) / c
+    r = np.hypot(dx, dy)
+    for f in range(frames):
+        ang = 2 * math.pi * f / frames
+        ox, oy = int(48 + 10 * math.cos(ang)), int(48 + 10 * math.sin(ang))
+        n = field[oy:oy + size, ox:ox + size]
+        rd = ridge[oy:oy + size, ox:ox + size]
+        e = edge[oy:oy + size, ox:ox + size]
+        th = np.arctan2(dy, dx)
+        lobes = 0.16 * np.sin(3 * th + ang * 2 + seed) + 0.1 * np.sin(5 * th - ang * 3)
+        limit = np.clip(0.66 + 0.9 * (e - 0.5) + 0.4 * (n - 0.5) + lobes, 0.38, 0.99)
+        inside = r < limit
+        fall = np.clip(1 - r / limit, 0, 1)
+        v = fall * (0.55 + 0.6 * n) + (rd > 0.9) * 0.55 * (fall > 0.08) + np.clip(1 - r / 0.32, 0, 1) * 1.2
+        level = np.digitize(v, [0.22, 0.5, 0.78, 1.05])          # 5 flat colours
+        # two crackling arcs of lightning reaching out past the edge
+        frng = random.Random(seed * 100 + f)
+        for _ in range(2):
+            a0 = frng.uniform(0, 2 * math.pi)
+            px_, py_ = c, c
+            for step in range(int(size * 0.62)):
+                a0 += frng.uniform(-0.6, 0.6)
+                px_ += math.cos(a0) * 0.9
+                py_ += math.sin(a0) * 0.9
+                ix, iy = int(round(px_)), int(round(py_))
+                if not (1 <= ix < size - 1 and 1 <= iy < size - 1):
+                    break
+                inside[iy, ix] = True
+                level[iy, ix] = max(level[iy, ix], 3)
+        img = np.zeros((size, size, 4), np.uint8)
+        for k, col in enumerate(palette):
+            img[inside & (level == k)] = col + (255,)
+        # one-pixel dark outline round the shape
+        mask = inside.copy()
+        grow = np.zeros_like(mask)
+        grow[1:, :] |= mask[:-1, :]
+        grow[:-1, :] |= mask[1:, :]
+        grow[:, 1:] |= mask[:, :-1]
+        grow[:, :-1] |= mask[:, 1:]
+        img[grow & ~mask] = outline + (255,)
+        strip.paste(Image.fromarray(img, "RGBA"), (f * size, 0))
+    return strip
+
+
+def pixel_glow(size, color):
+    """A chunky, blocky halo to sit behind the pixel ball (added, so it lights up the dark)."""
+    img = radial(size, [(0, color + (150,)), (0.55, color + (70,)), (1.0, color + (0,))])
+    px = img.load()
+    for xx in range(size):  # flatten into a few steps, like Minecraft's own glow
+        for yy in range(size):
+            r_, g_, b_, a_ = px[xx, yy]
+            px[xx, yy] = (r_, g_, b_, (a_ // 40) * 40)
+    return img
 
 
 # ---------- The Lantern orb (from the energy burst in reference image 4) ----------
@@ -375,15 +463,14 @@ def premultiplied(img):
 
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
-    m, g = sheet(False)
+    m, _ = sheet(False)
     m.save(OUT / "solace_shade.png")
-    premultiplied(g).save(OUT / "solace_shade_glow.png")
     m, g = sheet(True)
     m.save(OUT / "solace_shade_negative.png")
     premultiplied(g).save(OUT / "solace_shade_negative_glow.png")
-    premultiplied(radial(64, [(0, (255, 255, 255, 255)), (0.35, (235, 250, 255, 255)), (0.7, (140, 200, 255, 120)), (1.0, (30, 80, 220, 0))])).save(OUT / "orb_core.png")
-    premultiplied(radial(64, [(0, (60, 120, 255, 150)), (0.5, (20, 60, 200, 70)), (1.0, (0, 10, 60, 0))])).save(OUT / "orb_haze.png")
-    for i, (reach, veins, glow) in enumerate(((0.8, 1.0, 1.0), (0.95, 0.8, 0.8), (1.0, 0.6, 0.55))):
-        premultiplied(plasma(256, 11 + i * 17, reach, veins, glow)).save(OUT / f"orb_plasma_{i}.png")
-    smoke(64, 5).save(OUT / "orb_smoke.png")
+    outline_tex().save(OUT / "outline.png")
+    lantern_frames(21, [(22, 40, 140), (36, 90, 225), (90, 170, 255), (185, 230, 255), (255, 255, 255)], (6, 10, 34)).save(OUT / "orb_frames.png")
+    lantern_frames(27, [(70, 6, 8), (130, 16, 18), (200, 40, 36), (245, 120, 100), (255, 220, 210)], (14, 2, 2)).save(OUT / "orb_frames_hollow.png")
+    premultiplied(pixel_glow(16, (40, 100, 255))).save(OUT / "orb_glow.png")
+    premultiplied(pixel_glow(16, (200, 30, 30))).save(OUT / "orb_glow_hollow.png")
     print("Textures written to", OUT)

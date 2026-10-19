@@ -40,6 +40,10 @@ public final class BbModel {
         final float[] uv = new float[8];
         /** For cloth: how far down each corner hangs (0 at the top, 1 at the hem). */
         float[] fall;
+        /** For the outline: which way each corner faces, smoothed over the element (outwards); null = no outline. */
+        float[] smooth;
+        /** How much of the outline width this element gets: thin parts (claws) get a thinner line. */
+        float rim = 1;
     }
 
     /** A group from Blockbench. Its extra rotation, offset and scale are set by the renderer each frame. */
@@ -119,7 +123,10 @@ public final class BbModel {
             int before = parent.faces.size();
             if (type.equals("mesh")) addMesh(parent, e, texW, texH);
             else if (type.equals("cube")) addCube(parent, e, texW, texH);
-            if (parent.flutter) markFall(parent.faces.subList(before, parent.faces.size()));
+            List<Face> added = parent.faces.subList(before, parent.faces.size());
+            if (parent.flutter) markFall(added);
+            // Outlines need a closed shape: not flat cards (flames) or single sheets of cloth.
+            else if (!isFlat(e)) markSmooth(added);
             return;
         }
         JsonObject o = node.getAsJsonObject();
@@ -242,6 +249,61 @@ public final class BbModel {
         System.arraycopy(t2, 0, t, 0, 4);
     }
 
+    private static boolean isFlat(JsonObject e) {
+        if (!e.has("from")) return false;
+        float[] from = vec(e, "from"), to = vec(e, "to");
+        return Math.abs(to[0] - from[0]) < 0.01F || Math.abs(to[1] - from[1]) < 0.01F || Math.abs(to[2] - from[2]) < 0.01F;
+    }
+
+    /**
+     * Works out, for every corner, which way is "out" (the average of the faces meeting there, turned away from the
+     * element's middle), so the outline can puff the shape outwards evenly without splitting at the edges.
+     */
+    private static void markSmooth(List<Face> faces) {
+        float[] centre = new float[3];
+        int n = 0;
+        for (Face f : faces) for (int k = 0; k < 4; k++, n++) for (int a = 0; a < 3; a++) centre[a] += f.pos[k * 3 + a];
+        if (n == 0) return;
+        for (int a = 0; a < 3; a++) centre[a] /= n;
+        float[] lo = {1e9f, 1e9f, 1e9f}, hi = {-1e9f, -1e9f, -1e9f};
+        for (Face f : faces) for (int k = 0; k < 4; k++) for (int a = 0; a < 3; a++) {
+            lo[a] = Math.min(lo[a], f.pos[k * 3 + a]);
+            hi[a] = Math.max(hi[a], f.pos[k * 3 + a]);
+        }
+        float thinnest = Math.min(hi[0] - lo[0], Math.min(hi[1] - lo[1], hi[2] - lo[2]));
+        float rim = Math.max(0.35F, Math.min(1, thinnest / 2.5F));
+        Map<Long, float[]> sums = new HashMap<>();
+        float[][] normals = new float[faces.size()][];
+        for (int i = 0; i < faces.size(); i++) {
+            Face f = faces.get(i);
+            float[] p0 = {f.pos[0], f.pos[1], f.pos[2]}, p1 = {f.pos[3], f.pos[4], f.pos[5]}, p2 = {f.pos[6], f.pos[7], f.pos[8]};
+            float[] nrm = cross(sub(p1, p0), sub(p2, p0));
+            if (len(nrm) < 1e-8f) nrm = cross(sub(p2, p0), sub(new float[]{f.pos[9], f.pos[10], f.pos[11]}, p0));
+            float[] mid = new float[3];
+            for (int k = 0; k < 4; k++) for (int a = 0; a < 3; a++) mid[a] += f.pos[k * 3 + a] / 4;
+            if (dot(nrm, sub(mid, centre)) < 0) nrm = new float[]{-nrm[0], -nrm[1], -nrm[2]};
+            normals[i] = nrm;
+            for (int k = 0; k < 4; k++) {
+                float[] acc = sums.computeIfAbsent(key(f.pos, k), x -> new float[3]);
+                for (int a = 0; a < 3; a++) acc[a] += nrm[a];
+            }
+        }
+        for (Face f : faces) {
+            f.rim = rim;
+            f.smooth = new float[12];
+            for (int k = 0; k < 4; k++) {
+                float[] acc = sums.get(key(f.pos, k));
+                float l = Math.max(1e-6f, len(acc));
+                for (int a = 0; a < 3; a++) f.smooth[k * 3 + a] = acc[a] / l;
+            }
+        }
+    }
+
+    private static long key(float[] pos, int k) {
+        long x = Math.round(pos[k * 3] * 512), y = Math.round(pos[k * 3 + 1] * 512), z = Math.round(pos[k * 3 + 2] * 512);
+        return (x & 0x1FFFFF) << 42 | (y & 0x1FFFFF) << 21 | (z & 0x1FFFFF);
+    }
+
     private static void markFall(List<Face> faces) {
         float top = -1e9f, bottom = 1e9f;
         for (Face f : faces) for (int k = 0; k < 4; k++) {
@@ -272,10 +334,19 @@ public final class BbModel {
      * @param argb         colour to tint by
      */
     public void draw(Mat4 base, MeshSink out, int negativeMask, boolean negativePass, float t, float push, int argb) {
-        draw(root, base, out, negativeMask, negativePass, t, push, new int[]{argb, argb, argb, argb});
+        draw(root, base, out, negativeMask, negativePass, t, push, new int[]{argb, argb, argb, argb}, 0);
     }
 
-    private void draw(Bone b, Mat4 parent, MeshSink out, int mask, boolean negPass, float t, float push, int[] argb) {
+    /**
+     * Draws the outline for one pass: each closed shape is puffed outwards by {@code width} pixels and drawn inside
+     * out, so with back faces hidden only a rim shows round its edges (the "inverted hull" trick from cartoon games).
+     * Needs a render type that hides back faces.
+     */
+    public void drawOutline(Mat4 base, MeshSink out, int negativeMask, boolean negativePass, float width, int argb) {
+        draw(root, base, out, negativeMask, negativePass, 0, 0, new int[]{argb, argb, argb, argb}, width);
+    }
+
+    private void draw(Bone b, Mat4 parent, MeshSink out, int mask, boolean negPass, float t, float push, int[] argb, float hull) {
         if (!b.visible) return;
         if (b.form == NORMAL_ONLY && negPass && (mask & b.part) != 0) return;
         if (b.form == NEGATIVE_ONLY && !negPass) return;
@@ -288,10 +359,17 @@ public final class BbModel {
                 .translate(-b.pivot[0], -b.pivot[1], -b.pivot[2]);
         boolean mine = ((mask & b.part) != 0) == negPass;
         if (mine && !b.faces.isEmpty()) {
-            float[] pos = new float[12], nrm = new float[12];
+            float[] pos = new float[12], nrm = new float[12], out4 = new float[12];
             for (Face f : b.faces) {
+                if (hull > 0 && f.smooth == null) continue;
                 for (int k = 0; k < 4; k++) {
                     float x = f.pos[k * 3], y = f.pos[k * 3 + 1], z = f.pos[k * 3 + 2];
+                    if (hull > 0) {
+                        x += f.smooth[k * 3] * hull * f.rim;
+                        y += f.smooth[k * 3 + 1] * hull * f.rim;
+                        z += f.smooth[k * 3 + 2] * hull * f.rim;
+                        m.normal(f.smooth[k * 3], f.smooth[k * 3 + 1], f.smooth[k * 3 + 2], out4, k * 3);
+                    }
                     if (f.fall != null) {
                         // Cloth: ripples travel round it, bigger towards the hem, and it trails back when walking.
                         float d = f.fall[k] * f.fall[k];
@@ -317,6 +395,15 @@ public final class BbModel {
                 nx /= l;
                 ny /= l;
                 nz /= l;
+                if (hull > 0) {
+                    // Turn the face inside out: it must face inwards, so only the far side of the puffed shape shows.
+                    if (nx * (out4[0] + out4[6]) + ny * (out4[1] + out4[7]) + nz * (out4[2] + out4[8]) > 0) {
+                        swap(pos, 1, 3);
+                    }
+                    nx = 0;
+                    ny = 1;
+                    nz = 0;
+                }
                 for (int k = 0; k < 4; k++) {
                     nrm[k * 3] = nx;
                     nrm[k * 3 + 1] = ny;
@@ -325,7 +412,15 @@ public final class BbModel {
                 out.quad(pos, nrm, f.uv, argb);
             }
         }
-        for (Bone c : b.children) draw(c, m, out, mask, negPass, t, push, argb);
+        for (Bone c : b.children) draw(c, m, out, mask, negPass, t, push, argb, hull);
+    }
+
+    private static void swap(float[] pos, int i, int k) {
+        for (int a = 0; a < 3; a++) {
+            float v = pos[i * 3 + a];
+            pos[i * 3 + a] = pos[k * 3 + a];
+            pos[k * 3 + a] = v;
+        }
     }
 
     private static float[] sub(float[] a, float[] b) {
