@@ -290,9 +290,14 @@ public final class Powers {
     }
 
     private static String conjure(ServerPlayer p, PlayerStory story, String name, int count) {
-        if (!SolaceConfig.ALLOW_CONJURING.get()) return "can't: conjuring is switched off in this world";
         Item item = ActionExecutor.item(name);
         if (item == null) return "can't: you don't know what '" + name + "' is";
+        return conjure(p, story, item, count);
+    }
+
+    /** Makes items out of nothing, paid for with strength (Tether). Returns what happened; failures start with "can't". */
+    static String conjure(ServerPlayer p, PlayerStory story, Item item, int count) {
+        if (!SolaceConfig.ALLOW_CONJURING.get() || !SolaceConfig.ALLOW_POWERS.get()) return "can't: making things out of nothing is switched off in this world";
         String id = BuiltInRegistries.ITEM.getKey(item).getPath();
         if (FORBIDDEN.contains(id) || id.endsWith("_spawn_egg")) return "can't: some things shouldn't exist in anyone's hands";
         if (story.trust <= -30) return "can't: you don't want to give them anything (they've hurt you too much)";

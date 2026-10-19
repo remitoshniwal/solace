@@ -112,7 +112,7 @@ public final class ActionExecutor {
                 return null;
             }
             case "give" -> {
-                return give(owner, solace, str(a, "item"), clamp(num(a, "count", 64), 1, 64 * 27));
+                return give(owner, solace, story, str(a, "item"), clamp(num(a, "count", 64), 1, 64 * 27), a.has("count"));
             }
             case "craft" -> {
                 if (!SolaceConfig.ALLOW_CRAFTING.get()) return "I'm not allowed to craft.";
@@ -196,7 +196,13 @@ public final class ActionExecutor {
         return null;
     }
 
-    private static String give(ServerPlayer owner, SolaceEntity solace, String itemName, int count) {
+    /**
+     * Gives from Solace's pockets first. Whatever it doesn't have, it makes with its power (paid for in strength),
+     * so "give me coal" just works if it can afford it.
+     *
+     * @param askedCount false if the player didn't say how many: then it makes a sensible handful, not 64
+     */
+    private static String give(ServerPlayer owner, SolaceEntity solace, PlayerStory story, String itemName, int count, boolean askedCount) {
         String wanted = itemName.toLowerCase(Locale.ROOT).trim().replace(' ', '_');
         boolean all = wanted.isEmpty() || wanted.equals("all") || wanted.equals("everything");
         Item item = all ? null : item(wanted);
@@ -211,9 +217,30 @@ public final class ActionExecutor {
             given += take;
             if (!owner.getInventory().add(out)) owner.drop(out, false);
         }
-        if (given == 0) return all ? "My pockets are empty." : "I don't have any " + wanted.replace('_', ' ') + ".";
-        com.solacemod.solace.util.Sounds.playAt(owner, "entity.item.pickup", 0.5F, 1.0F);
-        return null;
+        if (given > 0) com.solacemod.solace.util.Sounds.playAt(owner, "entity.item.pickup", 0.5F, 1.0F);
+        if (all) return given == 0 ? "I don't have anything in my pockets to give." : null;
+        if (item == null) return given > 0 ? null : "I don't know what \"" + itemName + "\" is.";
+        int missing = count - given;
+        if (missing <= 0 || (given > 0 && !askedCount)) return null;
+        // Not enough in the pockets: make the rest.
+        double unit = ItemValue.of(item);
+        int make = askedCount ? missing : unit <= 1.0 ? 16 : unit <= 6 ? 4 : 1;
+        String made = Powers.conjure(owner, story, item, make);
+        if (!made.startsWith("can't")) {
+            story.addEvent("you " + made);
+            return null;
+        }
+        String name = new ItemStack(item).getHoverName().getString();
+        if (given > 0) return "I only had " + given + " " + name + " to give, and I couldn't make more: " + made.substring(made.indexOf(':') + 1).trim() + ".";
+        return "I don't have any " + name + ", and I couldn't make it: " + made.substring(made.indexOf(':') + 1).trim() + ".";
+    }
+
+    /** True if an action result means it didn't (fully) work, so Solace mustn't claim it did. */
+    static boolean isProblem(String result) {
+        String r = result.toLowerCase(Locale.ROOT);
+        return r.startsWith("can't") || r.startsWith("i can't") || r.startsWith("i don't") || r.startsWith("i'm not") || r.startsWith("i only")
+                || r.startsWith("i won't") || r.startsWith("i need") || r.startsWith("that place") || r.contains("too far")
+                || r.contains("isn't ready yet") || r.startsWith("my pockets");
     }
 
     @Nullable

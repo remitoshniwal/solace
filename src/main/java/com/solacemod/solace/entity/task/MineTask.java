@@ -12,7 +12,10 @@ import net.minecraft.world.phys.Vec3;
 import java.util.HashSet;
 import java.util.Set;
 
-/** Finds blocks of one kind nearby, walks to them, and mines them (with the right tool, at a realistic speed). */
+/**
+ * Finds blocks of one kind nearby, walks to them, and mines them. Solace doesn't need tools: without one it breaks
+ * the block with its power (and still gets the proper drops). A real tool from its pockets makes it faster.
+ */
 public final class MineTask implements SolaceTask {
     private static final int RADIUS = 14;
     private static final int HEIGHT = 8;
@@ -51,11 +54,7 @@ public final class MineTask implements SolaceTask {
                         : "That's all the " + matcher.displayName() + " I can reach. I got " + mined + ".");
                 return true;
             }
-            BlockState state = level.getBlockState(target);
-            if (!solace.equipBestToolFor(state)) {
-                TaskUtil.report(solace, "I need the right tool to mine " + matcher.displayName() + ". Can you give me a pickaxe?");
-                return true;
-            }
+            solace.equipBestToolFor(level.getBlockState(target)); // a tool helps, but isn't needed
             if (!TaskUtil.walkTo(solace, target, 1.1)) {
                 unreachable.add(target);
                 target = null;
@@ -106,13 +105,13 @@ public final class MineTask implements SolaceTask {
         clearProgress((ServerLevel) solace.level(), solace);
     }
 
-    /** Roughly how long a player would take with the same tool. */
+    /** Roughly how long a player would take with the same tool. With its bare power, about as fast as a stone tool. */
     private static int breakTime(SolaceEntity solace, BlockState state, ServerLevel level, BlockPos pos) {
         float hardness = state.getDestroySpeed(level, pos);
         ItemStack tool = solace.getMainHandItem();
-        float speed = Math.max(1.0F, tool.getDestroySpeed(state));
-        boolean correct = !state.requiresCorrectToolForDrops() || tool.isCorrectToolForDrops(state);
-        int ticks = (int) Math.ceil(hardness * (correct ? 30 : 100) / speed * 0.8);
+        boolean hasTool = tool.isCorrectToolForDrops(state) || (!state.requiresCorrectToolForDrops() && tool.getDestroySpeed(state) > 1.0F);
+        float speed = hasTool ? Math.max(1.0F, tool.getDestroySpeed(state)) : 4.0F;
+        int ticks = (int) Math.ceil(hardness * 30 / speed * 0.8);
         return Math.max(4, Math.min(400, ticks));
     }
 

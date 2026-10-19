@@ -89,7 +89,7 @@ Open setup and go to the **Voice** page:
 | `/solace reset confirm` | Restart the story in this world |
 | `/solace admin ...` | Server operators, for testing: `chapter`, `trust`, `bond`, `fragment`, `horror`, `presence`, `lantern`, `question` (see [docs/STORY.md](docs/STORY.md)) |
 
-**Tip:** give Solace items by right-clicking it while holding them. It needs blocks to build, a pickaxe to mine stone and ores, and coal + sticks to make torches.
+**Tip:** give Solace items by right-clicking it while holding them, or just throw them to it (Q). It doesn't need tools to mine (a pickaxe only makes it faster). Ask it for something it doesn't have and it makes it with its power, if it's strong enough. It needs blocks to build and coal + sticks to make torches.
 
 ## Comfort and safety settings
 

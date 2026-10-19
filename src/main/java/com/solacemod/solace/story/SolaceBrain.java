@@ -269,15 +269,21 @@ public final class SolaceBrain {
         // While Solace is upset (a story moment), it refuses to act. The AI is told about this in the game state.
         if (story.defiantUntilTick > server.getTickCount()) actions = List.of();
 
-        if (!say.isEmpty()) display(player, solace, story, say, reply.emotion());
         if (solace == null && !actions.isEmpty() && story.respawnAtTick < 0) {
             // Solace is far away in an unloaded area (e.g. told to stay). Being asked to act calls it back.
             solace = SolaceManager.summon(player, story);
         }
+        // Act first, speak second: Solace only says what it's doing once it knows whether it worked.
         List<String> results = new ArrayList<>();
         if (solace != null && !actions.isEmpty() && !solace.isHollow()) {
             results.addAll(ActionExecutor.execute(player, solace, story, actions));
         }
+        boolean followUpAllowed = !userContent.startsWith("[EVENT] Results");
+        List<String> problems = results.stream().filter(ActionExecutor::isProblem).toList();
+        // Something it was about to promise didn't happen ("here's some coal", but it has none and can't make it).
+        // Don't show that line at all: ask for one honest reply instead, so the player never sees two messages that disagree.
+        boolean retract = !problems.isEmpty() && followUpAllowed && !say.isEmpty();
+        if (!say.isEmpty() && !retract) display(player, solace, story, say, reply.emotion());
         for (String fact : reply.remember()) {
             story.addFact(fact);
             GlobalMemory.addFact(player.getUUID(), fact);
@@ -287,7 +293,7 @@ public final class SolaceBrain {
         // History: what was said, and what Solace answered (as JSON, so the AI keeps using the format).
         story.history.add(new PlayerStory.Turn("user", userContent));
         JsonObject saved = new JsonObject();
-        saved.addProperty("say", say);
+        saved.addProperty("say", retract ? "" : say);
         if (!actions.isEmpty()) saved.add("actions", ReplyParser.toJsonArray(actions));
         story.history.add(new PlayerStory.Turn("assistant", saved.toString()));
         trimHistory(player, story);
@@ -295,10 +301,16 @@ public final class SolaceBrain {
 
         // Some actions have results Solace should mention ("I don't have any diamonds", "found a village at...").
         // Tell the AI so it can say it naturally. Results of results don't chain, so this can't loop.
-        if (!results.isEmpty() && !userContent.startsWith("[EVENT] Results")) {
+        if (!results.isEmpty() && followUpAllowed) {
             String joined = String.join(" | ", results);
             results.forEach(r -> story.addEvent("action result: " + r));
-            event(player, "Results of what you just tried to do: " + joined + ". Tell the player briefly, in your own words.", true);
+            if (retract) {
+                event(player, "Results of what you just tried to do: " + joined + ". You haven't said anything to the player yet. "
+                        + "Reply ONCE, honestly and in character: don't claim it worked. Say what you couldn't do and why, "
+                        + "and offer something you CAN do instead (mine it, find it, or make it with your power once you're strong enough).", true);
+            } else {
+                event(player, "Results of what you just tried to do: " + joined + ". Tell the player briefly, in your own words.", true);
+            }
         }
     }
 

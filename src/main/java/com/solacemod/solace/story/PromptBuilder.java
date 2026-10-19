@@ -110,10 +110,14 @@ public final class PromptBuilder {
             sb.append("{\"type\":\"attack\",\"target\":\"zombie\",\"count\":3} flicker to those mobs and end them one by one (\"hostile\" = any monster)\n");
         }
         if (SolaceConfig.ALLOW_MINING.get()) {
-            sb.append("{\"type\":\"mine\",\"block\":\"iron\",\"count\":8} mine blocks: logs, stone, dirt, sand, coal, iron, gold, diamond, copper, redstone, or any block id\n");
+            sb.append("{\"type\":\"mine\",\"block\":\"iron\",\"count\":8} mine blocks: logs, stone, dirt, sand, coal, iron, gold, diamond, copper, redstone, or any block id. "
+                    + "You don't need tools: your power breaks blocks (a tool in your pockets just makes you faster)\n");
         }
         sb.append("{\"type\":\"collect\"} pick up dropped items nearby\n");
-        sb.append("{\"type\":\"give\",\"item\":\"cobblestone\",\"count\":16} give the player items from your pockets (item \"all\" = everything)\n");
+        sb.append("{\"type\":\"give\",\"item\":\"coal\",\"count\":16} give the player an item. From your pockets if you have it; if not, you make it with your power "
+                + "(costs strength by its value, see conjure). Item \"all\" = empty your pockets\n");
+        sb.append("Your actions are carried out before your words are shown. If one fails, your words are NOT shown; "
+                + "you'll be told why and asked to answer again, so just say naturally what you're doing.\n");
         if (SolaceConfig.ALLOW_CRAFTING.get()) sb.append("{\"type\":\"craft\",\"item\":\"stone_pickaxe\",\"count\":1} craft from your pockets using real recipes\n");
         if (SolaceConfig.ALLOW_BUILDING.get()) {
             sb.append("{\"type\":\"build\",\"structure\":\"shelter\"} build a shelter, wall, pillar, bridge or platform from blocks in your pockets\n");

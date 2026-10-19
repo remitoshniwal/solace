@@ -421,6 +421,7 @@ public class SolaceEntity extends PathfinderMob {
         } else {
             combat.tick();
             presence.tick();
+            if (tickCount % 10 == 0) pickUpThrownItems();
             if (tickCount % 40 == 0) equipBestWeapon();
         }
     }
@@ -671,22 +672,63 @@ public class SolaceEntity extends PathfinderMob {
 
     // ---------- Items ----------
 
+    /** Things the owner throws to Solace (Q key, near it) go into its pockets, as a gift. Journal pages are left alone. */
+    private void pickUpThrownItems() {
+        ServerPlayer owner = getServerOwner();
+        if (owner == null || owner.level() != level()) return;
+        for (net.minecraft.world.entity.item.ItemEntity item : level().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                getBoundingBox().inflate(2.5, 1.0, 2.5), e -> e.isAlive() && e.tickCount > 10)) {
+            if (!(item.getOwner() instanceof Player thrower) || !thrower.getUUID().equals(owner.getUUID())) continue;
+            ItemStack stack = item.getItem();
+            if (com.solacemod.solace.story.Fragments.indexOf(stack) >= 0) continue;
+            ItemStack copy = stack.copy();
+            ItemStack leftover = inventory.addItem(copy);
+            int taken = stack.getCount() - leftover.getCount();
+            if (taken <= 0) continue;
+            take(item, taken);
+            ItemStack gift = stack.copyWithCount(taken);
+            if (leftover.isEmpty()) item.discard();
+            else item.setItem(leftover);
+            Sounds.playAt(this, "entity.item.pickup", 0.6F, 1.2F);
+            SolaceBrain.onGift(owner, this, gift);
+        }
+    }
+
     /** Puts an item in Solace's pockets; whatever doesn't fit is dropped on the ground. */
     public void storeOrDrop(ItemStack stack) {
         ItemStack leftover = inventory.addItem(stack);
         if (!leftover.isEmpty()) spawnAtLocation(leftover);
     }
 
-    /** Breaks a block like a player would, keeping the drops. */
+    /**
+     * Breaks a block and keeps the drops. With the right tool in hand it uses (and wears) that tool. Without one,
+     * the block crumbles to ash under its power, and drops what a proper tool would have given.
+     */
     public void harvest(BlockPos pos) {
         ServerLevel level = (ServerLevel) level();
         BlockState state = level.getBlockState(pos);
         BlockEntity be = state.hasBlockEntity() ? level.getBlockEntity(pos) : null;
-        List<ItemStack> drops = Block.getDrops(state, level, pos, be, this, getMainHandItem());
+        ItemStack tool = getMainHandItem();
+        boolean usingTool = tool.isCorrectToolForDrops(state) || (!state.requiresCorrectToolForDrops() && tool.getDestroySpeed(state) > 1.0F);
+        List<ItemStack> drops = Block.getDrops(state, level, pos, be, this, usingTool ? tool : powerTool(state));
         level.destroyBlock(pos, false, this);
         drops.forEach(this::storeOrDrop);
-        ItemStack tool = getMainHandItem();
-        if (!tool.isEmpty() && tool.isDamageableItem()) tool.hurtAndBreak(1, this, EquipmentSlot.MAINHAND);
+        if (usingTool && !tool.isEmpty() && tool.isDamageableItem()) {
+            tool.hurtAndBreak(1, this, EquipmentSlot.MAINHAND);
+        } else if (!usingTool) {
+            level.sendParticles(ParticleTypes.ASH, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 12, 0.3, 0.3, 0.3, 0.01);
+        }
+    }
+
+    /** The tool Solace's power acts like for this block (only used to decide what drops). */
+    private static ItemStack powerTool(BlockState state) {
+        for (net.minecraft.world.item.Item i : new net.minecraft.world.item.Item[]{net.minecraft.world.item.Items.DIAMOND_PICKAXE,
+                net.minecraft.world.item.Items.DIAMOND_AXE, net.minecraft.world.item.Items.DIAMOND_SHOVEL, net.minecraft.world.item.Items.DIAMOND_HOE,
+                net.minecraft.world.item.Items.SHEARS}) {
+            ItemStack s = new ItemStack(i);
+            if (s.isCorrectToolForDrops(state)) return s;
+        }
+        return ItemStack.EMPTY;
     }
 
     /** Holds the best tool from the pockets for this block. Returns false if no tool can harvest it. */
