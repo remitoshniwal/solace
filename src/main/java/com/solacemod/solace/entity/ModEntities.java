@@ -14,9 +14,10 @@ public final class ModEntities {
 
     public static final DeferredHolder<EntityType<?>, EntityType<SolaceEntity>> SOLACE = ENTITIES.register("solace",
             () -> EntityType.Builder.of(SolaceEntity::new, MobCategory.MISC)
-                    .sized(0.6F, 1.8F)
+                    // Wider than a player to match its shoulders, but still narrower than an open doorway (0.81).
+                    .sized(0.78F, 1.95F)
                     .fireImmune()
-                    .eyeHeight(1.62F)
+                    .eyeHeight(1.75F)
                     .clientTrackingRange(10)
                     .build("solace"));
 

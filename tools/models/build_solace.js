@@ -2,12 +2,13 @@
  * Builds Solace's model inside Blockbench (runs in the Blockbench page, see bb_run.mjs).
  * Units are Blockbench pixels: 16 = one block. The model faces north (-z), its right side is +x.
  *
- * A headless samurai: no head and no eyes in either form; a tall laced neck guard stands round an empty hollow.
- * Its armour (chest plates, shoulder guards, armoured skirt, sleeves and shin guards, a katana at its hip) is shared:
- * the negative is the same armour with the colours flipped.
+ * Headless, with no eyes in either form; a laced neck guard stands round an empty hollow.
+ * The negative is a white armoured wraith (chest plates, three-plate shoulder guards, armoured skirt, sleeves, shin
+ * guards, a katana, flames, sword blades for hands). The normal form is a weaker, dark grey version of it: chest plates,
+ * one shoulder plate a side, a lower collar, a short ragged robe and claws.
  * Group name prefixes decide which form shows a part:
- *   n_  only in the normal form (tattered cloak, claws)
- *   x_  only in the negative (shoulder flames, long robe, sword blades for hands)
+ *   n_  only in the normal form (short robe, claws)
+ *   x_  only in the negative (the rest of the armour, katana, shoulder flames, long robe, sword blades for hands)
  *   anything else is shared.
  * The mod animates groups by name (body, arm_r, forearm_r, hand_r, leg_l, shin_l, cloak, wisp..., flame...).
  *
@@ -282,21 +283,24 @@ function buildSolace(textureUrl) {
     ring(24.5, 4.2, 2.55, 0, 0.1), ring(27.5, 4.7, 2.65, 0, 0.2), ring(29.6, 5.3, 2.5, 0, 0.2), top,
   ], SKIN, 12, { caps: ['start', 'end'] });
 
-  // ---------- samurai armour, the same in both forms (the sheet makes it black with red cords, or white with black) ----------
+  // ---------- armour. The negative wears the full set; the normal form is a weaker version of it: only the chest
+  // plates, one shoulder plate a side, a lower collar, and a short ragged robe (dark grey where the negative is white) ----------
   const armor = group('armor', [0, 24, 0], [0, 0, 0], body);
   // Chest armour (do): rows of laced plates from the waist up to the shoulders.
   loft('do', armor, [ring(30.5, 5.6, 2.8, 0, 0.2), ring(28, 5.0, 2.95, 0, 0.2), ring(25, 4.55, 2.85, 0, 0.1), ring(22.5, 3.65, 2.45), ring(21.0, 3.35, 2.35)],
     ARMOR(8), 12);
   // A thick sash (obi) round the waist.
   loft('obi', armor, [ring(19.8, 2.9, 2.1), ring(18.2, 3.25, 2.3), ring(16.8, 3.45, 2.4)], BAND, 12);
-  // Armoured skirt (kusazuri): broad plates hanging round the hips, flaring out.
+  // Armoured skirt (kusazuri, negative): broad plates hanging round the hips, flaring out.
+  const skirtPlates = group('x_kusazuri', [0, 17, 0], [0, 0, 0], armor);
   [180, -125, 125, -70, 70].forEach((a, i) => {
-    plate('kusazuri' + i, armor, { cx: 0, cz: 0.1, a0: a - 27, a1: a + 27, yTop: 17.6, yBot: 10.2, rTop: 3.5, rBot: 4.6, sz: 0.72, thick: 0.4, uv: ARMOR(5, 24), cols: 4 });
+    plate('kusazuri' + i, skirtPlates, { cx: 0, cz: 0.1, a0: a - 27, a1: a + 27, yTop: 17.6, yBot: 10.2, rTop: 3.5, rBot: 4.6, sz: 0.72, thick: 0.4, uv: ARMOR(5, 24), cols: 4 });
   });
   // The neck guard (shikoro) as the coat's collar: three flaring tiers of laced plates round an empty hollow.
   const coll = group('collar', [0, 30.5, 0.4], [0, 0, 0], body);
+  const topTier = group('x_collar_top', [0, 32, 0.4], [0, 0, 0], coll);
   [[30.0, 3.9, 2.5, 1.3], [31.3, 4.75, 3.0, 1.4], [32.6, 5.65, 3.6, 1.5]].forEach(([y, rx, rz, flare], k) => {
-    collar('tier' + k, coll, { y, height: 1.8, drop: 0.7, rx, rz, flare, thick: 0.45, dz: 0.4 + k * 0.25, back: 0.5, spread: 128 - k * 6, cols: 16, uv: ARMOR(1, 48) });
+    collar('tier' + k, k === 2 ? topTier : coll, { y, height: 1.8, drop: 0.7, rx, rz, flare, thick: 0.45, dz: 0.4 + k * 0.25, back: 0.5, spread: 128 - k * 6, cols: 16, uv: ARMOR(1, 48) });
   });
 
   // Two broad, swept-back horns of black (or white) on each shoulder.
@@ -308,8 +312,8 @@ function buildSolace(textureUrl) {
     });
   }
 
-  // A sheathed katana at its left hip: hilt forward, scabbard sweeping back.
-  const sword = group('katana', [-3.7, 16.4, 0], [0, 0, 0], body);
+  // A sheathed katana at its left hip (negative): hilt forward, scabbard sweeping back.
+  const sword = group('x_katana', [-3.7, 16.4, 0], [0, 0, 0], body);
   tube('saya', sword, [-3.7, 16.3, -2.2], [-4.0, 13.2, 9.5], 0.55, 0.5, SAYA, 6, 1.5);
   tube('tsuba', sword, [-3.68, 16.36, -2.2], [-3.66, 16.45, -2.75], 1.15, 1.15, METAL, 8);
   tube('tsuka', sword, [-3.66, 16.45, -2.7], [-3.4, 17.7, -7.6], 0.48, 0.44, TSUKA, 6, 1.3);
@@ -322,9 +326,9 @@ function buildSolace(textureUrl) {
     cross('f2', g2, [s * 5.6, 29.8, 0.8], 5, 8, FLAME(3), FLAME(s > 0 ? 1 : 0));
   }
 
-  // ---------- cloak (normal): a tattered surcoat over the back, falling from the collar nearly to the ground ----------
-  const cloak = group('n_cloak', [0, 31, 0.5], [0, 0, 0], body);
-  drape('cloak', cloak, { a0: -100, a1: 100, cols: 14, rows: 8, top: 31, len: 28, rx: 5.8, rz: 3.0, flareX: 2.6, flareZ: 2.2, dz: 0.4, back: 1.5, fold: 0.1, folds: 6, uv: CLOAK });
+  // ---------- short ragged robe (normal): to the knees, so its thin legs show ----------
+  const shortRobe = group('n_robe', [0, 17, 0], [0, 0, 0], body);
+  drape('robe', shortRobe, { a0: -180, a1: 180, cols: 16, rows: 4, top: 17.6, len: 10.5, rx: 3.4, rz: 2.35, flareX: 1.8, flareZ: 1.5, fold: 0.12, folds: 6, uv: CLOAK });
 
   // ---------- long robe (negative): closes all the way round under the armoured skirt and hides the legs ----------
   const robe = group('x_robe', [0, 17, 0], [0, 0, 0], body);
@@ -336,16 +340,17 @@ function buildSolace(textureUrl) {
     const sx = s * 5.2;
     const arm = group('arm' + side, [sx, 29.8, 0.2], [6, 0, s * 6], body);
     loft('upper', arm, [ring(30.6, 1.6, 1.55, sx, 0.2), ring(28.5, 1.5, 1.45, sx, 0.2), ring(24, 1.2, 1.15, sx, 0.2), ring(20.2, 1.0, 1.0, sx, 0.2)], SKIN, 8, { caps: ['start'] });
-    // Shoulder guards (sode): three broad laced plates, each a little wider, hanging over the outside of the arm.
+    // Shoulder guards (sode): broad laced plates hanging over the outside of the arm; the negative has all three.
+    const moreSode = group('x_sode' + side, [sx, 28, 0.2], [0, 0, 0], arm);
     for (let k = 0; k < 3; k++) {
       const yTop = 31.4 - 2.5 * k;
-      plate('sode' + k, arm, { cx: sx, cz: 0.2, a0: s * 90 - 72, a1: s * 90 + 72, yTop, yBot: yTop - 3.6, rTop: 1.95 + 0.32 * k, rBot: 2.5 + 0.32 * k,
+      plate('sode' + k, k === 0 ? arm : moreSode, { cx: sx, cz: 0.2, a0: s * 90 - 72, a1: s * 90 + 72, yTop, yBot: yTop - 3.6, rTop: 1.95 + 0.32 * k, rBot: 2.5 + 0.32 * k,
         thick: 0.35, uv: ARMOR(2, 32), cols: 6 });
     }
     const fore = group('forearm' + side, [sx, 20.2, 0.2], [14, 0, 0], arm);
     loft('fore', fore, [ring(21.0, 1.1, 1.1, sx, 0.2), ring(19.6, 1.2, 1.1, sx, 0.2), ring(14, 1.0, 0.95, sx, 0.2), ring(9.2, 0.78, 0.75, sx, 0.2)], SKIN, 8, { caps: ['start'] });
-    // Armoured sleeve (kote).
-    loft('kote', fore, [ring(19.2, 1.38, 1.3, sx, 0.2), ring(14, 1.22, 1.15, sx, 0.2), ring(10.6, 1.0, 0.95, sx, 0.2)], ARMOR(5, 32), 8);
+    // Armoured sleeve (kote, negative).
+    loft('kote', group('x_kote' + side, [sx, 15, 0.2], [0, 0, 0], fore), [ring(19.2, 1.38, 1.3, sx, 0.2), ring(14, 1.22, 1.15, sx, 0.2), ring(10.6, 1.0, 0.95, sx, 0.2)], ARMOR(5, 32), 8);
 
     // Hand (normal): a big palm and three thick, bent claws.
     const hand = group('hand' + side, [sx, 9.2, 0.2], [8, 0, 0], fore);
@@ -371,8 +376,8 @@ function buildSolace(textureUrl) {
     loft('thigh', leg, [ring(15.8, 1.7, 1.6, x, 0), ring(13, 1.55, 1.5, x, 0.1), ring(8.6, 1.05, 1.05, x, 0.1)], SKIN, 8, { caps: ['start'] });
     const shin = group('shin' + side, [x, 8.8, 0.1], [10, 0, 0], leg);
     loft('shin', shin, [ring(9.4, 1.1, 1.1, x, 0.1), ring(6, 0.9, 0.9, x, 0.25), ring(1.6, 0.62, 0.65, x, 0.3)], SKIN, 8, { caps: ['start'] });
-    // Shin guard (suneate).
-    loft('suneate', shin, [ring(8.4, 1.3, 1.35, x, 0.0), ring(5, 1.12, 1.18, x, 0.15), ring(2.4, 0.95, 1.0, x, 0.2)], ARMOR(4, 24), 8);
+    // Shin guard (suneate, negative).
+    loft('suneate', group('x_suneate' + side, [x, 5, 0.1], [0, 0, 0], shin), [ring(8.4, 1.3, 1.35, x, 0.0), ring(5, 1.12, 1.18, x, 0.15), ring(2.4, 0.95, 1.0, x, 0.2)], ARMOR(4, 24), 8);
     loft('foot', shin, [ring(2.0, 0.7, 0.72, x, 0.3), ring(0.5, 1.0, 1.25, x, -0.4)], SKIN, 8, { caps: ['end'] });
     [-0.6, 0, 0.6].forEach((dx, k) => {
       const base = [x + dx, 0.65, -1.0];

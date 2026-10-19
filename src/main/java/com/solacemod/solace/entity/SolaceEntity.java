@@ -568,10 +568,13 @@ public class SolaceEntity extends PathfinderMob {
         return form == FORM_VAST ? getBoundingBox().inflate(9, 12, 9) : isLanternForm() ? getBoundingBox().inflate(1.5, 2.5, 1.5) : super.getBoundingBoxForCulling();
     }
 
-    /** The Hollow is the huge Lantern shape, so it's much taller. */
+    /**
+     * The hitbox follows the shape: in the Lantern forms (and the Hollow) it's the floating ball, about 1.4 blocks
+     * across. In its body it's set in ModEntities: as wide as it can be and still fit through an open door.
+     */
     @Override
     public net.minecraft.world.entity.EntityDimensions getDefaultDimensions(net.minecraft.world.entity.Pose pose) {
-        return isHollow() ? net.minecraft.world.entity.EntityDimensions.scalable(1.2F, 2.4F) : super.getDefaultDimensions(pose);
+        return isLanternForm() ? net.minecraft.world.entity.EntityDimensions.scalable(1.4F, 1.65F) : super.getDefaultDimensions(pose);
     }
 
     @Override

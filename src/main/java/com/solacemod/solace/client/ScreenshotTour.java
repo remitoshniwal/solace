@@ -97,7 +97,7 @@ public final class ScreenshotTour {
         list.add(new Stop(List.of("time set noon"), 20, "5_negative_day.png"));
         list.add(new Stop(List.of("solace admin chapter " + me + " 7", "time set midnight"), 220, null)); // let the negative wear off
         list.add(new Stop(List.of("tp " + solace + " 0.5 -60 4.0 180 0", "tp " + me + " 0.5 -60 1.5 0 15"), 30, "6_closeup_night.png"));
-        list.add(new Stop(List.of("tp " + me + " 0.5 -60 1.3 0 -6", "solace admin lantern " + me), 40, "7_lantern_night.png"));
+        list.add(new Stop(List.of("tp " + me + " 0.5 -60 1.3 0 14", "solace admin lantern " + me), 40, "7_lantern_night.png"));
         list.add(new Stop(List.of("gamerule doDaylightCycle false"), 25, "8_lantern_night_later.png")); // a moment later: the blobs have moved
         list.add(new Stop(List.of("time set noon"), 20, "9_lantern_day.png"));
         return list;
