@@ -339,6 +339,8 @@ public final class SolaceBrain {
         if (solace != null && emotion != null && java.util.Set.of("angry", "sad", "glitch", "afraid")
                 .contains(emotion.toLowerCase(java.util.Locale.ROOT))) {
             solace.agitate(20 * 8);
+            // From chapter 4, real anger shows: he flares into his negative.
+            if (solace.getCorruption() >= 4 && ("angry".equalsIgnoreCase(emotion) || "glitch".equalsIgnoreCase(emotion))) solace.goNegative(60);
         }
         if (SolaceConfig.REPLIES_VISIBLE_TO_ALL.get() && owner.getServer() != null) {
             owner.getServer().getPlayerList().broadcastSystemMessage(message, false);

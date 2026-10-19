@@ -129,6 +129,13 @@ public final class SolaceCommand {
                             solace.showLantern(20 * 10);
                             return msg(ctx, "Showing the Lantern form for 10 seconds.");
                         })))
+                        .then(Commands.literal("negative").then(Commands.argument("player", EntityArgument.player()).executes(ctx -> {
+                            ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
+                            SolaceEntity solace = SolaceManager.find(ctx.getSource().getServer(), story(ctx, p));
+                            if (solace == null) return fail(ctx, "Solace isn't around.");
+                            solace.goNegative(20 * 10);
+                            return msg(ctx, "Solace shows his negative side for 10 seconds.");
+                        })))
                         .then(Commands.literal("question").then(Commands.argument("player", EntityArgument.player()).executes(ctx -> {
                             ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
                             PlayerStory s = story(ctx, p);

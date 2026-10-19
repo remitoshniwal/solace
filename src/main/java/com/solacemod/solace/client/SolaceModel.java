@@ -59,6 +59,12 @@ public class SolaceModel extends HumanoidModel<SolaceEntity> {
         showParts(~negativeMask);
     }
 
+    /** Copies the pose of another body (used for the energy shell that moves with him). */
+    void copyPose(SolaceModel other) {
+        other.copyPropertiesTo(this);
+        jacketHem.copyFrom(other.jacketHem);
+    }
+
     /** Shows only the parts in the mask (used to draw the normal and the negative parts separately). */
     void showParts(int mask) {
         head.visible = hat.visible = (mask & HEAD) != 0;

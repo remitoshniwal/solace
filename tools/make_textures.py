@@ -321,6 +321,71 @@ def veins(prefix, stages=4, seed=21):
         img.save(OUT / (prefix + str(stage + 1) + ".png"))
 
 
+def negative_glow(name, seed=31):
+    """What shines in his negative form (drawn glowing, added on top): white neon veins all over his black skin,
+    burning eyes, and faint light along the edges of his white suit, like neon tubes."""
+    rng = random.Random(seed)
+    img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    px = img.load()
+    f = faces(0, 0, 8, 8, 8)
+    a = faces(40, 16, 4, 12, 4)
+    # Skin the veins can cross: face below the hairline, neck, hands.
+    skin = []
+    for key in ("front", "right", "left", "back"):
+        x0, y0, w, h = f[key]
+        top = 2 if key == "front" else 4 if key == "back" else 3
+        skin += [(x, y) for x in range(x0, x0 + w) for y in range(y0 + top, y0 + h)]
+        x0, y0, w, h = a[key]
+        skin += [(x, y) for x in range(x0, x0 + w) for y in range(y0 + 10, y0 + h)]
+    allowed = set(skin)
+    eye_row = {(f["front"][0] + x, f["front"][1] + 4) for x in range(8)}
+    for _ in range(11):
+        x, y = rng.choice(skin)
+        for _ in range(rng.randint(2, 5)):
+            if (x, y) in eye_row:
+                break  # keep the black around the eyes, so the eyes stand out
+            if (x, y) in allowed:
+                b = rng.randint(200, 255)
+                px[x, y] = (b, b, min(255, b + 10), 255)
+            x += rng.choice((-1, 0, 1))
+            y += rng.choice((-1, -1, 0, 1))
+    for x in (1, 2, 5, 6):  # burning eyes
+        px[f["front"][0] + x, f["front"][1] + 4] = (255, 255, 255, 255)
+    # Faint neon along the edges of every face of the suit, sleeves and trousers.
+    def rim(u, v, w, h, d, level):
+        for key, (x0, y0, fw, fh) in faces(u, v, w, h, d).items():
+            if key in ("top", "bottom"):
+                continue
+            for x in range(x0, x0 + fw):
+                for y in range(y0, y0 + fh):
+                    if x in (x0, x0 + fw - 1) and px[x, y][3] == 0:
+                        px[x, y] = (level, level, level + 8, 255)
+    rim(16, 16, 8, 12, 4, 120)
+    rim(40, 16, 4, 10, 4, 100)
+    rim(0, 16, 4, 10, 4, 90)
+    rim(16, 32, 8, 4, 4, 110)
+    img.save(OUT / name)
+
+
+def aura(name, seed=41):
+    """The energy that flows around him in his negative form: soft white streaks on black (black = nothing is drawn).
+    Tiles in every direction, because the game scrolls it."""
+    rng = random.Random(seed)
+    img = Image.new("RGBA", (64, 64), (0, 0, 0, 255))
+    px = img.load()
+    for _ in range(70):
+        x, y = rng.randint(0, 63), rng.randint(0, 63)
+        length = rng.randint(6, 20)
+        peak = rng.randint(90, 230)
+        for i in range(length):
+            k = 1 - abs(i - length / 2) / (length / 2)  # brightest in the middle of each streak
+            v = int(peak * k)
+            xx, yy = (x + (i // 5)) % 64, (y + i) % 64
+            old = px[xx, yy][0]
+            px[xx, yy] = (min(255, old + v), min(255, old + v), min(255, old + v + 12), 255)
+    img.save(OUT / name)
+
+
 def lantern(name, mass, edge, alpha, seed=6):
     """The Lantern's see-through tendril mass. Everything uses the same noisy colour, so the UVs don't matter."""
     rng = random.Random(seed)
@@ -374,6 +439,8 @@ if __name__ == "__main__":
     suit("solace_uneasy.png", SUIT, uneasy=True)
     negative(normal, "solace_negative.png")
     veins("solace_veins_")
+    negative_glow("solace_negative_glow.png")
+    aura("solace_aura.png")
     figure("watcher.png", skin=(200, 204, 210), hair=(150, 140, 130), cloak=(185, 190, 198), pants=(165, 170, 178), eyes=(0, 0, 0),
            slim=True, alpha=150, seed=4)
     lantern("lantern.png", mass=(46, 196, 190), edge=(150, 255, 245), alpha=120)

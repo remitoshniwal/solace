@@ -92,6 +92,8 @@ public final class SolaceCombat {
     /** Flicker to the target, kill it with one touch, flicker back. Bosses only take a heavy hit. */
     public void oneTap(LivingEntity target) {
         if (!(solace.level() instanceof ServerLevel level) || !target.isAlive()) return;
+        // For the kill, the mask slips: he flares into his negative side.
+        if (solace.getCorruption() >= 2) solace.goNegative(30);
         Vec3 home = solace.position();
         float homeYaw = solace.getYRot();
         Vec3 dir = target.position().subtract(home);

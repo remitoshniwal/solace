@@ -27,6 +27,10 @@ public class SolaceRenderer extends HumanoidMobRenderer<SolaceEntity, SolaceMode
     private static final ResourceLocation NORMAL = Solace.id("textures/entity/solace.png");
     private static final ResourceLocation UNEASY = Solace.id("textures/entity/solace_uneasy.png");
     static final ResourceLocation NEGATIVE = Solace.id("textures/entity/solace_negative.png");
+    private static final ResourceLocation NEGATIVE_GLOW = Solace.id("textures/entity/solace_negative_glow.png");
+    private static final ResourceLocation AURA = Solace.id("textures/entity/solace_aura.png");
+    private final SolaceModel auraModel;
+    private int lastParticleTick = -1;
     private static final ResourceLocation[] VEINS = {
             Solace.id("textures/entity/solace_veins_1.png"), Solace.id("textures/entity/solace_veins_2.png"),
             Solace.id("textures/entity/solace_veins_3.png"), Solace.id("textures/entity/solace_veins_4.png")};
@@ -41,7 +45,8 @@ public class SolaceRenderer extends HumanoidMobRenderer<SolaceEntity, SolaceMode
         // Order matters: veins and eyes are drawn on the normal parts, then the negative parts are drawn last.
         addLayer(new Veins(this));
         addLayer(new Eyes(this));
-        addLayer(new Negative(this));
+        auraModel = new SolaceModel(context.bakeLayer(SolaceModels.BODY_AURA));
+        addLayer(new Negative(this, auraModel));
         lantern = new LanternRenderer(context);
     }
 
@@ -55,6 +60,7 @@ public class SolaceRenderer extends HumanoidMobRenderer<SolaceEntity, SolaceMode
      * flickers between the two, like a bad signal. Worked out from the time, so it costs nothing to sync.
      */
     static int negativeMask(SolaceEntity entity, float t) {
+        if (entity.isNegative()) return SolaceModel.ALL; // fully transformed: no flicker
         int level = Math.max(0, Math.min(8, entity.getCorruption()));
         double chance = FLASH_CHANCE[level] * (entity.isAgitated() ? 3 : 1);
         if (entity.getPresence() == Presence.FLICKER) chance = Math.max(chance, 0.6);
@@ -117,9 +123,61 @@ public class SolaceRenderer extends HumanoidMobRenderer<SolaceEntity, SolaceMode
         float bob = entity.getPresence() == Presence.FREEZE ? frozenBob : (float) (Math.sin(t * 0.06) * 0.06);
         frozenBob = bob;
         poseStack.translate(0.0, 0.12 + bob, 0.0);
-        getModel().negativeMask = negativeMask(entity, t);
+        int mask = negativeMask(entity, t);
+        getModel().negativeMask = mask;
         super.render(entity, entityYaw, partialTick, poseStack, buffer, packedLight);
+        if (entity.tickCount != lastParticleTick) {
+            lastParticleTick = entity.tickCount;
+            particles(entity, mask, partialTick);
+        }
         poseStack.popPose();
+    }
+
+    /** Neon brightness: a slow pulse, with the odd buzz-and-dip of a real neon tube. */
+    static float neon(float t, int seed) {
+        float pulse = 0.82F + 0.18F * Mth.sin(t * 0.25F);
+        int frame = (int) t;
+        int h = frame * 0x27D4EB2D ^ seed * 0x165667B1;
+        h ^= h >>> 15;
+        return Math.floorMod(h, 29) == 0 ? pulse * 0.45F : pulse;
+    }
+
+    /**
+     * Sparks and light coming off him while he's negative: glowing specks drifting up, white light at his hands,
+     * crackles, and dark smoke curling away. In the late chapters, a wisp of dark smoke now and then even when he looks normal.
+     */
+    private static void particles(SolaceEntity e, int mask, float partialTick) {
+        net.minecraft.world.level.Level level = e.level();
+        net.minecraft.util.RandomSource r = e.getRandom();
+        double x = Mth.lerp(partialTick, e.xo, e.getX()), y = Mth.lerp(partialTick, e.yo, e.getY()) + 0.12, z = Mth.lerp(partialTick, e.zo, e.getZ());
+        if (mask == 0) {
+            if (e.getCorruption() >= 5 && r.nextInt(40) == 0) level.addParticle(net.minecraft.core.particles.ParticleTypes.SMOKE, x, y + 1.45, z, 0, 0.02, 0);
+            return;
+        }
+        boolean full = e.isNegative();
+        float yaw = Mth.rotLerp(partialTick, e.yBodyRotO, e.yBodyRot) * ((float) Math.PI / 180F);
+        double rx = -Mth.cos(yaw), rz = -Mth.sin(yaw);   // his right side
+        double fx = -Mth.sin(yaw), fz = Mth.cos(yaw);     // in front of him
+        var white = new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f(0.95F, 0.97F, 1.0F), 0.7F);
+        for (int side : new int[]{1, -1}) {
+            int part = side == 1 ? SolaceModel.RIGHT_ARM : SolaceModel.LEFT_ARM;
+            if ((mask & part) == 0) continue;
+            double hx = x + rx * 0.36 * side + fx * 0.05, hy = y + 0.72, hz = z + rz * 0.36 * side + fz * 0.05;
+            level.addParticle(white, hx + r.nextGaussian() * 0.05, hy + r.nextGaussian() * 0.05, hz + r.nextGaussian() * 0.05, 0, 0, 0);
+            if (r.nextInt(full ? 3 : 6) == 0) level.addParticle(net.minecraft.core.particles.ParticleTypes.ELECTRIC_SPARK, hx, hy, hz,
+                    r.nextGaussian() * 0.08, r.nextGaussian() * 0.08, r.nextGaussian() * 0.08);
+        }
+        if ((mask & SolaceModel.HEAD) != 0 && r.nextInt(full ? 2 : 4) == 0) {
+            level.addParticle(net.minecraft.core.particles.ParticleTypes.END_ROD, x + fx * 0.25, y + 1.6, z + fz * 0.25, 0, 0.01, 0);
+        }
+        if (full) {
+            for (int i = 0; i < 2; i++) {
+                level.addParticle(net.minecraft.core.particles.ParticleTypes.END_ROD, x + r.nextGaussian() * 0.3, y + 0.3 + r.nextDouble() * 1.5,
+                        z + r.nextGaussian() * 0.3, 0, 0.02 + r.nextDouble() * 0.03, 0);
+            }
+            if (r.nextInt(4) == 0) level.addParticle(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE, x + r.nextGaussian() * 0.3,
+                    y + 0.4 + r.nextDouble(), z + r.nextGaussian() * 0.3, 0, 0.02, 0);
+        }
     }
 
     @Override
@@ -159,21 +217,45 @@ public class SolaceRenderer extends HumanoidMobRenderer<SolaceEntity, SolaceMode
         }
     }
 
-    /** The parts that are showing his negative side this frame, drawn inverted and faintly lit so you notice them in the dark. */
+    /**
+     * The parts showing his negative side this frame: inverted and lit, white neon veins and burning eyes on top,
+     * and a shell of flowing light around them. All drawn glowing, so it shines even in total darkness.
+     */
     private static final class Negative extends RenderLayer<SolaceEntity, SolaceModel> {
-        Negative(RenderLayerParent<SolaceEntity, SolaceModel> parent) {
+        private final SolaceModel aura;
+
+        Negative(RenderLayerParent<SolaceEntity, SolaceModel> parent, SolaceModel aura) {
             super(parent);
+            this.aura = aura;
         }
 
         @Override
         public void render(PoseStack poseStack, MultiBufferSource buffer, int packedLight, SolaceEntity entity,
                            float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
             SolaceModel model = getParentModel();
-            if (model.negativeMask == 0) return;
-            model.showParts(model.negativeMask);
-            int light = Math.max(packedLight & 0xFFFF, 0xA0) | (packedLight & 0xFFFF0000); // never fully dark
-            model.renderToBuffer(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(NEGATIVE)), light, LivingEntityRenderer.getOverlayCoords(entity, 0));
+            int mask = model.negativeMask;
+            if (mask == 0) return;
+            int overlay = LivingEntityRenderer.getOverlayCoords(entity, 0);
+            int full = net.minecraft.client.renderer.LightTexture.FULL_BRIGHT;
+            model.showParts(mask);
+            // 1. The inverted body: near-black skin, white suit, white hair.
+            model.renderToBuffer(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(NEGATIVE)), full, overlay);
+            // 2. Neon: white veins over his skin, burning eyes, light along the seams. Added on top, so it shines.
+            int glow = grey(neon(ageInTicks, entity.getId()));
+            model.renderToBuffer(poseStack, buffer.getBuffer(RenderType.eyes(NEGATIVE_GLOW)), full, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, glow);
+            // 3. Energy flowing over and around him (a slightly bigger copy of the body, with the light scrolling across it).
+            aura.copyPose(model);
+            aura.showParts(mask);
+            float flow = ageInTicks * 0.01F;
+            int strength = grey(entity.isNegative() ? 0.75F : 0.45F);
+            aura.renderToBuffer(poseStack, buffer.getBuffer(RenderType.energySwirl(AURA, flow % 1.0F, (ageInTicks * 0.025F) % 1.0F)), full,
+                    net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, strength);
             model.showParts(SolaceModel.ALL);
+        }
+
+        private static int grey(float level) {
+            int v = Mth.clamp((int) (level * 255), 0, 255);
+            return 0xFF000000 | v << 16 | v << 8 | v;
         }
     }
 }

@@ -29,6 +29,7 @@ public final class ClientModEvents {
     @SubscribeEvent
     public static void onLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(SolaceModels.BODY, SolaceModels::createBody);
+        event.registerLayerDefinition(SolaceModels.BODY_AURA, SolaceModels::createAura);
         event.registerLayerDefinition(SolaceModels.LANTERN, SolaceModels::createLantern);
     }
 

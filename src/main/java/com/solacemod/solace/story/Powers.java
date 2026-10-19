@@ -147,6 +147,8 @@ public final class Powers {
             if (cost > 0) Bond.spend(story, cost); // conjure pays for itself inside conjure()
             // Big powers show what it really is, but only once the story has revealed it (chapter 6).
             if (solace != null && cost >= 15 && story.chapter >= 6 && SolaceConfig.STORY_ENABLED.get()) solace.showLantern(50);
+            // From chapter 3, using a power shows his negative side for a moment.
+            else if (solace != null && cost > 0 && story.chapter >= 3 && SolaceConfig.STORY_ENABLED.get()) solace.goNegative(40);
         }
         // Solace already announced what it was doing. Only follow up when there's news: what "find" found, or a failure.
         if (failed || type.equals("find")) return result;

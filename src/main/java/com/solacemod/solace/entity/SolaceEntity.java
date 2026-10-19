@@ -81,6 +81,7 @@ public class SolaceEntity extends PathfinderMob {
     private static final EntityDataAccessor<Integer> DATA_PRESENCE = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_CORRUPTION = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> DATA_AGITATED = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DATA_NEGATIVE = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.BOOLEAN);
 
     public enum Mode { FOLLOW, STAY, WANDER }
 
@@ -98,6 +99,7 @@ public class SolaceEntity extends PathfinderMob {
     private int lanternTicks;
     private int formBeforeLantern = FORM_NORMAL;
     private int agitatedTicks;
+    private int negativeTicks;
 
     // Boss ("Hollow") state
     @Nullable
@@ -134,6 +136,7 @@ public class SolaceEntity extends PathfinderMob {
         builder.define(DATA_PRESENCE, Presence.WALK);
         builder.define(DATA_CORRUPTION, 0);
         builder.define(DATA_AGITATED, false);
+        builder.define(DATA_NEGATIVE, false);
     }
 
     @Override
@@ -274,6 +277,22 @@ public class SolaceEntity extends PathfinderMob {
         if (!isAgitated()) entityData.set(DATA_AGITATED, true);
     }
 
+    /** Fully turned into his negative: glowing veins, burning eyes, flowing energy, sparks. */
+    public boolean isNegative() {
+        return entityData.get(DATA_NEGATIVE);
+    }
+
+    /** Turns fully negative for a moment (when he uses a power, kills something, or loses his temper). */
+    public void goNegative(int ticks) {
+        if (isHollow() || isLanternForm()) return;
+        if (!isNegative()) {
+            entityData.set(DATA_NEGATIVE, true);
+            Sounds.playAt(this, "block.beacon.power_select", 0.6F, 0.5F);
+            Sounds.playAt(this, "block.respawn_anchor.charge", 0.4F, 0.6F);
+        }
+        negativeTicks = Math.max(negativeTicks, ticks);
+    }
+
     /** The Lantern shape is drawn for the true form and for the Hollow. */
     public boolean isLanternForm() {
         return getForm() == FORM_LANTERN || getForm() == FORM_VAST || getForm() == FORM_HOLLOW;
@@ -379,6 +398,10 @@ public class SolaceEntity extends PathfinderMob {
         }
         if (hurtReactCooldown > 0) hurtReactCooldown--;
         if (agitatedTicks > 0 && --agitatedTicks == 0) entityData.set(DATA_AGITATED, false);
+        if (negativeTicks > 0 && --negativeTicks == 0) {
+            entityData.set(DATA_NEGATIVE, false);
+            Sounds.playAt(this, "block.beacon.deactivate", 0.4F, 0.6F);
+        }
         if (lanternTicks > 0 && --lanternTicks == 0) endLantern();
         // A stale copy (e.g. one left in an unloaded chunk after Solace was re-summoned) removes itself.
         if ((tickCount == 1 || tickCount % 100 == 0) && !SolaceManager.isCurrent(this)) {
@@ -487,7 +510,11 @@ public class SolaceEntity extends PathfinderMob {
     public boolean hurt(DamageSource source, float amount) {
         if (isHollow()) return super.hurt(source, amount);
         if (level().isClientSide) return false;
-        if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) return super.hurt(source, amount); // /kill or the void; it returns anyway
+        if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            // Not even /kill or the void: it scatters into ash and is back beside you, as if nothing happened.
+            escapeDeath();
+            return false;
+        }
         if (source.getEntity() instanceof ServerPlayer player && isOwner(player) && hurtReactCooldown <= 0) {
             hurtReactCooldown = 60;
             presence.end();
@@ -503,7 +530,24 @@ public class SolaceEntity extends PathfinderMob {
     @Override
     public boolean isInvulnerableTo(DamageSource source) {
         if (isHollow()) return super.isInvulnerableTo(source);
-        return !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY);
+        return true;
+    }
+
+    /** Called instead of dying (to /kill or the void). Only the Hollow can really be beaten. */
+    private void escapeDeath() {
+        ServerLevel level = (ServerLevel) level();
+        level.sendParticles(ParticleTypes.ASH, getX(), getY() + 1, getZ(), 60, 0.4, 0.9, 0.4, 0.02);
+        Sounds.playAt(this, "entity.enderman.teleport", 0.7F, 0.3F);
+        setHealth(getMaxHealth());
+        fallDistance = 0;
+        setDeltaMovement(Vec3.ZERO);
+        ServerPlayer owner = getServerOwner();
+        if (owner != null && owner.level() == level && owner.getY() > level.getMinBuildHeight()) {
+            blinkBehind(owner);
+        } else if (getY() < level.getMinBuildHeight() + 1) {
+            BlockPos spawn = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, level.getSharedSpawnPos());
+            moveTo(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5, getYRot(), 0);
+        }
     }
 
     @Override

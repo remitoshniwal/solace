@@ -8,6 +8,11 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### New in 1.5.0
+- **His negative side shines.** Black skin with glowing white neon veins, burning eyes, light along his suit's seams, energy flowing over him, sparks crackling at his hands and dark smoke curling off him. It glows even in total darkness. (With a shader pack, the glow gets real bloom too.)
+- **Full transformations.** When he one-taps a mob, uses a power or loses his temper (later in the story), he turns fully negative for a few seconds, with a low electric hum.
+- **Truly invincible.** Not even `/kill` or falling into the void works on Solace: he scatters into ash and reappears behind you. Only the Hollow, his boss form, can be beaten.
+
 ### New in 1.4.0
 - **A new look for Solace.** His own model and texture: a calm man in a dark tailored suit, with a jacket hem that swings when he walks. The lumps are gone.
 - **Negative flashes.** Now and then he flickers into his photo negative for a split second, all of him or just his face or a hand. Rare at first, more often each chapter.
