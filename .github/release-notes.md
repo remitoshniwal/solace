@@ -8,6 +8,14 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### New in 1.6.1
+- **A whole new look, made in Blockbench.** Solace is now headless and eyeless: a laced collar stands round an empty hollow where its head should be.
+  - **Normal form:** a gaunt shadow in dark grey armour, with black spikes on its shoulders, a short ragged robe, long arms and clawed hands, and a thin white outline. Its spikes grow as the story goes on.
+  - **Negative form:** the same shape at full strength, in white: three-plate shoulder guards, an armoured skirt, sleeves and shin guards, a katana at its hip, a long black robe, white flames off its shoulders and sword blades for hands, with a black outline.
+- **A new Lantern.** A floating 3D ball of blue plasma with a white-hot middle, glowing blue layers, lightning arcs and a soft crackling glow. The Hollow is the same in red.
+- **Hitboxes that fit.** The Lantern's hitbox now wraps the ball. Solace's body is a little wider (to match its shoulders) but still fits through doors.
+- **New setting: Who gets one.** On a busy server, set it to *Only players who type /solace join* (Abilities & Chat page). `/solace leave confirm` sends yours away.
+
 ### New in 1.6.0
 - **Solace has its own body.** No more player shape: a tall, thin, headless figure in a long coat, with broad shoulders, long arms and long pale fingers that twitch. Two eyes glow in its empty collar, day and night.
 - **The negative has a head.** When it flickers into its negative, a blank, glowing white head appears, along with the white coat, neon veins and flowing energy.
