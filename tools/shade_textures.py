@@ -1,6 +1,7 @@
 """
 Paints the textures for Solace's Blockbench model (src/main/resources/assets/solace/models/entity/solace.bbmodel).
-The Lantern is built from coloured voxels in code (client/VoxelOrb.java), so it needs no texture of its own.
+The Lantern's body is built from coloured voxels in code (client/VoxelOrb.java); only its soft plasma glow
+(orb_plasma_*.png) is painted here.
 Run:  python3 tools/shade_textures.py
 
 One 256x256 sheet holds every piece of the model; the negative form uses the same layout with different colours,
@@ -18,6 +19,7 @@ Sheet layout (x, y, width, height), shared with tools/models/build_solace.js:
   flames    (0, 192, 128, 64)   4 flames, 32x64 each (negative only)
 """
 import math
+import numpy as np
 import random
 from pathlib import Path
 from PIL import Image, ImageChops, ImageDraw, ImageFilter
@@ -208,6 +210,80 @@ def outline_tex():
     return Image.new("RGBA", (16, 16), (255, 255, 255, 255))
 
 
+
+# ---------- The Lantern's glow: soft blue plasma round its voxel body ----------
+
+def radial(size, stops):
+    """A round glow: stops are (radius 0..1, (r, g, b, a)) from the centre out."""
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    px = img.load()
+    c = (size - 1) / 2
+    for x in range(size):
+        for y in range(size):
+            r = math.hypot(x - c, y - c) / c
+            for i in range(len(stops) - 1):
+                (r0, c0), (r1, c1) = stops[i], stops[i + 1]
+                if r0 <= r <= r1:
+                    f = (r - r0) / (r1 - r0) if r1 > r0 else 0
+                    px[x, y] = tuple(int(c0[k] + (c1[k] - c0[k]) * f) for k in range(4))
+                    break
+    return img
+
+
+def fbm(size, seed, octaves=5, base=4):
+    """Smooth random clouds (fractal noise), values 0..1."""
+    rng = np.random.default_rng(seed)
+    out = np.zeros((size, size))
+    amp, total = 1.0, 0.0
+    for o in range(octaves):
+        n = base * 2 ** o
+        grid = rng.random((n + 1, n + 1))
+        img = Image.fromarray((grid * 255).astype(np.uint8)).resize((size, size), Image.BICUBIC)
+        out += np.asarray(img, dtype=float) / 255 * amp
+        total += amp
+        amp *= 0.5
+    return out / total
+
+
+def plasma(size, seed, reach=0.9, veins=1.0, glow=1.0):
+    """
+    A ball of blue plasma (reference: the energy ball picture): a white-hot middle, lightning-like veins branching
+    outwards through blue cloud, and a ragged, uneven outline instead of a neat circle.
+    """
+    c = (size - 1) / 2
+    y, x = np.mgrid[0:size, 0:size]
+    dx, dy = (x - c) / c, (y - c) / c
+    r = np.hypot(dx, dy)
+    ang = np.arctan2(dy, dx)
+    # warp the space with noise so the veins wander and fork
+    wx, wy = fbm(size, seed + 1, base=3), fbm(size, seed + 2, base=3)
+    n = fbm(size, seed + 3, octaves=6, base=4)
+    warped = np.asarray(Image.fromarray((n * 255).astype(np.uint8)).transform(
+        (size, size), Image.AFFINE, (1, 0, 0, 0, 1, 0)), dtype=float) / 255
+    ridge = 1 - np.abs(2 * fbm(size, seed + 4, octaves=6, base=5) - 1)          # thin bright lines where the noise crosses the middle
+    ridge2 = 1 - np.abs(2 * fbm(size, seed + 5, octaves=5, base=8) - 1)
+    lines = np.clip((ridge ** 10) * 1.3 + (ridge2 ** 14) * 0.9, 0, 1) * veins
+    # a ragged outline: how far the plasma reaches depends on direction, unevenly
+    edge_noise = fbm(size, seed + 6, octaves=4, base=3)
+    lobes = 0.78 + 0.12 * np.sin(ang * 3 + seed) + 0.32 * (edge_noise - 0.5) * 2 + 0.2 * (wx - 0.5)
+    limit = np.clip(reach * lobes, 0.35, 0.98)
+    fall = np.clip(1 - r / limit, 0, 1)
+    cloud = (fall ** 1.1) * (0.3 + 0.7 * warped) * glow
+    core = np.clip(1 - r / 0.3, 0, 1) ** 1.4
+    v = np.clip(cloud * 0.8 + lines * (fall ** 0.6) * 1.1 + core * 1.2, 0, 1.6)
+    # colour: deep blue -> bright blue -> pale cyan -> white as it gets brighter
+    stops = [(0.0, (0, 0, 0)), (0.18, (10, 30, 150)), (0.45, (35, 110, 255)), (0.8, (120, 200, 255)), (1.1, (225, 245, 255)), (1.6, (255, 255, 255))]
+    rgb = np.zeros((size, size, 3))
+    for (a0, c0), (a1, c1) in zip(stops, stops[1:]):
+        m = (v >= a0) & (v <= a1)
+        f = ((v - a0) / (a1 - a0))[m][:, None]
+        rgb[m] = np.array(c0) * (1 - f) + np.array(c1) * f
+    alpha = np.clip(v * 1.6, 0, 1) * 255
+    out = np.dstack([rgb, alpha]).astype(np.uint8)
+    return Image.fromarray(out, "RGBA")
+
+
+
 def premultiplied(img):
     """Glow textures are added on top of the scene (Minecraft's "eyes" layer adds colour and ignores see-through),
     so a pixel's colour must already be dimmed by how see-through it is, or invisible pixels would glow."""
@@ -229,4 +305,6 @@ if __name__ == "__main__":
     m.save(OUT / "solace_shade_negative.png")
     premultiplied(g).save(OUT / "solace_shade_negative_glow.png")
     outline_tex().save(OUT / "outline.png")
+    for i, (reach, veins, glow) in enumerate(((0.95, 0.9, 0.7), (1.0, 0.6, 0.5))):
+        premultiplied(plasma(256, 11 + i * 17, reach, veins, glow)).save(OUT / f"orb_plasma_{i}.png")
     print("Textures written to", OUT)

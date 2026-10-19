@@ -7,16 +7,16 @@ import java.util.Map;
 import java.util.Random;
 
 /**
- * The Lantern's body as chunky 3D voxels (little cubes, 1/8 of a block each): a ragged ball of plasma with a solid
+ * The Lantern's body as 3D voxels (little cubes the size of one Minecraft texture pixel, 1/16 of a block): a ragged ball of plasma with a solid
  * white-hot middle inside glowing layers of blue, deeper towards the skin, and arcs of lightning poking out. Built once as a
  * loop of frames (each a slightly different shape) so it churns like a flipbook, but in 3D.
  * Pure Java: lists of faces the renderer sends to Minecraft.
  */
 final class VoxelOrb {
     /** Grid size in voxels, and voxel size in blocks. */
-    static final int N = 13;
-    static final float VOX = 1 / 8F;
-    static final int FRAMES = 10;
+    static final int N = 24;
+    static final float VOX = 1 / 16F;
+    static final int FRAMES = 16;
 
     /** One square face: 4 corners (x, y, z in blocks, centred on the ball), its colour, and which way it faces. */
     record Face(float[] pos, int argb, float nx, float ny, float nz) {
@@ -38,25 +38,25 @@ final class VoxelOrb {
 
     private static Frame build(int frame, int[] palette, int outlineColor, long seed) {
         double ang = 2 * Math.PI * frame / FRAMES;
-        double ox = Math.cos(ang) * 1.6, oz = Math.sin(ang) * 1.6;
+        double ox = Math.cos(ang) * 0.9, oz = Math.sin(ang) * 0.9;
         int[][][] level = new int[N][N][N]; // -1 empty, 0 hottest .. 4 skin
         boolean[][][] arc = new boolean[N][N][N];
         float c = (N - 1) / 2F, radius = N / 2F - 0.6F;
         for (int x = 0; x < N; x++) for (int y = 0; y < N; y++) for (int z = 0; z < N; z++) {
             float dx = x - c, dy = y - c, dz = z - c;
             double r = Math.sqrt(dx * dx + dy * dy + dz * dz) / radius;
-            double n = fbm(dx * 0.32 + ox, dy * 0.32, dz * 0.32 + oz, seed);
+            double n = fbm(dx * 0.17 + ox, dy * 0.17, dz * 0.17 + oz, seed);
             double edge = r + 0.55 * (n - 0.5);
             if (edge > 0.98) {
                 level[x][y][z] = -1;
                 continue;
             }
-            double heat = r + 0.35 * (fbm(dx * 0.5 - oz, dy * 0.5 + 3, dz * 0.5 + ox, seed + 7) - 0.5);
+            double heat = r + 0.35 * (fbm(dx * 0.27 - oz, dy * 0.27 + 3, dz * 0.27 + ox, seed + 7) - 0.5);
             level[x][y][z] = heat < 0.3 ? 0 : heat < 0.45 ? 1 : heat < 0.6 ? 2 : edge > 0.84 ? 4 : 3;
         }
         // Two arcs of lightning crackling out through the skin.
         Random rnd = new Random(seed * 31 + frame);
-        for (int a = 0; a < 2; a++) {
+        for (int a = 0; a < 4; a++) {
             double px = c, py = c, pz = c;
             double vx = rnd.nextGaussian(), vy = rnd.nextGaussian(), vz = rnd.nextGaussian();
             for (int step = 0; step < N; step++) {
@@ -131,7 +131,7 @@ final class VoxelOrb {
             n[1] += f.ny;
             n[2] += f.nz;
         }
-        float width = 0.045F;
+        float width = 0.03F;
         List<Face> out = new ArrayList<>();
         for (Face f : outer) {
             float[] pos = new float[12];
