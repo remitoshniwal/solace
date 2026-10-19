@@ -41,8 +41,9 @@ final class FigureRenderer {
             fig.root.draw(m, new MeshDraw(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(CLOTH)), light, overlay),
                     normalMask, false, 0xFFFFFFFF, uneasy ? FigureRenderer::uneasy : null, 0);
             if (veinStage > 0) {
+                // Veins only show on skin and the white shirt; everywhere else this pass is invisible.
                 fig.root.draw(m, new MeshDraw(poseStack, buffer.getBuffer(RenderType.entityTranslucent(VEINS[veinStage - 1])), light, overlay),
-                        normalMask, false, 0xFFFFFFFF, null, 0);
+                        normalMask, false, 0xFFFFFFFF, c -> c == Figure.SKIN || c == Figure.SHIRT ? 0xFFFFFFFF : 0x00FFFFFF, 0);
             }
         }
         // The eyes, only while the body is in its normal form.

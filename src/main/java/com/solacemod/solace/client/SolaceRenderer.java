@@ -135,7 +135,7 @@ public class SolaceRenderer extends EntityRenderer<SolaceEntity> {
             lastParticleTick = entity.tickCount;
             particles(entity, mask, partialTick);
         }
-        super.render(entity, entityYaw, partialTick, poseStack, buffer, packedLight);
+        // (No name tag: it's not a pet.)
     }
 
     /** Neon brightness: a slow pulse, with the odd buzz-and-dip of a real neon tube. */
@@ -173,9 +173,8 @@ public class SolaceRenderer extends EntityRenderer<SolaceEntity> {
             }
         }
         if (full) {
-            if (r.nextInt(4) == 0) {
-                level.addParticle(ParticleTypes.END_ROD, x + r.nextGaussian() * 0.35, y + 0.3 + r.nextDouble() * 1.5, z + r.nextGaussian() * 0.35,
-                        0, 0.01 + r.nextDouble() * 0.02, 0);
+            if (r.nextInt(3) == 0) {
+                level.addParticle(white, x + r.nextGaussian() * 0.3, y + 0.3 + r.nextDouble() * 1.4, z + r.nextGaussian() * 0.3, 0, 0, 0);
             }
             if (r.nextInt(8) == 0) level.addParticle(ParticleTypes.SMOKE, x + r.nextGaussian() * 0.25, y + 0.5 + r.nextDouble() * 1.1, z + r.nextGaussian() * 0.25, 0, 0.015, 0);
         }

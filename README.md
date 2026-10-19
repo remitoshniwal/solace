@@ -14,7 +14,7 @@ Solace shows up about 30 seconds after you join a world. It's a quiet, pale figu
 - **Power comes at a price.** Its strength (**Tether**) grows while you're together and gets spent on powers. Nothing is off limits, not even netherite, but big things cost a lot. Every gift adds to your **Debt**. Owe it enough and it starts asking for things. Owe it too much and it collects.
 - **Moves wrong.** Most of the time it walks like a player. Sometimes it glides without moving its legs, stutters forward like lag, flickers, turns its head too far, stands somewhere it shouldn't be at the edge of your vision, or copies your every move.
 - **Does things on its own.** Leaves gifts on your bed. Watches you sleep. Builds things while you're logged off. Rearranges your chests. Once in a while, for a third of a second, you're in the sky, falling... and then you're back, like nothing happened.
-- **Two forms, its own models.** Every day it's a tall headless figure in a long coat, two eyes glowing in its empty collar. Sometimes it flickers into its negative: a white coat, neon veins, and a blank, glowing white head. Its true form, the Lantern, is a glowing cyan lava lamp of a creature with spiky black ferrofluid moving inside it. His true form is the Lantern: a huge glowing mass of tendrils with something small curled up inside.
+- **Two forms, designed in 3D.** Every day it's a tall headless figure in a long coat, two eyes glowing above its flat neck. Sometimes it flickers into its glowing negative. Its true form, the Lantern, is a lava lamp of a creature with spiky black ferrofluid moving inside it. Smooth, rounded models, no extra mods needed.
 - **Does what you ask.** "follow me", "stay here", "guard me", "mine 10 iron", "chop some wood", "pick up the items", "build a shelter", "craft a stone pickaxe", "light this place up", "give me your cobblestone", "remember this place as home", "take me home", "where's the nearest village?", "make it day", "heal me"
 - **Remembers you.** Your name, what you like, what you did, how you treated it. It even remembers you **across different worlds**.
 - **Voice chat (optional).** Hold **G** to talk with your mic, and hear Solace speak.
@@ -51,7 +51,7 @@ No files to edit. Everything is in game:
 
 The other pages set up **Voice**, **Story & Horror** (turn scares down or off) and **Abilities & Chat**. **Advanced...** shows every setting.
 
-On a multiplayer server, the **server owner** sets Solace's AI (in the server's `config/solace-common.toml`). Each player's voice and comfort settings are their own.
+On a multiplayer server, **every player needs the mod installed**, but only the **server owner** needs an AI key: Solace's AI runs on the server, and the owner pays for everyone's requests. Each player gets their own Solace and their own story. On a busy server, set **Who gets one** (Abilities & Chat page) to *Only players who type /solace join*. The server owner sets Solace's AI (in the server's `config/solace-common.toml`). Each player's voice and comfort settings are their own.
 
 More detail, including recommended models and costs: [docs/PROVIDERS.md](docs/PROVIDERS.md)
 
