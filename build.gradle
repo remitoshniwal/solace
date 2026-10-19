@@ -18,6 +18,10 @@ neoForge {
     runs {
         client {
             client()
+            // The automatic build's "photo tour" (see ScreenshotTour.java). Off unless SOLACE_SCREENSHOTS is set.
+            if (System.getenv('SOLACE_SCREENSHOTS') != null) {
+                systemProperty 'solace.screenshots', 'true'
+            }
         }
         server {
             server()

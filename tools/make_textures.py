@@ -121,14 +121,16 @@ def eyes_only(name, color, slim=False):
     img.save(OUT / name)
 
 
-# ---------- Solace's body: a man in a tailored suit (custom model, see SolaceModels.createBody) ----------
-# Layout: head (0,0), hair (32,0), body (16,16), arms (40,16, both arms share it), legs (0,16, both legs share it),
-# shoe toes (0,32), jacket hem (16,32). All 64x64.
+# ---------- Solace's body: a tall headless figure in a long coat (custom model, see SolaceModels.createBody) ----------
+# Each entry: (u, v, width, height, depth) of one box, matching the texOffs in SolaceModels.java.
+BOX = dict(leg=(0, 0, 3, 15, 3), shoe=(0, 18, 3, 1, 5), waist=(16, 0, 6, 7, 3), chest=(34, 0, 8, 7, 4), pad=(16, 10, 3, 2, 5),
+           collar_front=(16, 17, 5, 3, 1), collar_back=(16, 21, 5, 3, 1), collar_side=(0, 52, 1, 3, 6), void=(40, 11, 5, 1, 4),
+           coat_back=(0, 24, 7, 9, 1), coat_front=(16, 25, 4, 9, 1), coat_side=(26, 25, 1, 9, 3), upper_arm=(34, 25, 2, 8, 2),
+           forearm=(42, 25, 2, 7, 2), palm=(50, 25, 2, 2, 2), finger=(58, 25, 1, 3, 1), head=(0, 37, 7, 8, 7), eye=(28, 37, 1, 1, 1))
 
-SUIT = dict(suit=(38, 40, 52), suit_dark=(27, 28, 37), lapel=(31, 32, 43), shirt=(232, 232, 228), tie=(24, 22, 30),
-            skin=(226, 196, 166), skin_shade=(206, 174, 144), lips=(176, 128, 116), hair=(22, 22, 27), grey=(112, 112, 118),
-            brow=(32, 28, 30), white=(238, 238, 236), pupil=(44, 32, 28), trousers=(33, 35, 46), crease=(25, 26, 34),
-            shoe=(14, 14, 16), shoe_shine=(54, 54, 62))
+COAT = dict(coat=(30, 31, 40), coat_dark=(20, 21, 28), coat_light=(44, 46, 58), shirt=(232, 232, 228), tie=(18, 16, 22),
+            skin=(224, 214, 206), skin_shade=(196, 184, 178), trousers=(26, 27, 35), crease=(18, 19, 25), shoe=(10, 10, 12),
+            shoe_shine=(58, 58, 66), eye=(225, 250, 255), void=(2, 2, 3))
 
 
 def fill(px, rect, color, rng, noise=4, alpha=255):
@@ -139,130 +141,102 @@ def fill(px, rect, color, rng, noise=4, alpha=255):
             px[x, y] = tuple(max(0, min(255, c + n)) for c in color) + (alpha,)
 
 
-def box(px, u, v, w, h, d, color, rng, noise=4):
-    for rect in faces(u, v, w, h, d).values():
+def paint_box(px, name, color, rng, noise=3):
+    for rect in faces(*BOX[name]).values():
         fill(px, rect, color, rng, noise)
 
 
+def face(name, key):
+    return faces(*BOX[name])[key]
+
+
 def suit(name, c, uneasy=False, seed=11):
-    """Paints the suited man. uneasy = later chapters: paler, tired eyes, tie pulled loose, hair out of place."""
+    """Paints the headless figure. uneasy = later chapters: the coat more worn, the tie pulled loose, the hands paler."""
     rng = random.Random(seed)
     img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
     px = img.load()
-    skin = (214, 192, 172) if uneasy else c["skin"]
-    # Head: skin, hair on top/back/upper sides, ears.
-    box(px, 0, 0, 8, 8, 8, skin, rng, 3)
-    f = faces(0, 0, 8, 8, 8)
-    fill(px, f["top"], c["hair"], rng, 3)
-    for key in ("right", "left"):
-        x0, y0, w, h = f[key]
-        fill(px, (x0, y0, w, 3), c["hair"], rng, 3)
-        fill(px, (x0 + 3, y0 + 4, 2, 2), c["skin_shade"], rng, 2)          # ear
-        px[x0 + (1 if key == "right" else 6), y0 + 3] = c["grey"] + (255,)  # grey at the temples
-    x0, y0, w, h = f["back"]
-    fill(px, (x0, y0, w, 6), c["hair"], rng, 3)
-    # Face (front of head)
-    fx, fy = 8, 8
-    for x in range(8):
-        px[fx + x, fy] = c["hair"] + (255,)
-        px[fx + x, fy + 1] = c["hair"] + (255,)
-    px[fx, fy + 2] = c["hair"] + (255,)
-    px[fx + 7, fy + 2] = c["hair"] + (255,)
-    if uneasy:
-        px[fx + 3, fy + 2] = c["hair"] + (255,)  # a strand fallen out of place
-    for x in (1, 2, 5, 6):
-        px[fx + x, fy + 3] = c["brow"] + (255,)
-    for x, col in ((1, c["white"]), (2, c["pupil"]), (5, c["pupil"]), (6, c["white"])):
-        px[fx + x, fy + 4] = col + (255,)
-    px[fx + 4, fy + 5] = c["skin_shade"] + (255,)  # a hint of a nose
-    if uneasy:
-        for x in (1, 2, 5, 6):
-            px[fx + x, fy + 5] = (176, 150, 142, 255)  # dark circles
-    for x in (3, 4):
-        px[fx + x, fy + 6] = c["lips"] + (255,)  # a thin, calm mouth
-    px[fx, fy + 7] = c["skin_shade"] + (255,)
-    px[fx + 7, fy + 7] = c["skin_shade"] + (255,)
+    skin = (206, 198, 194) if uneasy else c["skin"]
 
-    # Hair layer: neat, swept back, a little volume on top.
-    h = faces(32, 0, 8, 8, 8)
-    fill(px, h["top"], c["hair"], rng, 4)
-    x0, y0, w, hh = h["back"]
-    fill(px, (x0, y0, w, 5), c["hair"], rng, 4)
-    for key in ("right", "left"):
-        x0, y0, w, hh = h[key]
-        fill(px, (x0, y0, w, 2), c["hair"], rng, 4)
-    x0, y0, w, hh = h["front"]
-    fill(px, (x0, y0, w, 1), c["hair"], rng, 4)
+    # Legs: trousers with a crease; long black shoes.
+    paint_box(px, "leg", c["trousers"], rng)
+    x0, y0, w, h = face("leg", "front")
+    for y in range(y0, y0 + h):
+        px[x0 + 1, y] = c["crease"] + (255,)
+    paint_box(px, "shoe", c["shoe"], rng, 2)
+    x0, y0, w, h = face("shoe", "top")
+    for y in range(y0, y0 + h):
+        px[x0 + 1, y] = c["shoe_shine"] + (255,)
 
-    # Body: jacket, white shirt in a V, dark tie, one button, pocket square.
-    box(px, 16, 16, 8, 12, 4, c["suit"], rng, 3)
-    b = faces(16, 16, 8, 12, 4)
-    bx, by, _, _ = b["front"]
-    tie_x = 4 if uneasy else 3
-    for y in range(0, 6):
+    # Waist and chest: the coat, buttoned, with a white shirt V and a dark tie at the chest.
+    paint_box(px, "waist", c["coat"], rng)
+    x0, y0, w, h = face("waist", "front")
+    for y in range(y0, y0 + h):
+        px[x0 + 2, y] = c["coat_dark"] + (255,)  # where the coat closes
+    for y in (y0 + 1, y0 + 4):
+        px[x0 + 3, y] = (6, 6, 8, 255)  # buttons
+    paint_box(px, "chest", c["coat"], rng)
+    x0, y0, w, h = face("chest", "front")
+    for y in range(h):
         half = max(0, 2 - y // 2)
         for x in range(3 - half, 5 + half):
-            px[bx + x, by + y] = c["shirt"] + (255,)
-        px[bx + 2 - half, by + y] = c["lapel"] + (255,)
-        px[bx + 5 + half, by + y] = c["lapel"] + (255,)
-    for y in range(1 if not uneasy else 2, 8):
-        px[bx + tie_x, by + y] = c["tie"] + (255,)
+            px[x0 + x, y0 + y] = c["shirt"] + (255,)
+        px[x0 + 2 - half, y0 + y] = c["coat_dark"] + (255,)  # lapels
+        px[x0 + 5 + half, y0 + y] = c["coat_dark"] + (255,)
+    tie_x = 4 if uneasy else 3
+    for y in range(0, h):
+        px[x0 + tie_x, y0 + y] = c["tie"] + (255,)
         if not uneasy:
-            px[bx + tie_x + 1, by + y] = c["tie"] + (255,)
-    if uneasy:
-        px[bx + 3, by] = skin + (255,)  # top button open
-        px[bx + 4, by] = skin + (255,)
-    px[bx + 3, by + 8] = (12, 12, 14, 255)  # button
-    px[bx + 6, by + 3] = c["shirt"] + (255,)  # pocket square
-    for y in range(9, 12):
-        px[bx + 3, by + y] = c["suit_dark"] + (255,)
-        px[bx + 4, by + y] = c["suit_dark"] + (255,)
-    x0, y0, w, hh = b["back"]
-    for y in range(y0, y0 + hh):
-        px[x0 + 4, y] = c["suit_dark"] + (255,)  # centre seam
-    x0, y0, w, hh = b["top"]
-    fill(px, (x0 + 2, y0, 4, 2), c["shirt"], rng, 2)  # shirt collar showing at the neck
+            px[x0 + tie_x + 1, y0 + y] = c["tie"] + (255,)
+    x0, y0, w, h = face("chest", "back")
+    for y in range(y0, y0 + h):
+        px[x0 + 4, y] = c["coat_dark"] + (255,)
 
-    # Arms: sleeves, a white cuff, hands.
-    box(px, 40, 16, 4, 12, 4, c["suit"], rng, 3)
-    a = faces(40, 16, 4, 12, 4)
-    for key in ("front", "back", "right", "left"):
-        x0, y0, w, hh = a[key]
-        fill(px, (x0, y0 + 9, w, 1), c["shirt"], rng, 2)
-        fill(px, (x0, y0 + 10, w, 2), skin, rng, 2)
-    fill(px, a["bottom"], skin, rng, 2)
+    # Shoulder pads: catch the light on top.
+    paint_box(px, "pad", c["coat"], rng)
+    fill(px, face("pad", "top"), c["coat_light"], rng, 3)
 
-    # Legs: trousers with a crease, black shoes.
-    box(px, 0, 16, 4, 12, 4, c["trousers"], rng, 3)
-    l = faces(0, 16, 4, 12, 4)
-    x0, y0, w, hh = l["front"]
-    for y in range(y0, y0 + 10):
-        px[x0 + 1, y] = c["crease"] + (255,)
-    for key in ("front", "back", "right", "left"):
-        x0, y0, w, hh = l[key]
-        fill(px, (x0, y0 + 10, w, 2), c["shoe"], rng, 2)
-        px[x0 + 1, y0 + 10] = c["shoe_shine"] + (255,)
-    fill(px, l["bottom"], c["shoe"], rng, 2)
-    box(px, 0, 32, 4, 2, 1, c["shoe"], rng, 2)        # toes
-    t = faces(0, 32, 4, 2, 1)
-    px[t["top"][0] + 1, t["top"][1]] = c["shoe_shine"] + (255,)
+    # The high collar: coat outside, white rim on top, black inside. Nothing in it but the eyes.
+    for part in ("collar_front", "collar_back", "collar_side"):
+        paint_box(px, part, c["coat_dark"], rng, 2)
+        fill(px, face(part, "top"), c["shirt"], rng, 2)
+    # Inner sides of the collar walls (front wall's back face, back wall's front face, side walls' inner faces).
+    fill(px, face("collar_front", "back"), c["void"], rng, 1)
+    fill(px, face("collar_back", "front"), c["void"], rng, 1)
+    fill(px, face("collar_side", "left"), c["void"], rng, 1)
+    fill(px, face("collar_side", "right"), c["void"], rng, 1)
+    paint_box(px, "void", c["void"], rng, 1)
 
-    # Jacket hem: hangs over the hips and swings when he walks. A vent at the back.
-    box(px, 16, 32, 8, 4, 4, c["suit"], rng, 3)
-    j = faces(16, 32, 8, 4, 4)
-    x0, y0, w, hh = j["front"]
-    for y in range(y0, y0 + hh):
-        px[x0 + 3, y] = c["suit_dark"] + (255,)
-        px[x0 + 4, y] = c["suit_dark"] + (255,)
-    x0, y0, w, hh = j["back"]
-    for y in range(y0 + 1, y0 + hh):
-        px[x0 + 4, y] = c["suit_dark"] + (255,)
+    # The long coat panels, darker on the inside.
+    for part in ("coat_back", "coat_front", "coat_side"):
+        paint_box(px, part, c["coat"], rng)
+    fill(px, face("coat_back", "front"), c["coat_dark"], rng, 2)
+    fill(px, face("coat_front", "back"), c["coat_dark"], rng, 2)
+    x0, y0, w, h = face("coat_back", "back")
+    for y in range(y0 + 4, y0 + h):
+        px[x0 + 3, y] = c["coat_dark"] + (255,)  # the vent
+
+    # Arms: sleeves, a white cuff, pale hands with long fingers.
+    paint_box(px, "upper_arm", c["coat"], rng)
+    paint_box(px, "forearm", c["coat"], rng)
+    for key in ("front", "back", "left", "right"):
+        x0, y0, w, h = face("forearm", key)
+        fill(px, (x0, y0 + h - 1, w, 1), c["shirt"], rng, 2)
+    fill(px, face("forearm", "bottom"), skin, rng, 2)
+    paint_box(px, "palm", skin, rng, 2)
+    paint_box(px, "finger", skin, rng, 2)
+    x0, y0, w, h = face("finger", "front")
+    px[x0, y0 + h - 1] = c["skin_shade"] + (255,)
+
+    # The head only exists in his negative form; here it's left blank. The eyes glow.
+    paint_box(px, "head", (255, 255, 255), rng, 0)
+    paint_box(px, "eye", c["eye"], rng, 0)
     img.save(OUT / name)
     return img
 
 
 def negative(src, name):
-    """The photo-negative version: black and white with the brightness flipped. Near-black skin, a white suit, white hair."""
+    """The photo-negative: black and white with the brightness flipped. A white coat, black shirt, black hands.
+    The head stays pure white."""
     img = src.copy()
     px = img.load()
     for x in range(img.width):
@@ -271,49 +245,45 @@ def negative(src, name):
             if a:
                 v = 255 - int(0.3 * r + 0.59 * g + 0.11 * b)
                 px[x, y] = (max(0, v - 6), max(0, v - 4), min(255, v + 4), a)  # a faint cold tint
+    for rect in faces(*BOX["head"]).values():
+        fill(px, rect, (255, 255, 255), random.Random(1), 0)
     img.save(OUT / name)
 
 
+def skin_areas():
+    """Where veins can go: the hands (and the cuffs' edge) and the white shirt at his chest."""
+    spots = []
+    for part in ("palm", "finger"):
+        for rect in faces(*BOX[part]).values():
+            x0, y0, w, h = rect
+            spots += [(x, y) for x in range(x0, x0 + w) for y in range(y0, y0 + h)]
+    for key in ("front", "back", "left", "right"):
+        x0, y0, w, h = face("forearm", key)
+        spots += [(x, y0 + h - 1) for x in range(x0, x0 + w)]
+    x0, y0, w, h = face("chest", "front")
+    for y in range(h):
+        half = max(0, 2 - y // 2)
+        spots += [(x0 + x, y0 + y) for x in range(3 - half, 5 + half)]
+    for part in ("collar_front", "collar_back", "collar_side"):
+        x0, y0, w, h = face(part, "top")
+        spots += [(x, y) for x in range(x0, x0 + w) for y in range(y0, y0 + h)]
+    return spots
+
+
 def veins(prefix, stages=4, seed=21):
-    """Dark veins creeping from his collar and cuffs, a stage further every couple of chapters. Only on skin."""
+    """Dark veins creeping over his hands and up the white of his shirt and collar, a stage further every couple of chapters."""
     rng = random.Random(seed)
-    f = faces(0, 0, 8, 8, 8)
-    a = faces(40, 16, 4, 12, 4)
-    # Where veins start in each stage: (x, y, how far they can wander up)
-    starts = [
-        [(f["right"][0] + 2, f["right"][1] + 7, 3), (f["left"][0] + 5, f["left"][1] + 7, 3), (a["front"][0] + 1, a["front"][1] + 11, 2)],
-        [(f["back"][0] + 2, f["back"][1] + 7, 2), (f["back"][0] + 6, f["back"][1] + 7, 2), (f["front"][0] + 0, f["front"][1] + 7, 2),
-         (a["back"][0] + 2, a["back"][1] + 11, 2), (a["right"][0] + 1, a["right"][1] + 11, 2)],
-        [(f["front"][0] + 7, f["front"][1] + 7, 3), (f["front"][0] + 1, f["front"][1] + 7, 3), (f["right"][0] + 5, f["right"][1] + 7, 4),
-         (a["left"][0] + 2, a["left"][1] + 11, 2)],
-        [(f["front"][0] + 2, f["front"][1] + 6, 3), (f["front"][0] + 5, f["front"][1] + 6, 3), (f["left"][0] + 2, f["left"][1] + 7, 5)],
-    ]
-    # Skin areas veins may cross: the face below the hairline, the sides and back of the neck, the hands.
-    allowed = set()
-    for key in ("front", "right", "left", "back"):
-        x0, y0, w, h = f[key]
-        top = 2 if key == "front" else 4 if key == "back" else 3
-        for x in range(x0, x0 + w):
-            for y in range(y0 + top, y0 + h):
-                allowed.add((x, y))
-        x0, y0, w, h = a[key]
-        for x in range(x0, x0 + w):
-            for y in range(y0 + 10, y0 + h):
-                allowed.add((x, y))
-    eyes = {(f["front"][0] + x, f["front"][1] + 4) for x in (1, 2, 5, 6)}
+    spots = skin_areas()
+    allowed = set(spots)
     drawn = []
     for stage in range(stages):
-        for (x, y, reach) in starts[stage]:
-            cx, cy = x, y
-            for _ in range(reach * 3):
-                if (cx, cy) in allowed and (cx, cy) not in eyes:
-                    drawn.append((cx, cy))
-                cy -= 1 if rng.random() < 0.6 else 0
-                cx += rng.choice((-1, 0, 0, 1))
-        if stage == stages - 1:
-            # The end: the veins reach his eyes.
-            for (ex, ey) in eyes:
-                drawn.append((ex, ey + 1))
+        for _ in range(4 + stage * 3):
+            x, y = rng.choice(spots)
+            for _ in range(rng.randint(2, 5)):
+                if (x, y) in allowed:
+                    drawn.append((x, y))
+                x += rng.choice((-1, 0, 1))
+                y += rng.choice((-1, 0, 1))
         img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
         p = img.load()
         for (vx, vy) in drawn:
@@ -322,48 +292,30 @@ def veins(prefix, stages=4, seed=21):
 
 
 def negative_glow(name, seed=31):
-    """What shines in his negative form (drawn glowing, added on top): white neon veins all over his black skin,
-    burning eyes, and faint light along the edges of his white suit, like neon tubes."""
+    """What shines in his negative form (drawn glowing, added on top): the head, blazing white; white neon veins on his
+    black hands; and faint light along the edges of the coat, like neon tubes."""
     rng = random.Random(seed)
     img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
     px = img.load()
-    f = faces(0, 0, 8, 8, 8)
-    a = faces(40, 16, 4, 12, 4)
-    # Skin the veins can cross: face below the hairline, neck, hands.
-    skin = []
-    for key in ("front", "right", "left", "back"):
-        x0, y0, w, h = f[key]
-        top = 2 if key == "front" else 4 if key == "back" else 3
-        skin += [(x, y) for x in range(x0, x0 + w) for y in range(y0 + top, y0 + h)]
-        x0, y0, w, h = a[key]
-        skin += [(x, y) for x in range(x0, x0 + w) for y in range(y0 + 10, y0 + h)]
-    allowed = set(skin)
-    eye_row = {(f["front"][0] + x, f["front"][1] + 4) for x in range(8)}
-    for _ in range(11):
-        x, y = rng.choice(skin)
-        for _ in range(rng.randint(2, 5)):
-            if (x, y) in eye_row:
-                break  # keep the black around the eyes, so the eyes stand out
-            if (x, y) in allowed:
-                b = rng.randint(200, 255)
-                px[x, y] = (b, b, min(255, b + 10), 255)
-            x += rng.choice((-1, 0, 1))
-            y += rng.choice((-1, -1, 0, 1))
-    for x in (1, 2, 5, 6):  # burning eyes
-        px[f["front"][0] + x, f["front"][1] + 4] = (255, 255, 255, 255)
-    # Faint neon along the edges of every face of the suit, sleeves and trousers.
-    def rim(u, v, w, h, d, level):
-        for key, (x0, y0, fw, fh) in faces(u, v, w, h, d).items():
+    for rect in faces(*BOX["head"]).values():
+        fill(px, rect, (255, 255, 255), rng, 0)
+    hands = [s for s in skin_areas() if s[1] >= 25]  # hands and cuffs only (rows 25+)
+    for (x, y) in hands:
+        if rng.random() < 0.45:
+            b = rng.randint(190, 255)
+            px[x, y] = (b, b, min(255, b + 10), 255)
+
+    def rim(part, level):
+        for key, (x0, y0, fw, fh) in faces(*BOX[part]).items():
             if key in ("top", "bottom"):
                 continue
             for x in range(x0, x0 + fw):
                 for y in range(y0, y0 + fh):
                     if x in (x0, x0 + fw - 1) and px[x, y][3] == 0:
                         px[x, y] = (level, level, level + 8, 255)
-    rim(16, 16, 8, 12, 4, 120)
-    rim(40, 16, 4, 10, 4, 100)
-    rim(0, 16, 4, 10, 4, 90)
-    rim(16, 32, 8, 4, 4, 110)
+    for part, level in (("chest", 120), ("waist", 100), ("coat_back", 110), ("coat_front", 110), ("coat_side", 90),
+                        ("upper_arm", 100), ("forearm", 100), ("leg", 80), ("pad", 130)):
+        rim(part, level)
     img.save(OUT / name)
 
 
@@ -435,8 +387,8 @@ def logo():
 
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
-    normal = suit("solace.png", SUIT)
-    suit("solace_uneasy.png", SUIT, uneasy=True)
+    normal = suit("solace.png", COAT)
+    suit("solace_uneasy.png", COAT, uneasy=True)
     negative(normal, "solace_negative.png")
     veins("solace_veins_")
     negative_glow("solace_negative_glow.png")
@@ -447,6 +399,5 @@ if __name__ == "__main__":
     lantern("lantern_hollow.png", mass=(14, 18, 22), edge=(70, 10, 14), alpha=200, seed=8)
     core("lantern_core.png", inner=(235, 255, 250), outer=(120, 255, 235))
     core("lantern_core_hollow.png", inner=(255, 90, 70), outer=(200, 10, 10), seed=9)
-    eyes_only("solace_eyes.png", (127, 232, 255))
     logo()
     print("Textures written to", OUT)

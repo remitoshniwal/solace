@@ -4,7 +4,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.solacemod.solace.Solace;
 import com.solacemod.solace.entity.SolaceEntity;
-import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -28,7 +27,7 @@ final class LanternRenderer {
     private final ModelPart mass;
     private final ModelPart core;
     private final ModelPart[][] tendrils;
-    private final HumanoidModel<SolaceEntity> figure;
+    private final SolaceModel<SolaceEntity> figure;
 
     LanternRenderer(EntityRendererProvider.Context context) {
         ModelPart root = context.bakeLayer(SolaceModels.LANTERN);
@@ -43,8 +42,8 @@ final class LanternRenderer {
                 tendrils[i][j] = seg;
             }
         }
-        figure = new HumanoidModel<>(context.bakeLayer(SolaceModels.BODY));
-        curlUp(figure);
+        figure = new SolaceModel<>(context.bakeLayer(SolaceModels.BODY));
+        figure.curlUp();
     }
 
     void render(SolaceEntity entity, float partialTick, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
@@ -68,6 +67,7 @@ final class LanternRenderer {
         poseStack.scale(0.2F, 0.2F, 0.2F);
         poseStack.mulPose(Axis.YP.rotationDegrees(t * 0.4F));
         figure.renderToBuffer(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(FIGURE)), LightTexture.FULL_BRIGHT, overlay);
+        figure.renderEyes(poseStack, buffer.getBuffer(RenderType.eyes(FIGURE)), LightTexture.FULL_BRIGHT, overlay, -1);
         poseStack.popPose();
 
         // The core glows at full brightness and breathes.
@@ -96,21 +96,5 @@ final class LanternRenderer {
                 seg.zRot = (j == 0 ? base[4] : 0) + Mth.cos(phase * 0.8F) * amp;
             }
         }
-    }
-
-    /** Knees up, head down, arms around its legs. */
-    private static void curlUp(HumanoidModel<SolaceEntity> m) {
-        m.head.xRot = 0.9F;
-        m.body.xRot = 0.6F;
-        m.rightArm.xRot = -1.3F;
-        m.leftArm.xRot = -1.3F;
-        m.rightArm.zRot = 0.3F;
-        m.leftArm.zRot = -0.3F;
-        m.rightLeg.xRot = -1.9F;
-        m.leftLeg.xRot = -1.9F;
-        m.rightLeg.y = 9.0F;
-        m.leftLeg.y = 9.0F;
-        m.rightLeg.z = -3.0F;
-        m.leftLeg.z = -3.0F;
     }
 }

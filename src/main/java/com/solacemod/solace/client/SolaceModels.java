@@ -3,6 +3,7 @@ package com.solacemod.solace.client;
 import com.solacemod.solace.Solace;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
@@ -37,9 +38,11 @@ public final class SolaceModels {
     }
 
     /**
-     * The everyday form: a man in a tailored suit. A person-shaped body (same joints as a player, so it walks and
-     * holds things like one), plus a jacket hem that hangs over the hips and swings as he walks, and proper shoes.
-     * Texture: textures/entity/solace.png (painted by tools/make_textures.py).
+     * Solace's own body (not a player shape): a tall, thin figure in a long tailored coat, with broad stiff shoulders,
+     * long jointed arms with long fingers, and a high collar with nothing inside it. No head: just two glowing eyes
+     * floating where a face should be. In his negative form a blank, glowing white head appears.
+     * Measurements are in pixels (16 = one block); the ground is at y = 24 and y points down.
+     * The texture layout (textures/entity/solace.png) is painted by tools/make_textures.py to match the texOffs below.
      */
     public static LayerDefinition createBody() {
         return body(0.0F);
@@ -49,17 +52,69 @@ public final class SolaceModels {
         return body(0.45F);
     }
 
-    /** @param grow how much bigger than normal each box is (0 = the body itself) */
+    /** @param grow how much bigger than normal each box is (0 = the body itself, more = the glowing shell around it) */
     private static LayerDefinition body(float grow) {
-        net.minecraft.client.model.geom.builders.CubeDeformation g = new net.minecraft.client.model.geom.builders.CubeDeformation(grow);
-        MeshDefinition mesh = net.minecraft.client.model.HumanoidModel.createMesh(g, 0.0F);
+        MeshDefinition mesh = new MeshDefinition();
         PartDefinition root = mesh.getRoot();
-        root.getChild("body").addOrReplaceChild("jacket_hem", CubeListBuilder.create().texOffs(16, 32)
-                .addBox(-4.0F, 0.0F, -2.0F, 8, 4, 4, new net.minecraft.client.model.geom.builders.CubeDeformation(0.3F + grow)), PartPose.offset(0.0F, 11.0F, 0.0F));
-        root.getChild("right_leg").addOrReplaceChild("toe", CubeListBuilder.create().texOffs(0, 32)
-                .addBox(-2.0F, 10.0F, -3.0F, 4, 2, 1, g), PartPose.ZERO);
-        root.getChild("left_leg").addOrReplaceChild("toe", CubeListBuilder.create().texOffs(0, 32).mirror()
-                .addBox(-2.0F, 10.0F, -3.0F, 4, 2, 1, g), PartPose.ZERO);
+        CubeDeformation g = new CubeDeformation(grow);
+        CubeDeformation thin = new CubeDeformation(grow - 0.2F);
+
+        // Torso: a narrow waist under a broad chest, square padded shoulders, and a high empty collar.
+        PartDefinition body = root.addOrReplaceChild("body", CubeListBuilder.create()
+                .texOffs(16, 0).addBox(-3.0F, 1.0F, -1.5F, 6, 7, 3, g)          // waist
+                .texOffs(34, 0).addBox(-4.0F, -6.0F, -2.0F, 8, 7, 4, g)         // chest
+                .texOffs(16, 10).addBox(-6.5F, -6.5F, -2.5F, 3, 2, 5, g)        // right shoulder pad
+                .texOffs(16, 10).mirror().addBox(3.5F, -6.5F, -2.5F, 3, 2, 5, g).mirror(false)
+                .texOffs(16, 17).addBox(-2.5F, -9.0F, -3.0F, 5, 3, 1, g)        // collar, front
+                .texOffs(16, 21).addBox(-2.5F, -9.0F, 2.0F, 5, 3, 1, g)         // collar, back
+                .texOffs(0, 52).addBox(-3.5F, -9.0F, -3.0F, 1, 3, 6, g)        // collar, sides
+                .texOffs(0, 52).mirror().addBox(2.5F, -9.0F, -3.0F, 1, 3, 6, g).mirror(false)
+                .texOffs(40, 11).addBox(-2.5F, -6.2F, -2.0F, 5, 1, 4, g),       // the dark inside of the collar
+                PartPose.ZERO);
+        // The long coat hangs from the waist in panels, so it can swing as he walks.
+        body.addOrReplaceChild("coat_back", CubeListBuilder.create().texOffs(0, 24).addBox(-3.5F, 0.0F, 0.0F, 7, 9, 1, g),
+                PartPose.offset(0.0F, 7.5F, 1.6F));
+        body.addOrReplaceChild("coat_front_right", CubeListBuilder.create().texOffs(16, 25).addBox(-3.6F, 0.0F, -1.0F, 4, 9, 1, g),
+                PartPose.offset(0.0F, 7.5F, -1.6F));
+        body.addOrReplaceChild("coat_front_left", CubeListBuilder.create().texOffs(16, 25).mirror().addBox(-0.4F, 0.0F, -1.0F, 4, 9, 1, g),
+                PartPose.offset(0.0F, 7.5F, -1.6F));
+        body.addOrReplaceChild("coat_side_right", CubeListBuilder.create().texOffs(26, 25).addBox(-1.0F, 0.0F, -1.5F, 1, 9, 3, g),
+                PartPose.offset(-3.4F, 7.5F, 0.0F));
+        body.addOrReplaceChild("coat_side_left", CubeListBuilder.create().texOffs(26, 25).mirror().addBox(0.0F, 0.0F, -1.5F, 1, 9, 3, g),
+                PartPose.offset(3.4F, 7.5F, 0.0F));
+
+        // Where the face should be: two eyes, floating in the empty collar. And the head that only exists in the negative.
+        root.addOrReplaceChild("eyes", CubeListBuilder.create()
+                .texOffs(28, 37).addBox(-2.2F, -3.0F, -1.5F, 1, 1, 1, new CubeDeformation(grow - 0.15F))
+                .texOffs(28, 37).addBox(1.2F, -3.0F, -1.5F, 1, 1, 1, new CubeDeformation(grow - 0.15F)),
+                PartPose.offset(0.0F, -7.5F, 0.0F));
+        root.addOrReplaceChild("head", CubeListBuilder.create().texOffs(0, 37).addBox(-3.5F, -8.0F, -3.5F, 7, 8, 7, g),
+                PartPose.offset(0.0F, -7.5F, 0.0F));
+
+        // Long arms: upper arm, forearm (so the elbows bend), a narrow hand and three long fingers.
+        for (int side : new int[]{-1, 1}) {
+            String name = side < 0 ? "right" : "left";
+            boolean m = side > 0;
+            PartDefinition arm = root.addOrReplaceChild(name + "_arm", CubeListBuilder.create().texOffs(34, 25).mirror(m)
+                    .addBox(-1.0F, -0.5F, -1.0F, 2, 8, 2, new CubeDeformation(grow + 0.25F)), PartPose.offset(5.2F * side, -5.0F, 0.0F));
+            PartDefinition fore = arm.addOrReplaceChild(name + "_forearm", CubeListBuilder.create().texOffs(42, 25).mirror(m)
+                    .addBox(-1.0F, 0.0F, -1.0F, 2, 7, 2, new CubeDeformation(grow + 0.1F)), PartPose.offset(0.0F, 7.5F, 0.0F));
+            PartDefinition hand = fore.addOrReplaceChild(name + "_hand", CubeListBuilder.create().texOffs(50, 25).mirror(m)
+                    .addBox(-1.0F, 0.0F, -1.0F, 2, 2, 2, thin), PartPose.offset(0.0F, 7.0F, 0.0F));
+            for (int f = 0; f < 3; f++) {
+                hand.addOrReplaceChild(name + "_finger" + f, CubeListBuilder.create().texOffs(58, 25)
+                        .addBox(-0.5F, 0.0F, -0.5F, 1, 3, 1, new CubeDeformation(grow - 0.2F)), PartPose.offset(-0.6F + f * 0.6F, 1.8F, -0.4F + (f == 1 ? -0.2F : 0)));
+            }
+        }
+
+        // Long thin legs and long pointed shoes.
+        for (int side : new int[]{-1, 1}) {
+            String name = side < 0 ? "right" : "left";
+            PartDefinition leg = root.addOrReplaceChild(name + "_leg", CubeListBuilder.create().texOffs(0, 0).mirror(side > 0)
+                    .addBox(-1.5F, 0.0F, -1.5F, 3, 15, 3, g), PartPose.offset(1.9F * side, 8.0F, 0.0F));
+            leg.addOrReplaceChild(name + "_shoe", CubeListBuilder.create().texOffs(0, 18).mirror(side > 0)
+                    .addBox(-1.5F, 15.0F, -3.5F, 3, 1, 5, g), PartPose.ZERO);
+        }
         return LayerDefinition.create(mesh, 64, 64);
     }
 

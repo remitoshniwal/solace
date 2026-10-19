@@ -101,6 +101,29 @@ jobs:
           fi
           echo "::notice title=Client smoke test::Client loaded to the title screen with no Solace errors"
 
+      - name: Screenshots (photo tour of Solace's forms)
+        continue-on-error: true
+        run: |
+          export LIBGL_ALWAYS_SOFTWARE=1
+          rm -rf run/screenshots run/saves/solace_tour
+          SOLACE_SCREENSHOTS=1 timeout 600 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runClient > shots.log 2>&1 || true
+          ls -la run/screenshots || true
+          n=$(ls run/screenshots/*.png 2>/dev/null | wc -l)
+          if [ "$n" -eq 0 ]; then
+            msg=$(grep -i "screenshots\|exception\|error" shots.log | tail -40 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')
+            echo "::warning title=No screenshots::${msg}"
+          else
+            echo "::notice title=Screenshots::${n} screenshots taken"
+          fi
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: run/screenshots/*.png
+          if-no-files-found: ignore
+
       - name: Show build errors
         if: failure()
         run: |

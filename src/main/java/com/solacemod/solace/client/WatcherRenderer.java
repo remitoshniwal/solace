@@ -3,28 +3,36 @@ package com.solacemod.solace.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.solacemod.solace.Solace;
 import com.solacemod.solace.entity.WatcherEntity;
-import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
+import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nullable;
 
 /** Draws the Watcher: a faded, see-through, player-shaped figure. */
-public class WatcherRenderer extends HumanoidMobRenderer<WatcherEntity, HumanoidModel<WatcherEntity>> {
+public class WatcherRenderer extends MobRenderer<WatcherEntity, EntityModel<WatcherEntity>> {
     private static final ResourceLocation TEXTURE = Solace.id("textures/entity/watcher.png");
     private static final ResourceLocation SOLACE = Solace.id("textures/entity/solace.png");
-    private final HumanoidModel<WatcherEntity> slim;
-    /** The "two places" copy of Solace uses his suited body. */
-    private final HumanoidModel<WatcherEntity> suited;
+    private final EntityModel<WatcherEntity> slim;
+    /** The "two places" copy of Solace uses his body, glowing eyes and all. */
+    private final SolaceModel<WatcherEntity> suited;
 
     public WatcherRenderer(EntityRendererProvider.Context context) {
         super(context, new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER_SLIM), true), 0.0F);
         slim = getModel();
-        suited = new HumanoidModel<>(context.bakeLayer(SolaceModels.BODY));
+        suited = new SolaceModel<>(context.bakeLayer(SolaceModels.BODY));
+        addLayer(new net.minecraft.client.renderer.entity.layers.RenderLayer<>(this) {
+            @Override
+            public void render(PoseStack pose, net.minecraft.client.renderer.MultiBufferSource buffer, int light, WatcherEntity entity,
+                               float limbSwing, float limbSwingAmount, float partialTick, float age, float yaw, float pitch) {
+                if (entity.isMimic()) suited.renderEyes(pose, buffer.getBuffer(RenderType.eyes(SOLACE)), 0xF000F0,
+                        net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, -1);
+            }
+        });
     }
 
     /** A mimic is drawn as a solid copy of Solace, hovering like it does. */
