@@ -7,8 +7,8 @@ import java.util.Map;
 import java.util.Random;
 
 /**
- * The Lantern's body as chunky 3D voxels (little cubes, 1/8 of a block each): a ragged ball of plasma with a white-hot
- * middle, paler and paler blues towards a see-through deep-blue skin, and arcs of lightning poking out. Built once as a
+ * The Lantern's body as chunky 3D voxels (little cubes, 1/8 of a block each): a ragged ball of plasma with a solid
+ * white-hot middle inside glowing layers of blue, deeper towards the skin, and arcs of lightning poking out. Built once as a
  * loop of frames (each a slightly different shape) so it churns like a flipbook, but in 3D.
  * Pure Java: lists of faces the renderer sends to Minecraft.
  */
@@ -22,7 +22,7 @@ final class VoxelOrb {
     record Face(float[] pos, int argb, float nx, float ny, float nz) {
     }
 
-    /** The parts of one frame: the solid glowing inside, the see-through skin, and the inside-out outline. */
+    /** The parts of one frame: the solid white-hot inside, the glowing blue layers round it, and the inside-out outline. */
     record Frame(List<Face> core, List<Face> shell, List<Face> outline) {
     }
 
@@ -76,13 +76,14 @@ final class VoxelOrb {
         for (int x = 0; x < N; x++) for (int y = 0; y < N; y++) for (int z = 0; z < N; z++) {
             int lv = level[x][y][z];
             if (lv < 0) continue;
-            boolean solid = lv <= 2;
+            boolean solid = lv <= 1;
             for (int[] d : dirs) {
                 int nl = get(level, x + d[0], y + d[1], z + d[2]);
                 // The hot middle is solid; the blue layers round it are see-through, each showing its outer side.
-                boolean show = solid ? nl < 0 || nl > 2 : nl < 0 || nl > lv;
+                boolean show = solid ? nl < 0 || nl > 1 : nl < 0 || nl > lv;
                 if (!show) continue;
-                int alpha = solid ? 0xFF000000 : lv == 3 ? 0x48000000 : 0x78000000;
+                // For the glowing layers the alpha says how strongly they glow.
+                int alpha = solid ? 0xFF000000 : lv == 2 ? 0x70000000 : lv == 3 ? 0x80000000 : 0xB0000000;
                 Face face = face(x - c, y - c, z - c, d, palette[Math.min(lv, 4)] & 0xFFFFFF | alpha);
                 if (solid) core.add(face);
                 else shell.add(face);

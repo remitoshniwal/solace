@@ -18,8 +18,8 @@ import net.minecraft.util.RandomSource;
 import java.util.List;
 
 /**
- * Solace's true form: a 3D ball of plasma made of chunky voxels (see VoxelOrb), with a dark outline, a white-hot
- * middle glowing through a see-through blue skin, and arcs of lightning. It churns (a loop of slightly different
+ * Solace's true form: a 3D ball of plasma made of chunky voxels (see VoxelOrb), with a dark outline, a solid
+ * white-hot middle shining through glowing layers of blue, and arcs of lightning. It churns (a loop of slightly different
  * shapes), slowly turns, and has a soft glow round it.
  * The Hollow (the boss) is the same thing in red, churning faster.
  */
@@ -53,11 +53,12 @@ final class LanternRenderer {
         // Each buffer is fetched right before it's used (fetching another one can close it).
         emit(poseStack, buffer.getBuffer(RenderType.entityTranslucentEmissive(WHITE)), frame.core(), full);
         emit(poseStack, buffer.getBuffer(RenderType.entityCutout(WHITE)), frame.outline(), full);
-        emit(poseStack, buffer.getBuffer(RenderType.entityTranslucentEmissive(WHITE)), frame.shell(), full);
-        // A soft glow: the skin again, a bit bigger, added on top of what's behind it.
-        poseStack.scale(1.18F, 1.18F, 1.18F);
-        float pulse = 0.22F + 0.06F * Mth.sin(t * 0.15F);
-        emitGlow(poseStack, buffer.getBuffer(RenderType.eyes(WHITE)), frame.shell(), pulse);
+        // The blue layers glow: added on top of what's behind them, so the white middle shines through.
+        float flicker = 0.9F + 0.1F * Mth.sin(t * 0.7F);
+        emitGlow(poseStack, buffer.getBuffer(RenderType.eyes(WHITE)), frame.shell(), flicker);
+        // And a faint halo just outside.
+        poseStack.scale(1.16F, 1.16F, 1.16F);
+        emitGlow(poseStack, buffer.getBuffer(RenderType.eyes(WHITE)), frame.shell(), 0.22F + 0.06F * Mth.sin(t * 0.15F));
         poseStack.popPose();
 
         if (!Minecraft.getInstance().isPaused()) particles(entity, scale, hollow);
@@ -73,12 +74,13 @@ final class LanternRenderer {
         }
     }
 
-    /** The glow layer ignores see-through and adds its colour, so dim the colours instead. */
+    /** The glow layer ignores see-through and adds its colour, so dim the colours instead (by the face's alpha too). */
     private static void emitGlow(PoseStack poseStack, VertexConsumer out, List<VoxelOrb.Face> faces, float level) {
         PoseStack.Pose pose = poseStack.last();
         for (VoxelOrb.Face f : faces) {
             int c = f.argb();
-            int r = (int) (((c >> 16) & 255) * level), g = (int) (((c >> 8) & 255) * level), b = (int) ((c & 255) * level);
+            float strength = level * ((c >>> 24) / 255F);
+            int r = (int) (((c >> 16) & 255) * strength), g = (int) (((c >> 8) & 255) * strength), b = (int) ((c & 255) * strength);
             int argb = 0xFF000000 | r << 16 | g << 8 | b;
             for (int k = 0; k < 4; k++) {
                 out.addVertex(pose, f.pos()[k * 3], f.pos()[k * 3 + 1], f.pos()[k * 3 + 2]).setColor(argb).setUv(0.5F, 0.5F)
