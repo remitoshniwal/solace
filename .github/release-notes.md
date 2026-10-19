@@ -8,6 +8,12 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### New in 1.6.0
+- **Solace has its own body.** No more player shape: a tall, thin, headless figure in a long coat, with broad shoulders, long arms and long pale fingers that twitch. Two eyes glow in its empty collar, day and night.
+- **The negative has a head.** When it flickers into its negative, a blank, glowing white head appears, along with the white coat, neon veins and flowing energy.
+- **A new Lantern.** Smaller (about 2 blocks), and like a lava lamp crossed with ferrofluid: spiky black blobs rising and sinking through a glowing cyan body, drifting glowing wax, cyan energy flowing over it, and a bright core.
+- Calmer particles in the negative form.
+
 ### Fixed in 1.5.1
 - **No more contradicting messages.** Solace now does what you asked *before* it speaks. If something can't be done, you get one honest reply instead of "here's some coal" followed by "I don't have any coal".
 - **"Give me coal" just works.** Solace gives from its pockets, and if it doesn't have the item it makes it with its power (paid for in strength, so cheap things are easy and precious things take a strong bond).
