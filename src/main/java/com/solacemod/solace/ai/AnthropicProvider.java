@@ -19,6 +19,12 @@ public final class AnthropicProvider implements LlmProvider {
     private static final Set<String> FALLBACK_MODELS = Set.of("claude-fable-5-1", "claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5");
 
     private final ProviderSettings settings;
+    private volatile java.util.function.Consumer<RateInfo> rateListener;
+
+    @Override
+    public void onRateInfo(java.util.function.Consumer<RateInfo> listener) {
+        this.rateListener = listener;
+    }
 
     public AnthropicProvider(ProviderSettings settings) {
         this.settings = settings;
@@ -36,7 +42,7 @@ public final class AnthropicProvider implements LlmProvider {
         headers.put("anthropic-version", "2023-06-01");
         boolean fallbacks = FALLBACK_MODELS.contains(settings.model());
         if (fallbacks) headers.put("anthropic-beta", "server-side-fallback-2026-07-01");
-        return Http.postJson(settings.baseUrl() + "/v1/messages", headers, buildBody(request, fallbacks), settings.timeoutSeconds())
+        return Http.postJson(settings.baseUrl() + "/v1/messages", headers, buildBody(request, fallbacks), settings.timeoutSeconds(), rateListener)
                 .thenApply(AnthropicProvider::extractText);
     }
 

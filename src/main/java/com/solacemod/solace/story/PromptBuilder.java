@@ -27,14 +27,24 @@ public final class PromptBuilder {
     }
 
     public static LlmRequest build(ServerPlayer player, PlayerStory story, @Nullable SolaceEntity solace, String userContent) {
+        return build(player, story, solace, userContent, false);
+    }
+
+    /**
+     * @param compact a shorter version for brains that are low on tokens and for background requests:
+     *                the same rules and personality, but less chat history and a smaller description of the world
+     */
+    public static LlmRequest build(ServerPlayer player, PlayerStory story, @Nullable SolaceEntity solace, String userContent, boolean compact) {
         List<ChatMessage> messages = new ArrayList<>();
-        int max = SolaceConfig.HISTORY_MESSAGES.get();
+        int max = compact ? Math.min(4, SolaceConfig.HISTORY_MESSAGES.get()) : SolaceConfig.HISTORY_MESSAGES.get();
         List<PlayerStory.Turn> history = story.history;
         for (int i = Math.max(0, history.size() - max); i < history.size(); i++) {
             PlayerStory.Turn t = history.get(i);
             messages.add(new ChatMessage(t.role(), t.text()));
         }
-        messages.add(ChatMessage.user(gameState(player, story, solace) + "\n" + userContent));
+        // History must start with something the player said, or some providers reject it.
+        while (!messages.isEmpty() && !messages.get(0).role().equals("user")) messages.remove(0);
+        messages.add(ChatMessage.user(gameState(player, story, solace, compact) + "\n" + userContent));
         return new LlmRequest(systemPrompt(player, story), messages, SolaceConfig.MAX_REPLY_TOKENS.get(),
                 SolaceConfig.TEMPERATURE.get(), true);
     }
@@ -137,7 +147,7 @@ public final class PromptBuilder {
     }
 
     /** A short snapshot of the game right now, attached to each request. */
-    static String gameState(ServerPlayer player, PlayerStory story, @Nullable SolaceEntity solace) {
+    static String gameState(ServerPlayer player, PlayerStory story, @Nullable SolaceEntity solace, boolean compact) {
         ServerLevel level = player.serverLevel();
         StringBuilder sb = new StringBuilder("[GAME STATE] ");
         long dayTime = level.getDayTime() % 24000;
@@ -175,13 +185,14 @@ public final class PromptBuilder {
             sb.append(". Trust ").append(story.trust).append(" (").append(story.trustWord()).append(")");
             sb.append(". Torn pages the player has found: ").append(story.fragmentsFound.size()).append('/').append(StoryText.FRAGMENT_COUNT);
         }
-        sb.append(Omniscience.describe(player));
+        if (!compact) sb.append(Omniscience.describe(player));
         sb.append(Bond.describe(story));
         if (story.defiantUntilTick > player.getServer().getTickCount()) {
             sb.append(". RIGHT NOW you are hurt and refuse to do anything the player asks (any actions you include will be ignored)");
         }
         if (!story.recentEvents.isEmpty()) {
-            sb.append(". Recent events: ").append(String.join("; ", story.recentEvents.subList(Math.max(0, story.recentEvents.size() - 4), story.recentEvents.size())));
+            int n = compact ? 2 : 4;
+            sb.append(". Recent events: ").append(String.join("; ", story.recentEvents.subList(Math.max(0, story.recentEvents.size() - n), story.recentEvents.size())));
         }
         sb.append('.');
         return sb.toString();

@@ -19,6 +19,12 @@ import java.util.concurrent.CompletableFuture;
  */
 public final class OpenAiCompatibleProvider implements LlmProvider {
     private final ProviderSettings settings;
+    private volatile java.util.function.Consumer<RateInfo> rateListener;
+
+    @Override
+    public void onRateInfo(java.util.function.Consumer<RateInfo> listener) {
+        this.rateListener = listener;
+    }
     private volatile boolean useMaxCompletionTokens;
     private volatile boolean skipTemperature;
     private volatile boolean skipSpeedHints;
@@ -133,7 +139,7 @@ public final class OpenAiCompatibleProvider implements LlmProvider {
 
     private CompletableFuture<String> send(LlmRequest request, String model, boolean mayRetry) {
         JsonObject body = buildBody(request, model);
-        return Http.postJson(settings.baseUrl() + "/chat/completions", authHeaders(), body, settings.timeoutSeconds())
+        return Http.postJson(settings.baseUrl() + "/chat/completions", authHeaders(), body, settings.timeoutSeconds(), rateListener)
                 .thenApply(OpenAiCompatibleProvider::extractText)
                 .exceptionallyCompose(error -> {
                     Throwable cause = Http.unwrap(error);

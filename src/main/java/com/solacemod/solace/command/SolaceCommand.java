@@ -196,7 +196,8 @@ public final class SolaceCommand {
         PlayerStory s = story(ctx, player);
         MinecraftServer server = ctx.getSource().getServer();
         StoryData data = StoryData.get(server);
-        msg(ctx, "AI brain: " + AiService.describe());
+        msg(ctx, "AI: " + AiService.describe());
+        for (String line : AiService.brainStatus()) msg(ctx, "  " + line);
         msg(ctx, "AI requests today: " + data.requestsToday + " (limit " + com.solacemod.solace.config.SolaceConfig.DAILY_REQUEST_LIMIT.get() + ")");
         if (!s.met) return msg(ctx, "You haven't met Solace yet.");
         msg(ctx, "Story: chapter " + s.chapter + " of 8, " + Math.round(s.playMinutes()) + " minutes together, pages found " + s.fragmentsFound.size() + "/" + StoryText.FRAGMENT_COUNT
@@ -216,17 +217,28 @@ public final class SolaceCommand {
             ctx.getSource().sendSystemMessage(SolaceBrain.setupMessage("Not set up: " + problem));
             return 0;
         }
-        msg(ctx, "Testing " + AiService.describe() + "...");
-        long start = System.currentTimeMillis();
         LlmRequest req = new LlmRequest("You are a test. Reply with exactly: {\"say\":\"I can hear you.\"}",
                 List.of(ChatMessage.user("Test")), 200, 0.0, true);
-        AiService.complete(req).whenComplete((text, err) -> server.execute(() -> {
-            long ms = System.currentTimeMillis() - start;
-            if (err != null) src.sendFailure(Component.literal("Failed: " + AiService.hintFor(err)));
-            else src.sendSuccess(() -> Component.literal("Success in " + ms + " ms. Reply: " + (text.length() > 120 ? text.substring(0, 120) + "..." : text))
-                    .withStyle(ChatFormatting.GREEN), false);
-        }));
-        return 1;
+        // Test every brain on its own, so you can see which ones work.
+        int tested = 0;
+        for (int slot = 1; slot <= com.solacemod.solace.config.SolaceConfig.EXTRA_BRAINS + 1; slot++) {
+            com.solacemod.solace.ai.ProviderSettings s = AiService.settingsFor(slot);
+            if (s == null) continue;
+            final int n = slot;
+            if (s.problem() != null) {
+                src.sendFailure(Component.literal("Brain " + n + " (" + s.name() + "): " + s.problem()));
+                continue;
+            }
+            tested++;
+            msg(ctx, "Testing brain " + n + ": " + s + "...");
+            long start = System.currentTimeMillis();
+            com.solacemod.solace.ai.LlmProvider.create(s).complete(req).whenComplete((text, err) -> server.execute(() -> {
+                long ms = System.currentTimeMillis() - start;
+                if (err != null) src.sendFailure(Component.literal("Brain " + n + " failed: " + AiService.hintFor(err)));
+                else src.sendSuccess(() -> Component.literal("Brain " + n + " works (" + ms + " ms).").withStyle(ChatFormatting.GREEN), false);
+            }));
+        }
+        return tested > 0 ? 1 : 0;
     }
 
     private static int forget(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {

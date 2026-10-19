@@ -159,6 +159,12 @@ public final class SolaceBrain {
                                 boolean important, boolean ignoreExistence) {
         MinecraftServer server = player.getServer();
         if (server == null) return;
+        com.solacemod.solace.ai.BrainPool.Kind kind = classify(userContent, important);
+        // Background chatter isn't worth a request when every brain is nearly out: save them for when the player talks.
+        if (kind == com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND && AiService.configured()
+                && !AiService.hasRoomFor(com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND)) {
+            return;
+        }
         AiService.Gate gate = AiService.gate(server);
         if (gate != AiService.Gate.OK) {
             if (gate == AiService.Gate.NOT_CONFIGURED && isAdmin(player) && HINTED.add(player.getUUID())) {
@@ -176,11 +182,12 @@ public final class SolaceBrain {
         }
 
         SolaceEntity solace = SolaceManager.find(server, story);
-        LlmRequest req = PromptBuilder.build(player, story, solace, userContent);
+        LlmRequest req = PromptBuilder.build(player, story, solace, userContent, false);
+        LlmRequest compact = PromptBuilder.build(player, story, solace, userContent, true);
         UUID id = player.getUUID();
         BUSY.add(id);
         player.displayClientMessage(Component.literal("Solace is thinking...").withStyle(ChatFormatting.DARK_AQUA, ChatFormatting.ITALIC), true);
-        AiService.complete(req).whenComplete((text, err) -> server.execute(() -> {
+        AiService.complete(req, compact, kind).whenComplete((text, err) -> server.execute(() -> {
             BUSY.remove(id);
             ServerPlayer live = server.getPlayerList().getPlayer(id);
             if (live == null) return;
@@ -188,7 +195,12 @@ public final class SolaceBrain {
             PlayerStory liveStory = StoryData.get(server).get(id);
             if (!ignoreExistence && !liveStory.solaceShouldExist()) return;
             if (err != null) {
-                notifyError(live, err);
+                boolean busy = com.solacemod.solace.ai.Http.unwrap(err) instanceof com.solacemod.solace.ai.BrainPool.BusyException;
+                if (busy && important) {
+                    live.displayClientMessage(Component.literal(com.solacemod.solace.ai.Http.unwrap(err).getMessage()).withStyle(ChatFormatting.DARK_GRAY), true);
+                } else if (!busy) {
+                    notifyError(live, err);
+                }
                 runSilently(live, liveStory, fallbackActions);
             } else {
                 apply(live, liveStory, userContent, ReplyParser.parse(text));
@@ -199,6 +211,17 @@ public final class SolaceBrain {
                 request(live, liveStory, combined, CommandParser.parseCommands(combined), true, false);
             }
         }));
+    }
+
+    /**
+     * Sorts a request so the brains can route it: what the player said and their jobs are CHAT,
+     * important story moments are STORY, and things Solace does on its own are BACKGROUND.
+     */
+    static com.solacemod.solace.ai.BrainPool.Kind classify(String userContent, boolean important) {
+        if (!userContent.startsWith("[EVENT]")) return com.solacemod.solace.ai.BrainPool.Kind.CHAT;
+        if (!important) return com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND;
+        if (userContent.startsWith("[EVENT] Results of") || userContent.startsWith("[EVENT] Your job")) return com.solacemod.solace.ai.BrainPool.Kind.CHAT;
+        return com.solacemod.solace.ai.BrainPool.Kind.STORY;
     }
 
     /** When the AI can't answer, still do what the player clearly asked ("follow me", "mine iron"), without words. */
@@ -217,7 +240,7 @@ public final class SolaceBrain {
         if (last != null && now - last < 5 * 60_000) return;
         LAST_ERROR_NOTICE.put(player.getUUID(), now);
         if (isAdmin(player)) {
-            player.sendSystemMessage(setupMessage("AI problem: " + AiService.hintFor(err) + " (using pre-written lines for now)"));
+            player.sendSystemMessage(setupMessage("AI problem: " + AiService.hintFor(err) + " (Solace stays quiet until this works; simple commands still work)"));
         }
     }
 
@@ -287,7 +310,8 @@ public final class SolaceBrain {
         story.history.subList(0, 8).clear();
         if (!SolaceConfig.SUMMARIZE_MEMORY.get() || !AiService.configured() || SUMMARIZING.contains(player.getUUID())) return;
         MinecraftServer server = player.getServer();
-        if (server == null || AiService.gate(server) != AiService.Gate.OK) return;
+        if (server == null || !AiService.hasRoomFor(com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND)) return;
+        if (AiService.gate(server) != AiService.Gate.OK) return;
 
         StringBuilder transcript = new StringBuilder();
         for (PlayerStory.Turn t : old) transcript.append(t.role().equals("user") ? "" : "Solace: ").append(t.text()).append('\n');
@@ -296,7 +320,7 @@ public final class SolaceBrain {
         String user = "Old summary: " + (story.summary.isEmpty() ? "(none)" : story.summary) + "\n\nNew conversation:\n" + transcript;
         UUID id = player.getUUID();
         SUMMARIZING.add(id);
-        AiService.complete(new LlmRequest(system, List.of(ChatMessage.user(user)), 300, 0.3, false))
+        AiService.complete(new LlmRequest(system, List.of(ChatMessage.user(user)), 300, 0.3, false), null, com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND)
                 .whenComplete((text, err) -> server.execute(() -> {
                     SUMMARIZING.remove(id);
                     if (err != null || text == null) return;

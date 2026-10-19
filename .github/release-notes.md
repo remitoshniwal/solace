@@ -8,6 +8,12 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### New in 1.3.0
+- **Up to 5 AI brains.** Add several providers on the AI Brain page (click **+**). Solace switches between them on its own, so free limits last much longer.
+- **Smart routing.** Story moments and replies go to your best brain. Background work goes to whichever brain has the most room. Solace reads each provider's remaining limits and switches *before* one runs out.
+- **Fewer errors.** A brain that's rate limited rests exactly as long as the provider asks, a daily limit means a longer rest, and a bad key is flagged instead of retried forever. `/solace status` shows each brain.
+- **Fewer tokens.** Background requests and brains low on tokens get a shorter prompt.
+
 ### New in 1.2.0
 - **The whole story, rewritten:** 8 chapters, Maren's house, the confession, Day 1000, and a fifth ending (COLLECTED).
 - **Two forms:** the Mimic (lumps moving under its skin) and the Lantern, its true form.

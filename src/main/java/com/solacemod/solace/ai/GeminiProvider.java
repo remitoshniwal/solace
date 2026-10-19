@@ -15,6 +15,12 @@ import java.util.concurrent.CompletableFuture;
 /** Google's Gemini API (Google AI Studio keys). */
 public final class GeminiProvider implements LlmProvider {
     private final ProviderSettings settings;
+    private volatile java.util.function.Consumer<RateInfo> rateListener;
+
+    @Override
+    public void onRateInfo(java.util.function.Consumer<RateInfo> listener) {
+        this.rateListener = listener;
+    }
 
     public GeminiProvider(ProviderSettings settings) {
         this.settings = settings;
@@ -70,7 +76,7 @@ public final class GeminiProvider implements LlmProvider {
 
     private CompletableFuture<String> attempt(LlmRequest request, String model) {
         String url = settings.baseUrl() + "/v1beta/models/" + URLEncoder.encode(model, StandardCharsets.UTF_8) + ":generateContent";
-        return Http.postJson(url, Map.of("x-goog-api-key", settings.apiKey()), buildBody(request), settings.timeoutSeconds())
+        return Http.postJson(url, Map.of("x-goog-api-key", settings.apiKey()), buildBody(request), settings.timeoutSeconds(), rateListener)
                 .thenApply(GeminiProvider::extractText);
     }
 

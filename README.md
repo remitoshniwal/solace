@@ -47,6 +47,8 @@ No files to edit. Everything is in game:
 | OpenAI, Anthropic (Claude), DeepSeek, Mistral, xAI, Together, Cerebras | Paid (some have free tiers) |
 | Custom | Any other "OpenAI-compatible" server |
 
+**Using free keys? Add a second brain.** Click **+** next to *Brain* and add another free provider (Gemini, Cerebras...). Solace switches between them on its own, before one runs out, so the free limits last much longer. Details: [docs/PROVIDERS.md](docs/PROVIDERS.md#more-than-one-brain-recommended-for-free-keys)
+
 The other pages set up **Voice**, **Story & Horror** (turn scares down or off) and **Abilities & Chat**. **Advanced...** shows every setting.
 
 On a multiplayer server, the **server owner** sets Solace's AI (in the server's `config/solace-common.toml`). Each player's voice and comfort settings are their own.
@@ -59,7 +61,7 @@ More detail, including recommended models and costs: [docs/PROVIDERS.md](docs/PR
   - Don't show it on stream or in screenshots (the setup screen hides it unless you click **Show**).
   - It's saved in `config/solace-common.toml` in your Minecraft folder: **never share that file** or put it in a modpack.
 - **Paid providers charge per message.** Each Solace reply is one request. Built-in limits stop surprise bills:
-  - **Daily limit** on the AI Brain page (default 400 replies a day; after that Solace goes quiet until tomorrow)
+  - **Daily limit** on the AI Brain page (default 400 replies a day for all brains together; after that Solace goes quiet until tomorrow)
   - At most 12 requests a minute (change in **Advanced...**)
   - **Talks on its own** (Abilities & Chat page) also uses requests. Turn it off to save more.
 - Check `/solace status` to see how many requests were used today.
@@ -81,8 +83,8 @@ Open setup and go to the **Voice** page:
 | `/solace say <message>` | Talk to Solace from anywhere |
 | `/solace come` | Call Solace to you |
 | `/solace pockets` | Open Solace's inventory (or right-click it with an empty hand) |
-| `/solace status` | Story progress, trust, AI connection |
-| `/solace test` | Test your AI settings |
+| `/solace status` | Story progress, trust, and how each AI brain is doing |
+| `/solace test` | Test each AI brain |
 | `/solace forget confirm` | Wipe Solace's memory of you (all worlds) |
 | `/solace reset confirm` | Restart the story in this world |
 | `/solace admin ...` | Server operators, for testing: `chapter`, `trust`, `bond`, `fragment`, `horror`, `presence`, `lantern`, `question` (see [docs/STORY.md](docs/STORY.md)) |

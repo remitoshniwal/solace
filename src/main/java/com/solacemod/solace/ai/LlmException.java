@@ -3,15 +3,27 @@ package com.solacemod.solace.ai;
 /** Thrown when a provider fails. Carries the HTTP status (or -1) so we can show a helpful hint. */
 public class LlmException extends RuntimeException {
     private final int status;
+    private final RateInfo rate;
 
     public LlmException(int status, String message) {
+        this(status, message, RateInfo.NONE);
+    }
+
+    public LlmException(int status, String message, RateInfo rate) {
         super(message);
         this.status = status;
+        this.rate = rate == null ? RateInfo.NONE : rate;
     }
 
     public LlmException(String message, Throwable cause) {
         super(message, cause);
         this.status = -1;
+        this.rate = RateInfo.NONE;
+    }
+
+    /** What the provider said about its limits along with this error (when to retry, whether a daily limit was hit). */
+    public RateInfo rate() {
+        return rate;
     }
 
     public int status() {
@@ -47,6 +59,7 @@ public class LlmException extends RuntimeException {
 
     /** A short, beginner friendly explanation, plus the provider's own reason when it gave one. */
     public String hint() {
+        if (status == -2) return getMessage(); // every brain is resting: the message already says so
         String base = baseHint();
         String detail = providerMessage();
         if (status == 403 && detail != null && detail.toLowerCase().contains("denied access")) {

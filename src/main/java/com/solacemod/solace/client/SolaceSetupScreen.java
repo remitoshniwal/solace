@@ -67,10 +67,14 @@ public final class SolaceSetupScreen extends Screen {
     private Page page = Page.AI;
 
     // Working copy of the settings (saved only when Done is pressed)
-    private String provider;
-    private String apiKey;
-    private String model;
-    private String baseUrl;
+    /** Brains 1 to 5. Index 0 is brain 1 (the best one). "none" = empty slot (not allowed for brain 1). */
+    private static final int BRAINS = SolaceConfig.EXTRA_BRAINS + 1;
+    private final String[] providers = new String[BRAINS];
+    private final String[] apiKeys = new String[BRAINS];
+    private final String[] models = new String[BRAINS];
+    private final String[] baseUrls = new String[BRAINS];
+    /** Which brain the AI page is showing. */
+    private int brain;
     private int dailyLimit;
     private boolean showKey;
 
@@ -113,11 +117,30 @@ public final class SolaceSetupScreen extends Screen {
     }
 
     private void load() {
-        provider = SolaceConfig.PROVIDER.get();
-        if (!PROVIDER_NOTES.containsKey(provider)) provider = "groq";
-        apiKey = SolaceConfig.API_KEY.get();
-        model = SolaceConfig.MODEL.get();
-        baseUrl = SolaceConfig.BASE_URL.get();
+        providers[0] = SolaceConfig.PROVIDER.get();
+        if (!PROVIDER_NOTES.containsKey(providers[0])) providers[0] = "groq";
+        apiKeys[0] = SolaceConfig.API_KEY.get();
+        models[0] = SolaceConfig.MODEL.get();
+        baseUrls[0] = SolaceConfig.BASE_URL.get();
+        for (int i = 1; i < BRAINS; i++) {
+            providers[i] = SolaceConfig.BRAIN_PROVIDER.get(i - 1).get();
+            if (!PROVIDER_NOTES.containsKey(providers[i])) providers[i] = "none";
+            apiKeys[i] = SolaceConfig.BRAIN_API_KEY.get(i - 1).get();
+            models[i] = SolaceConfig.BRAIN_MODEL.get(i - 1).get();
+            baseUrls[i] = SolaceConfig.BRAIN_BASE_URL.get(i - 1).get();
+        }
+        // The old single "backup provider" becomes the first empty brain.
+        String oldBackup = SolaceConfig.FALLBACK_PROVIDER.get();
+        if (PROVIDER_NOTES.containsKey(oldBackup)) {
+            for (int i = 1; i < BRAINS; i++) {
+                if (!providers[i].equals("none")) continue;
+                providers[i] = oldBackup;
+                apiKeys[i] = SolaceConfig.FALLBACK_API_KEY.get();
+                models[i] = SolaceConfig.FALLBACK_MODEL.get();
+                baseUrls[i] = SolaceConfig.FALLBACK_BASE_URL.get();
+                break;
+            }
+        }
         dailyLimit = SolaceConfig.DAILY_REQUEST_LIMIT.get();
 
         voiceIn = ClientConfig.VOICE_INPUT.get();
@@ -150,10 +173,17 @@ public final class SolaceSetupScreen extends Screen {
     }
 
     private void save() {
-        SolaceConfig.PROVIDER.set(provider);
-        SolaceConfig.API_KEY.set(apiKey.trim());
-        SolaceConfig.MODEL.set(model.trim());
-        SolaceConfig.BASE_URL.set(baseUrl.trim());
+        SolaceConfig.PROVIDER.set(providers[0]);
+        SolaceConfig.API_KEY.set(apiKeys[0].trim());
+        SolaceConfig.MODEL.set(models[0].trim());
+        SolaceConfig.BASE_URL.set(baseUrls[0].trim());
+        for (int i = 1; i < BRAINS; i++) {
+            SolaceConfig.BRAIN_PROVIDER.get(i - 1).set(providers[i]);
+            SolaceConfig.BRAIN_API_KEY.get(i - 1).set(apiKeys[i].trim());
+            SolaceConfig.BRAIN_MODEL.get(i - 1).set(models[i].trim());
+            SolaceConfig.BRAIN_BASE_URL.get(i - 1).set(baseUrls[i].trim());
+        }
+        SolaceConfig.FALLBACK_PROVIDER.set("none"); // moved into the brains above
         SolaceConfig.DAILY_REQUEST_LIMIT.set(dailyLimit);
         SolaceConfig.STORY_ENABLED.set(storyEnabled);
         SolaceConfig.STORY_SPEED.set(storySpeed);
@@ -282,25 +312,45 @@ public final class SolaceSetupScreen extends Screen {
     }
 
     private void initAiPage() {
+        // Row 0: which brain you're editing. Brain 1 is used first; the others take over before it runs out.
+        label(0, "Brain");
+        int tabW = (controlWidth() - (BRAINS - 1) * 3) / BRAINS;
+        for (int i = 0; i < BRAINS; i++) {
+            int index = i;
+            boolean used = !providers[i].equals("none");
+            String text = used ? String.valueOf(i + 1) : "+";
+            Button tab = Button.builder(Component.literal(text).withStyle(used ? ChatFormatting.WHITE : ChatFormatting.DARK_GRAY), b -> {
+                brain = index;
+                status = Component.empty();
+                rebuildWidgets();
+            }).bounds(controlX() + i * (tabW + 3), rowY(0), tabW, 20)
+                    .tooltip(Tooltip.create(Component.literal("Brain " + (i + 1) + ": " + (used ? providerName(providers[i]).getString() : "not used")
+                            + liveStatus(i)))).build();
+            tab.active = brain != i;
+            addRenderableWidget(tab);
+        }
+
+        String provider = providers[brain];
         List<String> names = new ArrayList<>(PROVIDER_NOTES.keySet());
-        label(0, "Provider");
+        if (brain > 0) names.add(0, "none");
+        label(1, "Provider");
         addRenderableWidget(CycleButton.<String>builder(SolaceSetupScreen::providerName)
-                .withValues(names).withInitialValue(provider).displayOnlyValue()
-                .withTooltip(v -> Tooltip.create(Component.literal(PROVIDER_NOTES.get(v))))
-                .create(controlX(), rowY(0), controlWidth(), 20, Component.literal("Provider"), (btn, v) -> {
-                    provider = v;
+                .withValues(names).withInitialValue(names.contains(provider) ? provider : names.get(0)).displayOnlyValue()
+                .withTooltip(v -> Tooltip.create(Component.literal(v.equals("none") ? "Leave this brain empty." : PROVIDER_NOTES.get(v))))
+                .create(controlX(), rowY(1), controlWidth(), 20, Component.literal("Provider"), (btn, v) -> {
+                    providers[brain] = v;
                     status = Component.empty();
                     rebuildWidgets();
                 }));
 
         ProviderPreset preset = ProviderPreset.get(provider);
-        boolean scripted = preset == null; // unknown provider: nothing to fill in
+        boolean empty = preset == null; // "none": nothing to fill in
         boolean needsKey = preset != null && preset.needsKey();
-        int row = 1;
-        if (!scripted) {
+        int row = 2;
+        if (!empty) {
             label(row, needsKey ? "API key" : "API key (optional)");
             int keyW = controlWidth() - 2 * 47;
-            EditBox key = secretBox(controlX(), rowY(row), keyW, apiKey, v -> apiKey = v);
+            EditBox key = secretBox(controlX(), rowY(row), keyW, apiKeys[brain], v -> apiKeys[brain] = v);
             key.setHint(Component.literal(needsKey ? "paste your key here" : "not needed").withStyle(ChatFormatting.DARK_GRAY));
             addRenderableWidget(key);
             addRenderableWidget(Button.builder(Component.literal(showKey ? "Hide" : "Show"), b -> {
@@ -308,52 +358,100 @@ public final class SolaceSetupScreen extends Screen {
                 rebuildWidgets();
             }).bounds(controlX() + keyW + 3, rowY(row), 44, 20).build());
             Button getKey = Button.builder(Component.literal("Get key"), b -> {
-                if (preset != null && !preset.keyUrl().isEmpty()) ConfirmLinkScreen.confirmLinkNow(this, preset.keyUrl());
+                if (!preset.keyUrl().isEmpty()) ConfirmLinkScreen.confirmLinkNow(this, preset.keyUrl());
             }).bounds(controlX() + keyW + 50, rowY(row), 44, 20)
                     .tooltip(Tooltip.create(Component.literal("Opens the website where you get a key"))).build();
-            getKey.active = preset != null && !preset.keyUrl().isEmpty();
+            getKey.active = !preset.keyUrl().isEmpty();
             addRenderableWidget(getKey);
             row++;
 
             label(row, "Model");
-            EditBox modelBox = textBox(controlX(), rowY(row), controlWidth(), model, v -> model = v);
-            String def = preset == null ? "" : preset.defaultModel();
+            EditBox modelBox = textBox(controlX(), rowY(row), controlWidth(), models[brain], v -> models[brain] = v);
+            String def = preset.defaultModel();
             modelBox.setHint(Component.literal(def.isEmpty() ? "model name" : "default: " + def).withStyle(ChatFormatting.DARK_GRAY));
             addRenderableWidget(modelBox);
             row++;
 
             // Only custom servers and programs on your PC need an address; the big providers fill it in automatically.
-            boolean showUrl = preset == null || preset.baseUrl().isEmpty() || !preset.needsKey() || !baseUrl.isBlank();
+            boolean showUrl = preset.baseUrl().isEmpty() || !preset.needsKey() || !baseUrls[brain].isBlank();
             if (showUrl) {
                 label(row, "Server URL");
-                EditBox urlBox = textBox(controlX(), rowY(row), controlWidth(), baseUrl, v -> baseUrl = v);
-                String defUrl = preset == null ? "" : preset.baseUrl();
+                EditBox urlBox = textBox(controlX(), rowY(row), controlWidth(), baseUrls[brain], v -> baseUrls[brain] = v);
+                String defUrl = preset.baseUrl();
                 urlBox.setHint(Component.literal(defUrl.isEmpty() ? "https://..." : "default: " + defUrl).withStyle(ChatFormatting.DARK_GRAY));
                 addRenderableWidget(urlBox);
                 row++;
             }
+        }
 
-            label(row, "Daily limit");
-            addRenderableWidget(CycleButton.<Integer>builder(v -> Component.literal(v == 0 ? "Unlimited (careful!)" : v + " replies per day"))
-                    .withValues(DAILY_LIMITS).withInitialValue(DAILY_LIMITS.contains(dailyLimit) ? dailyLimit : 400).displayOnlyValue()
-                    .withTooltip(v -> Tooltip.create(Component.literal("Protects you from surprise bills. After the limit, Solace uses pre-written lines until tomorrow.")))
-                    .create(controlX(), rowY(row), controlWidth(), 20, Component.literal("Daily limit"), (btn, v) -> dailyLimit = v));
-            row++;
-
-            Button test = Button.builder(Component.literal(testing ? "Testing..." : "Test connection"), b -> runTest())
-                    .bounds(controlX(), rowY(row), Math.min(120, controlWidth()), 20).build();
+        // One row: the daily limit (for all brains together), then Test and Move up for this brain.
+        label(row, "Daily limit");
+        int limitW = controlWidth() / 2;
+        int smallW = (controlWidth() - limitW - 6) / 2;
+        addRenderableWidget(CycleButton.<Integer>builder(v -> Component.literal(v == 0 ? "Unlimited!" : v + " a day"))
+                .withValues(DAILY_LIMITS).withInitialValue(DAILY_LIMITS.contains(dailyLimit) ? dailyLimit : 400).displayOnlyValue()
+                .withTooltip(v -> Tooltip.create(Component.literal("Most replies per day, for all brains together. Protects you from surprise bills. "
+                        + "After the limit, Solace goes quiet until tomorrow.")))
+                .create(controlX(), rowY(row), limitW, 20, Component.literal("Daily limit"), (btn, v) -> dailyLimit = v));
+        if (!empty) {
+            Button test = Button.builder(Component.literal(testing ? "..." : "Test"), b -> runTest())
+                    .bounds(controlX() + limitW + 3, rowY(row), smallW, 20)
+                    .tooltip(Tooltip.create(Component.literal("Sends one tiny message to brain " + (brain + 1) + " to check it works."))).build();
             test.active = !testing;
             addRenderableWidget(test);
-            row++;
         }
-        // Stack the notes so long (wrapped) messages never overlap the next one.
+        if (brain > 0) {
+            // Brain 1 is the one Solace prefers, so let the player reorder.
+            addRenderableWidget(Button.builder(Component.literal("Move up"), b -> {
+                swap(brain, brain - 1);
+                brain--;
+                status = Component.empty();
+                rebuildWidgets();
+            }).bounds(controlX() + limitW + smallW + 6, rowY(row), smallW, 20)
+                    .tooltip(Tooltip.create(Component.literal("Solace prefers lower numbers. Put your best (or paid) brain first."))).build());
+        }
+        row++;
+
+        // Stack the notes so long (wrapped) messages never overlap the next one. Only what's useful right now.
         int y = rowY(row) + 2;
-        y = stack(y, Component.literal(PROVIDER_NOTES.getOrDefault(provider, "")), 0xFFAAAAAA);
+        String live = liveStatus(brain);
         if (!status.getString().isEmpty()) y = stack(y, status, 0xFFFFFFFF);
-        if (!scripted && needsKey) y = stack(y, Component.literal("Your key is like a password: never share it or show it on stream.").withStyle(ChatFormatting.GOLD), 0xFFAAAAAA);
+        else if (!live.isEmpty()) y = stack(y, Component.literal("Right now" + live), 0xFFAAAAAA);
+        else if (!empty) y = stack(y, Component.literal(PROVIDER_NOTES.getOrDefault(provider, "")), 0xFFAAAAAA);
+        int used = 0;
+        for (String p : providers) if (!p.equals("none")) used++;
+        if (used < 2) {
+            y = stack(y, Component.literal("Tip: add a second brain (+) from a different provider. Solace switches before one runs out, so free limits last longer.")
+                    .withStyle(ChatFormatting.DARK_AQUA), 0xFFAAAAAA);
+        }
+        if (needsKey && apiKeys[brain].isBlank()) {
+            y = stack(y, Component.literal("Keys are like passwords: never share them or show them on stream.").withStyle(ChatFormatting.GOLD), 0xFFAAAAAA);
+        }
         if (isRemoteServer()) {
             stack(y, Component.literal("You're on a server: the server owner sets Solace's AI there. This only changes your own worlds.")
                     .withStyle(ChatFormatting.YELLOW), 0xFFAAAAAA);
+        }
+    }
+
+    private void swap(int a, int b) {
+        for (String[] arr : List.of(providers, apiKeys, models, baseUrls)) {
+            String t = arr[a];
+            arr[a] = arr[b];
+            arr[b] = t;
+        }
+    }
+
+    /** What the running game knows about this brain (singleplayer only), like ": ready, 120 requests left today". */
+    private String liveStatus(int index) {
+        Minecraft mc = Minecraft.getInstance();
+        if (!mc.hasSingleplayerServer() || providers[index].equals("none")) return "";
+        try {
+            String s = com.solacemod.solace.story.AiService.brainStatus(index + 1);
+            if (s == null) return "";
+            int colon = s.indexOf(": ");
+            return colon >= 0 ? ":" + s.substring(colon + 1) : "";
+        } catch (RuntimeException e) {
+            return "";
         }
     }
 
@@ -502,6 +600,7 @@ public final class SolaceSetupScreen extends Screen {
             case "together" -> "Together AI";
             case "cerebras" -> "Cerebras";
             case "custom" -> "Custom (OpenAI-compatible)";
+            case "none" -> "Not used";
             default -> id;
         });
     }
@@ -514,7 +613,9 @@ public final class SolaceSetupScreen extends Screen {
     // ---------- Test button ----------
 
     private void runTest() {
-        ProviderSettings settings = ProviderSettings.resolve(provider, apiKey, model, baseUrl, 20, SolaceConfig.ANTHROPIC_EFFORT.get());
+        int index = brain;
+        String provider = providers[index];
+        ProviderSettings settings = ProviderSettings.resolve(provider, apiKeys[index], models[index], baseUrls[index], 20, SolaceConfig.ANTHROPIC_EFFORT.get());
         if (settings == null) {
             status = Component.literal("Unknown provider.").withStyle(ChatFormatting.RED);
             rebuildWidgets();
@@ -542,7 +643,7 @@ public final class SolaceSetupScreen extends Screen {
             } else {
                 String used = llm.activeModel();
                 if (!used.equals(settings.model())) {
-                    model = used; // the configured model was retired; remember the one that actually works
+                    models[index] = used; // the configured model was retired; remember the one that actually works
                 }
                 status = Component.literal("It works! Model: " + used + " (" + (System.currentTimeMillis() - start) + " ms). Press Done to save.")
                         .withStyle(ChatFormatting.GREEN);

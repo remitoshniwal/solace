@@ -27,6 +27,15 @@ public final class Http {
 
     /** POSTs JSON and returns the parsed JSON response, or fails with an {@link LlmException}. */
     public static CompletableFuture<JsonObject> postJson(String url, Map<String, String> headers, JsonObject body, int timeoutSeconds) {
+        return postJson(url, headers, body, timeoutSeconds, null);
+    }
+
+    /**
+     * Same, and also reports the provider's rate-limit headers (how many requests and tokens are left) to {@code onRate}.
+     * Errors carry the same information in {@link LlmException#rate()}.
+     */
+    public static CompletableFuture<JsonObject> postJson(String url, Map<String, String> headers, JsonObject body, int timeoutSeconds,
+                                                         java.util.function.Consumer<RateInfo> onRate) {
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
                 .timeout(Duration.ofSeconds(Math.max(5, timeoutSeconds)))
                 .header("Content-Type", "application/json")
@@ -39,9 +48,12 @@ public final class Http {
                         Throwable cause = error.getCause() != null ? error.getCause() : error;
                         throw new LlmException(cause.getClass().getSimpleName() + ": " + cause.getMessage(), cause);
                     }
+                    long now = System.currentTimeMillis();
                     if (response.statusCode() / 100 != 2) {
-                        throw new LlmException(response.statusCode(), "HTTP " + response.statusCode() + ": " + shorten(response.body()));
+                        RateInfo rate = RateInfo.parse(name -> response.headers().firstValue(name).orElse(null), response.body(), now);
+                        throw new LlmException(response.statusCode(), "HTTP " + response.statusCode() + ": " + shorten(response.body()), rate);
                     }
+                    if (onRate != null) onRate.accept(RateInfo.parse(name -> response.headers().firstValue(name).orElse(null), null, now));
                     try {
                         JsonElement parsed = JsonParser.parseString(response.body());
                         if (!parsed.isJsonObject()) throw new LlmException(response.statusCode(), "Response was not a JSON object");

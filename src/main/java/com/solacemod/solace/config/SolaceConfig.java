@@ -21,6 +21,12 @@ public final class SolaceConfig {
     public static final ModConfigSpec.ConfigValue<String> FALLBACK_API_KEY;
     public static final ModConfigSpec.ConfigValue<String> FALLBACK_MODEL;
     public static final ModConfigSpec.ConfigValue<String> FALLBACK_BASE_URL;
+    /** Extra brains (Brain 2 to 5). Brain 1 is provider/apiKey/model/baseUrl above. */
+    public static final int EXTRA_BRAINS = 4;
+    public static final java.util.List<ModConfigSpec.ConfigValue<String>> BRAIN_PROVIDER = new java.util.ArrayList<>();
+    public static final java.util.List<ModConfigSpec.ConfigValue<String>> BRAIN_API_KEY = new java.util.ArrayList<>();
+    public static final java.util.List<ModConfigSpec.ConfigValue<String>> BRAIN_MODEL = new java.util.ArrayList<>();
+    public static final java.util.List<ModConfigSpec.ConfigValue<String>> BRAIN_BASE_URL = new java.util.ArrayList<>();
     public static final ModConfigSpec.DoubleValue TEMPERATURE;
     public static final ModConfigSpec.IntValue MAX_REPLY_TOKENS;
     public static final ModConfigSpec.IntValue TIMEOUT_SECONDS;
@@ -79,7 +85,7 @@ public final class SolaceConfig {
                 .define("model", "");
         BASE_URL = b.comment("Server address. Leave blank for the provider's default. Required for 'custom'.")
                 .define("baseUrl", "");
-        FALLBACK_PROVIDER = b.comment("Backup provider if the main one fails (same names as above). 'none' = no backup.")
+        FALLBACK_PROVIDER = b.comment("Old setting: the backup provider. It's moved into brain 2 automatically. Use the [ai.brains] section instead.")
                 .define("fallbackProvider", "none");
         FALLBACK_API_KEY = b.define("fallbackApiKey", "");
         FALLBACK_MODEL = b.define("fallbackModel", "");
@@ -92,6 +98,20 @@ public final class SolaceConfig {
                 .defineInRange("timeoutSeconds", 45, 5, 180);
         ANTHROPIC_EFFORT = b.comment("Anthropic only: how hard Claude thinks. low = fastest and cheapest. low, medium, high")
                 .define("anthropicEffort", "low");
+        b.comment("More brains (up to 5 in total), so free limits last longer. The provider above is brain 1, the best one.",
+                "Solace uses brain 1 for story moments and replies, and moves to the next brain before one runs out.",
+                "Background work (memory summaries, comments on its own) goes to whichever brain has the most room left.",
+                "Use 'none' for an empty slot. Tip: use different providers. Making several free accounts on one service breaks most providers' rules.")
+                .push("brains");
+        for (int i = 2; i <= EXTRA_BRAINS + 1; i++) {
+            b.push("brain" + i);
+            BRAIN_PROVIDER.add(b.comment("Provider for brain " + i + " (same names as above), or none.").define("provider", "none"));
+            BRAIN_API_KEY.add(b.define("apiKey", ""));
+            BRAIN_MODEL.add(b.comment("Blank = the provider's default model.").define("model", ""));
+            BRAIN_BASE_URL.add(b.comment("Blank = the provider's default address.").define("baseUrl", ""));
+            b.pop();
+        }
+        b.pop();
         b.pop();
 
         b.comment("Limits that protect you from surprise bills. Each Solace reply is one request.").push("cost_safety");

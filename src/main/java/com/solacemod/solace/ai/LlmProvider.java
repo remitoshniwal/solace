@@ -13,6 +13,10 @@ public interface LlmProvider {
         return settings().model();
     }
 
+    /** Tells the provider where to report rate-limit information from each successful reply. */
+    default void onRateInfo(java.util.function.Consumer<RateInfo> listener) {
+    }
+
     /** Builds the right provider for the given settings. */
     static LlmProvider create(ProviderSettings settings) {
         return switch (settings.protocol()) {

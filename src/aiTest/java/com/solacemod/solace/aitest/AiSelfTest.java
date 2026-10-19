@@ -2,7 +2,9 @@ package com.solacemod.solace.aitest;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.solacemod.solace.ai.BrainPool;
 import com.solacemod.solace.ai.ChatMessage;
+import com.solacemod.solace.ai.RateInfo;
 import com.solacemod.solace.ai.LlmException;
 import com.solacemod.solace.ai.LlmProvider;
 import com.solacemod.solace.ai.LlmRequest;
@@ -228,9 +230,162 @@ public final class AiSelfTest {
         check("parser: never shows raw JSON", !ReplyParser.parse("{\"emotion\":\"calm\",\"actio").say().contains("{"));
 
         server.stop(0);
+        try {
+            poolTests(reply);
+        } catch (Exception e) {
+            check("brains: unexpected error " + Http_unwrap(e), false);
+        }
         System.out.println();
         System.out.println(passed + " passed, " + failed + " failed");
         System.exit(failed == 0 ? 0 : 1);
+    }
+
+    // ---------- Several brains working together ----------
+
+    private static final java.util.Map<String, java.util.concurrent.atomic.AtomicInteger> CALLS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static int calls(String name) {
+        return CALLS.computeIfAbsent(name, k -> new java.util.concurrent.atomic.AtomicInteger()).get();
+    }
+
+    private static void poolTests(String reply) throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        JsonObject msg = new JsonObject();
+        msg.addProperty("role", "assistant");
+        msg.addProperty("content", reply);
+        String ok = "{\"choices\":[{\"message\":" + msg + "}]}";
+        fake(server, "limited", ex -> respond(ex, 429, "{\"error\":{\"message\":\"Rate limit reached for model on requests per minute (RPM). Please try again in 30s.\"}}",
+                java.util.Map.of("retry-after", "30")));
+        fake(server, "daily", ex -> respond(ex, 429, "{\"error\":{\"message\":\"Rate limit reached for model on requests per day (RPD): Limit 1000, Used 1000. Please try again in 1m26.4s.\"}}",
+                java.util.Map.of()));
+        fake(server, "badkey", ex -> respond(ex, 401, "{\"error\":{\"message\":\"Invalid API Key\"}}", java.util.Map.of()));
+        fake(server, "okA", ex -> respond(ex, 200, ok, java.util.Map.of("x-ratelimit-remaining-requests", "900", "x-ratelimit-limit-requests", "1000")));
+        fake(server, "okB", ex -> respond(ex, 200, ok, java.util.Map.of()));
+        fake(server, "lowtok", ex -> respond(ex, 200, ok, java.util.Map.of("x-ratelimit-remaining-tokens", "50", "x-ratelimit-limit-tokens", "6000",
+                "x-ratelimit-reset-tokens", "50s")));
+        server.createContext("/big/chat/completions", ex -> {
+            String body = read(ex);
+            CALLS.computeIfAbsent("big", k -> new java.util.concurrent.atomic.AtomicInteger()).incrementAndGet();
+            if (body.length() > 1500) respond(ex, 413, "{\"error\":{\"message\":\"Request too large for model on tokens per minute (TPM): Limit 6000, Requested 9000\"}}", java.util.Map.of());
+            else respond(ex, 200, ok, java.util.Map.of());
+        });
+        server.start();
+        try {
+            poolChecks("http://127.0.0.1:" + server.getAddress().getPort());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    private static void poolChecks(String base) throws Exception {
+        java.util.concurrent.atomic.AtomicLong clock = new java.util.concurrent.atomic.AtomicLong(1_000_000_000L);
+        LlmRequest req = new LlmRequest("You are Solace.", List.of(ChatMessage.user("hi")), 100, 0.9, true);
+        BrainPool.Kind chat = BrainPool.Kind.CHAT;
+
+        // A brain that says "too many requests" rests, and brain 2 answers instead.
+        BrainPool pool = new BrainPool(clock::get);
+        pool.update(List.of(fakeBrain(base, "limited"), fakeBrain(base, "okB")));
+        BrainPool.Answer a = pool.complete(req, null, chat).get();
+        check("brains: 429 moves on to brain 2", a.brain().slot() == 2 && calls("limited") == 1);
+        check("brains: rests for exactly as long as the provider asked", pool.brains().get(0).describe(clock.get()).contains("resting 30s (too many requests)"));
+        pool.complete(req, null, chat).get();
+        check("brains: a resting brain isn't asked again", calls("limited") == 1 && calls("okB") == 2);
+        clock.addAndGet(31_000);
+        pool.complete(req, null, chat).get();
+        check("brains: tried again once the rest is over", calls("limited") == 2);
+
+        // A daily limit means a long rest, not 30 seconds.
+        BrainPool daily = new BrainPool(clock::get);
+        daily.update(List.of(fakeBrain(base, "daily"), fakeBrain(base, "okB")));
+        check("brains: daily limit, brain 2 answers", daily.complete(req, null, chat).get().brain().slot() == 2);
+        String d = daily.brains().get(0).describe(clock.get());
+        check("brains: daily limit rests for a long time", d.contains("daily limit reached") && d.contains("10 min"));
+
+        // A rejected key is reported, not retried forever.
+        BrainPool keys = new BrainPool(clock::get);
+        keys.update(List.of(fakeBrain(base, "badkey"), fakeBrain(base, "okB")));
+        keys.complete(req, null, chat).get();
+        keys.complete(req, null, chat).get();
+        check("brains: bad key flagged and skipped", calls("badkey") == 1 && keys.brains().get(0).describe(clock.get()).contains("NOT WORKING"));
+
+        // Smart routing: replies use brain 1, background work goes to the brain with more room, saving brain 1.
+        BrainPool smart = new BrainPool(clock::get);
+        smart.update(List.of(fakeBrain(base, "okA"), fakeBrain(base, "okB")));
+        check("routing: chat uses brain 1", smart.complete(req, null, chat).get().brain().slot() == 1);
+        check("routing: background saves brain 1", smart.complete(req, null, BrainPool.Kind.BACKGROUND).get().brain().slot() == 2);
+        check("routing: story uses brain 1", smart.complete(req, null, BrainPool.Kind.STORY).get().brain().slot() == 1);
+        check("brains: reads remaining requests", smart.brains().get(0).describe(clock.get()).contains("requests left"));
+
+        // A brain that is almost out of tokens this minute is passed over before it fails.
+        BrainPool tok = new BrainPool(clock::get);
+        tok.update(List.of(fakeBrain(base, "lowtok"), fakeBrain(base, "okB")));
+        tok.complete(req, null, chat).get();
+        int before = calls("lowtok");
+        check("routing: low on tokens, switches before an error", tok.complete(req, null, chat).get().brain().slot() == 2 && calls("lowtok") == before);
+
+        // Everyone resting: background requests are skipped without any network call.
+        BrainPool busy = new BrainPool(clock::get);
+        busy.update(List.of(fakeBrain(base, "limited")));
+        try {
+            busy.complete(req, null, chat).get();
+        } catch (Exception ignored) {
+            // expected: 429
+        }
+        int lim = calls("limited");
+        try {
+            busy.complete(req, null, BrainPool.Kind.BACKGROUND).get();
+            check("brains: should have been skipped", false);
+        } catch (Exception e) {
+            check("brains: all resting, background skipped quietly", Http_unwrap(e) instanceof BrainPool.BusyException && calls("limited") == lim);
+        }
+        check("brains: says when it'll be back", busy.readyInMs() > 25_000);
+
+        // Too big for a free tier's token limit: the same brain is asked again with the short version, and remembers.
+        StringBuilder longSystem = new StringBuilder();
+        for (int i = 0; i < 80; i++) longSystem.append("Lots of detail about the world. ");
+        LlmRequest full = new LlmRequest(longSystem.toString(), List.of(ChatMessage.user("hi")), 100, 0.9, true);
+        BrainPool big = new BrainPool(clock::get);
+        big.update(List.of(fakeBrain(base, "big")));
+        big.complete(full, req, chat).get();
+        check("compact: too big, retried with the short prompt", calls("big") == 2);
+        big.complete(full, req, chat).get();
+        check("compact: remembers to use the short prompt", calls("big") == 3);
+
+        // Reading limits from headers
+        check("rate: durations", RateInfo.duration("2m59.56s") == 179_560 && RateInfo.duration("120ms") == 120
+                && RateInfo.duration("7.66s") == 7660 && RateInfo.duration("1h2m") == 3_720_000 && RateInfo.duration("30") == 30_000);
+        long now = 1_700_000_000_000L;
+        RateInfo an = RateInfo.parse(n -> switch (n) {
+            case "anthropic-ratelimit-requests-remaining" -> "4";
+            case "anthropic-ratelimit-requests-limit" -> "50";
+            case "anthropic-ratelimit-requests-reset" -> java.time.Instant.ofEpochMilli(now + 20_000).toString();
+            default -> null;
+        }, null, now);
+        check("rate: Anthropic headers", an.remainingRequests() == 4 && an.limitRequests() == 50 && an.requestsResetMs() == 20_000);
+        RateInfo gem = RateInfo.parse(n -> null, "{\"error\":{\"message\":\"Quota exceeded for metric: generate_content_free_tier_requests\",\"details\":[{\"retryDelay\":\"33s\"}]}}", now);
+        check("rate: Gemini retryDelay", gem.retryAfterMs() == 33_000 && !gem.daily());
+        check("rate: Cerebras daily header", RateInfo.parse(n -> n.equals("x-ratelimit-remaining-requests-day") ? "12" : null, null, now).daily());
+    }
+
+    private static LlmProvider fakeBrain(String base, String name) {
+        return LlmProvider.create(ProviderSettings.resolve("custom", "k-" + name, "m", base + "/" + name, 10, ""));
+    }
+
+    private interface Handler {
+        void handle(com.sun.net.httpserver.HttpExchange ex) throws IOException;
+    }
+
+    private static void fake(HttpServer server, String name, Handler h) {
+        server.createContext("/" + name + "/chat/completions", ex -> {
+            read(ex);
+            CALLS.computeIfAbsent(name, k -> new java.util.concurrent.atomic.AtomicInteger()).incrementAndGet();
+            h.handle(ex);
+        });
+    }
+
+    private static void respond(com.sun.net.httpserver.HttpExchange ex, int code, String body, java.util.Map<String, String> headers) throws IOException {
+        headers.forEach((k, v) -> ex.getResponseHeaders().add(k, v));
+        respond(ex, code, body);
     }
 
     private static Throwable Http_unwrap(Throwable e) {
