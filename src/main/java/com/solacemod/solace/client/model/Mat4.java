@@ -1,4 +1,4 @@
-package com.solacemod.solace.client.mesh;
+package com.solacemod.solace.client.model;
 
 /** A small 4x4 matrix for moving and turning model parts. No Minecraft code, so the preview tool can use it too. */
 public final class Mat4 {

@@ -1,4 +1,4 @@
-package com.solacemod.solace.client.mesh;
+package com.solacemod.solace.client.model;
 
 /** Where finished quads go: the game's renderer, or the preview tool. Positions are in blocks, y up. */
 public interface MeshSink {

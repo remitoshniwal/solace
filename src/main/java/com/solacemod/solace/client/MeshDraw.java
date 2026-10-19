@@ -2,9 +2,9 @@ package com.solacemod.solace.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.solacemod.solace.client.mesh.MeshSink;
+import com.solacemod.solace.client.model.MeshSink;
 
-/** Sends the rounded 3D shapes (client/mesh) to Minecraft's renderer. */
+/** Sends model faces (client/model) to Minecraft's renderer. */
 final class MeshDraw implements MeshSink {
     private final PoseStack.Pose pose;
     private final VertexConsumer out;

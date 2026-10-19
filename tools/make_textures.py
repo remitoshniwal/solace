@@ -1,5 +1,6 @@
 """
-Draws Solace's textures (64x64 Minecraft skin layout) with simple pixel art.
+Draws the Watcher's texture (64x64 Minecraft skin layout) and the mod logo with simple pixel art.
+Solace's own textures come from tools/shade_textures.py.
 Run:  python3 tools/make_textures.py
 Want a different look? Change the colors below, or paint over the PNGs in any image editor
 (they use the normal Minecraft player-skin layout, so skin editors like Blockbench or NovaSkin work too).
@@ -121,78 +122,6 @@ def eyes_only(name, color, slim=False):
     img.save(OUT / name)
 
 
-# ---------- Textures for the 3D shapes (client/mesh): the shapes carry their colours, these add surface detail ----------
-
-def cloth(name, seed=71):
-    """A plain, faintly woven white. Tinted by each shape's colour, it gives the coat a fabric feel instead of flat plastic."""
-    rng = random.Random(seed)
-    img = Image.new("RGBA", (32, 32), (255, 255, 255, 255))
-    px = img.load()
-    for x in range(32):
-        for y in range(32):
-            weave = 6 if (x + y) % 2 == 0 else 0
-            v = 255 - rng.randint(0, 14) - weave
-            px[x, y] = (v, v, v, 255)
-    img.save(OUT / name)
-
-
-def veins(prefix, stages=4, seed=21):
-    """Dark veins as a repeating pattern (it wraps around the shapes), denser at each stage. Mostly shows on the
-    pale hands and the white shirt; on the dark coat it's barely visible, which is the point."""
-    rng = random.Random(seed)
-    lines = []
-    for stage in range(stages):
-        for _ in range(5 + stage * 5):
-            x, y = rng.randint(0, 63), rng.randint(0, 63)
-            path = []
-            for _ in range(rng.randint(6, 16)):
-                path.append((x % 64, y % 64))
-                x += rng.choice((-1, 0, 1))
-                y += rng.choice((-1, -1, 0, 1))
-            lines.extend(path)
-        img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-        p = img.load()
-        for (vx, vy) in lines:
-            p[vx, vy] = (40, 14, 38, 220)
-        img.save(OUT / (prefix + str(stage + 1) + ".png"))
-
-
-def aura(name, seed=41):
-    """The energy that flows around him in his negative form: soft white streaks on black (black = nothing is drawn).
-    Tiles in every direction, because the game scrolls it."""
-    rng = random.Random(seed)
-    img = Image.new("RGBA", (64, 64), (0, 0, 0, 255))
-    px = img.load()
-    for _ in range(70):
-        x, y = rng.randint(0, 63), rng.randint(0, 63)
-        length = rng.randint(6, 20)
-        peak = rng.randint(90, 230)
-        for i in range(length):
-            k = 1 - abs(i - length / 2) / (length / 2)  # brightest in the middle of each streak
-            v = int(peak * k)
-            xx, yy = (x + (i // 5)) % 64, (y + i) % 64
-            old = px[xx, yy][0]
-            px[xx, yy] = (min(255, old + v), min(255, old + v), min(255, old + v + 12), 255)
-    img.save(OUT / name)
-
-
-def flow(name, color, seed=61):
-    """The Lantern's moving energy: streaks of colour on black (black = nothing is drawn). Tiles, because it scrolls."""
-    rng = random.Random(seed)
-    img = Image.new("RGBA", (64, 64), (0, 0, 0, 255))
-    px = img.load()
-    for _ in range(55):
-        x, y = rng.randint(0, 63), rng.randint(0, 63)
-        length = rng.randint(8, 24)
-        peak = rng.uniform(0.35, 1.0)
-        for i in range(length):
-            k = (1 - abs(i - length / 2) / (length / 2)) * peak
-            xx, yy = (x + (i // 6)) % 64, (y + i) % 64
-            old = px[xx, yy]
-            px[xx, yy] = tuple(min(255, old[c] + int(color[c] * k)) for c in range(3)) + (255,)
-    img.save(OUT / name)
-
-
 def logo():
     size = 256
     img = Image.new("RGBA", (size, size), (8, 10, 16, 255))
@@ -215,11 +144,6 @@ def logo():
 
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
-    cloth("solace_cloth.png")
-    veins("solace_veins_")
-    aura("solace_aura.png")
-    flow("lantern_aura.png", (40, 230, 255))
-    flow("lantern_aura_hollow.png", (170, 20, 20), seed=62)
     figure("watcher.png", skin=(200, 204, 210), hair=(150, 140, 130), cloak=(185, 190, 198), pants=(165, 170, 178), eyes=(0, 0, 0),
            slim=True, alpha=150, seed=4)
     logo()
