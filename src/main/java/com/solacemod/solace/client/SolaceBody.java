@@ -1,7 +1,6 @@
 package com.solacemod.solace.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.solacemod.solace.Solace;
 import com.solacemod.solace.client.model.BbModel;
 import com.solacemod.solace.client.model.Mat4;
@@ -104,18 +103,19 @@ final class SolaceBody {
         BbModel m = model();
         Mat4 base = BbModel.base();
         int full = LightTexture.FULL_BRIGHT;
-        // The outline: drawn with back faces hidden (entityCutout), which the inside-out trick needs.
-        VertexConsumer rim = buffer.getBuffer(RenderType.entityCutout(OUTLINE));
+        // The outline is drawn with back faces hidden (entityCutout), which the inside-out trick needs.
+        // (Each buffer is fetched right before it's used: fetching another one can close it.)
         if (negativeMask != BbModel.ALL) {
             m.draw(base, new MeshDraw(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(NORMAL)), light, overlay), negativeMask, false, t, push, 0xFFFFFFFF);
-            m.drawOutline(base, new MeshDraw(poseStack, rim, full, OverlayTexture.NO_OVERLAY), negativeMask, false, OUTLINE_WIDTH,
+            m.drawOutline(base, new MeshDraw(poseStack, buffer.getBuffer(RenderType.entityCutout(OUTLINE)), full, OverlayTexture.NO_OVERLAY), negativeMask, false, OUTLINE_WIDTH,
                     grey(Math.min(1, 0.55F + glow * 0.6F)));
         }
         if (negativeMask != 0) {
             m.draw(base, new MeshDraw(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(NEGATIVE)), full, overlay), negativeMask, true, t, push, 0xFFFFFFFF);
             m.draw(base, new MeshDraw(poseStack, buffer.getBuffer(RenderType.eyes(NEGATIVE_GLOW)), full, OverlayTexture.NO_OVERLAY),
                     negativeMask, true, t, push, grey(0.8F + 0.2F * Mth.sin(t * 0.37F)));
-            m.drawOutline(base, new MeshDraw(poseStack, rim, full, OverlayTexture.NO_OVERLAY), negativeMask, true, OUTLINE_WIDTH, 0xFF000000);
+            m.drawOutline(base, new MeshDraw(poseStack, buffer.getBuffer(RenderType.entityCutout(OUTLINE)), full, OverlayTexture.NO_OVERLAY), negativeMask, true,
+                    OUTLINE_WIDTH, 0xFF000000);
         }
     }
 
