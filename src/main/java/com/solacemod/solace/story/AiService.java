@@ -153,7 +153,7 @@ public final class AiService {
         BrainPool pool = pool();
         if (pool.isEmpty()) return CompletableFuture.failedFuture(new LlmException(-1, "No AI provider configured"));
         return pool.complete(request, compact, kind).thenApply(answer -> {
-            rememberReplacement(answer.brain());
+            logReplacement(answer.brain());
             return answer.text();
         }).whenComplete((text, err) -> {
             if (err != null && !(Http.unwrap(err) instanceof BrainPool.BusyException)) {
@@ -166,25 +166,18 @@ public final class AiService {
         return complete(request, null, BrainPool.Kind.CHAT);
     }
 
-    /** If a brain's model was retired and the provider switched to a working one, save that so it sticks. */
-    private static void rememberReplacement(BrainPool.Brain brain) {
+    /**
+     * If a brain's DEFAULT model was retired and the provider switched to a working one, note it in the log.
+     * Nothing is written to the config: the player's settings are never changed behind their back.
+     */
+    private static void logReplacement(BrainPool.Brain brain) {
         LlmProvider provider = brain.provider();
         String active = provider.activeModel();
-        if (active == null || active.equals(provider.settings().model())) return;
-        int slot = -1;
-        for (int s = 1; s <= SolaceConfig.EXTRA_BRAINS + 1; s++) {
-            if (provider.settings().equals(settingsFor(s))) slot = s;
-        }
-        if (slot < 0) return;
-        Solace.LOGGER.info("Solace: brain {} model '{}' is no longer available, switched to '{}'", slot, provider.settings().model(), active);
-        try {
-            if (slot == 1) SolaceConfig.MODEL.set(active);
-            else SolaceConfig.BRAIN_MODEL.get(slot - 2).set(active);
-            SolaceConfig.SPEC.save();
-        } catch (RuntimeException e) {
-            Solace.LOGGER.warn("Could not save the replacement model", e);
-        }
+        if (active == null || active.equals(provider.settings().model()) || !REPLACEMENTS_LOGGED.add(provider.settings().name() + active)) return;
+        Solace.LOGGER.info("Solace: brain {}'s default model '{}' is no longer available, using '{}' instead", brain.slot(), provider.settings().model(), active);
     }
+
+    private static final java.util.Set<String> REPLACEMENTS_LOGGED = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     public static String hintFor(Throwable err) {
         Throwable cause = Http.unwrap(err);

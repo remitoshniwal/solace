@@ -56,10 +56,23 @@ public final class OpenAiCompatibleProvider implements LlmProvider {
             Throwable cause = Http.unwrap(error);
             // Providers retire model names regularly. If this one is gone, look up which models exist and try good ones.
             if (cause instanceof LlmException e && isModelMissing(e)) {
+                // A model the player typed is never swapped for another: tell them what's available instead.
+                if (settings.modelChosen()) return findCandidates().thenCompose(list -> CompletableFuture.failedFuture(modelNotFound(model, list)));
                 return findCandidates().thenCompose(list -> tryCandidates(request, list, model, cause, 0));
             }
             return CompletableFuture.failedFuture(cause);
         });
+    }
+
+    /** A clear "that model doesn't exist" error that lists models the key can use. */
+    LlmException modelNotFound(String model, List<String> available) {
+        return notFound(model, settings.name(), available);
+    }
+
+    static LlmException notFound(String model, String provider, List<String> available) {
+        String list = available.isEmpty() ? "" : " Models your key can use: " + String.join(", ", available.subList(0, Math.min(8, available.size()))) + ".";
+        return new LlmException(404, "Model '" + model + "' wasn't found on " + provider + ". Check the spelling in Solace setup, "
+                + "or clear the Model box to use the default." + list);
     }
 
     /** "Model not found / decommissioned / does not exist" errors look different on every provider. */

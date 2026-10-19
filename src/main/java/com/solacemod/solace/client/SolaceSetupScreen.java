@@ -338,6 +338,11 @@ public final class SolaceSetupScreen extends Screen {
                 .withValues(names).withInitialValue(names.contains(provider) ? provider : names.get(0)).displayOnlyValue()
                 .withTooltip(v -> Tooltip.create(Component.literal(v.equals("none") ? "Leave this brain empty." : PROVIDER_NOTES.get(v))))
                 .create(controlX(), rowY(1), controlWidth(), 20, Component.literal("Provider"), (btn, v) -> {
+                    // A model name or server address from one provider means nothing to another.
+                    if (!v.equals(providers[brain])) {
+                        models[brain] = "";
+                        baseUrls[brain] = "";
+                    }
                     providers[brain] = v;
                     status = Component.empty();
                     rebuildWidgets();
@@ -642,10 +647,8 @@ public final class SolaceSetupScreen extends Screen {
                 status = Component.literal("Failed: " + hint).withStyle(ChatFormatting.RED);
             } else {
                 String used = llm.activeModel();
-                if (!used.equals(settings.model())) {
-                    models[index] = used; // the configured model was retired; remember the one that actually works
-                }
-                status = Component.literal("It works! Model: " + used + " (" + (System.currentTimeMillis() - start) + " ms). Press Done to save.")
+                String note = used.equals(settings.model()) ? "" : " (the default, " + settings.model() + ", is retired)";
+                status = Component.literal("It works! Model: " + used + note + " (" + (System.currentTimeMillis() - start) + " ms). Press Done to save.")
                         .withStyle(ChatFormatting.GREEN);
             }
             if (minecraft != null && minecraft.screen == this) rebuildWidgets();

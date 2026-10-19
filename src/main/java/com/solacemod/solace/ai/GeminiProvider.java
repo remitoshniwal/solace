@@ -49,6 +49,11 @@ public final class GeminiProvider implements LlmProvider {
             Throwable cause = Http.unwrap(error);
             // Google retires model names regularly. If this one is gone, ask Google which models exist and try them in order.
             if (mayRecover && cause instanceof LlmException e && e.status() == 404) {
+                // A model the player typed is never swapped for another: tell them what's available instead.
+                if (settings.modelChosen()) {
+                    return findWorkingModels().thenCompose(list -> CompletableFuture.failedFuture(
+                            OpenAiCompatibleProvider.notFound(model, "Google Gemini", list)));
+                }
                 return findWorkingModels().thenCompose(candidates -> tryCandidates(request, candidates, model, cause, 0));
             }
             return CompletableFuture.failedFuture(cause);

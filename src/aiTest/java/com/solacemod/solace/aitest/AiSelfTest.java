@@ -84,7 +84,7 @@ public final class AiSelfTest {
                 respond(ex, 403, "{\"error\":{\"code\":403,\"message\":\"This model is not available on the free tier.\",\"status\":\"PERMISSION_DENIED\"}}");
                 return;
             }
-            if (path.contains("gemini-2.5-flash")) {
+            if (path.contains("gemini-2.5-flash") || path.contains("gemini-flash-latest")) {
                 respond(ex, 404, "{\"error\":{\"code\":404,\"message\":\"models/gemini-2.5-flash is not found\"}}");
                 return;
             }
@@ -102,6 +102,20 @@ public final class AiSelfTest {
             lastBody.set(body);
             if (body.contains("llama-3.3-70b-versatile")) {
                 respond(ex, 404, "{\"error\":{\"message\":\"The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.\",\"code\":\"model_not_found\"}}");
+                return;
+            }
+            JsonObject msg = new JsonObject();
+            msg.addProperty("role", "assistant");
+            msg.addProperty("content", reply);
+            respond(ex, 200, "{\"choices\":[{\"message\":" + msg + "}]}");
+        });
+        // A Groq-like server where today's default (openai/gpt-oss-120b) has been retired.
+        server.createContext("/groq3/models", ex -> respond(ex, 200, "{\"data\":[{\"id\":\"whisper-large-v3\"},{\"id\":\"llama-3.1-8b-instant\"},{\"id\":\"openai/gpt-oss-20b\"}]}"));
+        server.createContext("/groq3/chat/completions", ex -> {
+            String body = read(ex);
+            lastBody.set(body);
+            if (body.contains("gpt-oss-120b")) {
+                respond(ex, 404, "{\"error\":{\"message\":\"The model `openai/gpt-oss-120b` has been decommissioned.\",\"code\":\"model_decommissioned\"}}");
                 return;
             }
             JsonObject msg = new JsonObject();
@@ -138,11 +152,25 @@ public final class AiSelfTest {
         check("openrouter: low reasoning effort", orBody.has("reasoning") && orBody.getAsJsonObject("reasoning").get("effort").getAsString().equals("low"));
         check("timeout: friendly hint", new LlmException("HttpTimeoutException: request timed out", null).hint().contains("took too long"));
 
-        // Groq: retired model is replaced with the recommended one
+        // A model the player typed is never swapped: they get an error listing the models they can use.
         ProviderSettings gq = ProviderSettings.resolve("groq", "gsk-test", "llama-3.3-70b-versatile", base + "/groq2", 10, "");
         LlmProvider gqp = LlmProvider.create(gq);
-        out = gqp.complete(req).get();
-        check("groq: recovers from retired model", out.equals(reply) && gqp.activeModel().equals("openai/gpt-oss-120b"));
+        try {
+            gqp.complete(req).get();
+            check("groq: chosen model that doesn't exist should fail", false);
+        } catch (Exception e) {
+            String hint = Http_unwrap(e) instanceof LlmException le ? le.hint() : "";
+            check("model: a chosen model is never replaced", gqp.activeModel().equals("llama-3.3-70b-versatile"));
+            check("model: error names the model and lists usable ones", hint.contains("'llama-3.3-70b-versatile' wasn't found") && hint.contains("openai/gpt-oss-120b"));
+        }
+        check("model: typed model is used as typed", ProviderSettings.resolve("groq", "k", " qwen/qwen3.6-27b ", "", 10, "").model().equals("qwen/qwen3.6-27b")
+                && ProviderSettings.resolve("groq", "k", "qwen/qwen3.6-27b", "", 10, "").modelChosen());
+        // Only the DEFAULT model (blank Model box) is replaced when the provider retires it.
+        LlmProvider gq3 = LlmProvider.create(ProviderSettings.resolve("groq", "gsk-test", "", base + "/groq3", 10, ""));
+        out = gq3.complete(req).get();
+        check("groq: retired default is replaced automatically", out.equals(reply) && gq3.activeModel().equals("openai/gpt-oss-20b"));
+        gqp = LlmProvider.create(ProviderSettings.resolve("groq", "gsk-test", "openai/gpt-oss-120b", base + "/groq2", 10, ""));
+        gqp.complete(req).get();
         check("groq: thinking model asked to think briefly", JsonParser.parseString(lastBody.get()).getAsJsonObject().get("reasoning_effort").getAsString().equals("low"));
         check("groq: default is gpt-oss-120b", ProviderSettings.resolve("groq", "k", "", "", 10, "").model().equals("openai/gpt-oss-120b"));
 
@@ -178,11 +206,20 @@ public final class AiSelfTest {
         SolaceReply gr = ReplyParser.parse(out);
         check("gemini: fenced json parsed", gr.say().equals("Hello, friend.") && gr.actions().size() == 1);
 
-        // Gemini: retired model is replaced automatically
-        ProviderSettings retired = ProviderSettings.resolve("gemini", "g-test", "gemini-2.5-flash", base + "/gem2", 10, "");
+        // Gemini: a chosen model that's gone gives a clear error; the default is replaced automatically
+        com.solacemod.solace.ai.GeminiProvider chosen = (com.solacemod.solace.ai.GeminiProvider) LlmProvider.create(
+                ProviderSettings.resolve("gemini", "g-test", "gemini-2.5-flash", base + "/gem2", 10, ""));
+        try {
+            chosen.complete(req).get();
+            check("gemini: chosen missing model should fail", false);
+        } catch (Exception e) {
+            String hint = Http_unwrap(e) instanceof LlmException le ? le.hint() : "";
+            check("gemini: chosen model kept, usable models listed", chosen.activeModel().equals("gemini-2.5-flash") && hint.contains("gemini-3.5-flash"));
+        }
+        ProviderSettings retired = ProviderSettings.resolve("gemini", "g-test", "", base + "/gem2", 10, "");
         com.solacemod.solace.ai.GeminiProvider gp = (com.solacemod.solace.ai.GeminiProvider) LlmProvider.create(retired);
         out = gp.complete(req).get();
-        check("gemini: recovers from retired model", out.equals(reply) && lastPath.get().endsWith("gemini-3.5-flash:generateContent"));
+        check("gemini: recovers from retired default", out.equals(reply) && lastPath.get().endsWith("gemini-3.5-flash:generateContent"));
         check("gemini: skipped forbidden model, remembers working one", gp.activeModel().equals("gemini-3.5-flash"));
         LlmException forbidden = new LlmException(403, "HTTP 403: {\"error\":{\"code\":403,\"message\":\"Generative Language API has not been used in project 123\",\"status\":\"PERMISSION_DENIED\"}}");
         check("errors: provider's own reason is shown", forbidden.hint().contains("Generative Language API has not been used"));

@@ -60,6 +60,7 @@ public class LlmException extends RuntimeException {
     /** A short, beginner friendly explanation, plus the provider's own reason when it gave one. */
     public String hint() {
         if (status == -2) return getMessage(); // every brain is resting: the message already says so
+        if (status == 404 && getMessage() != null && getMessage().startsWith("Model '")) return getMessage(); // already explains, with the list
         String base = baseHint();
         String detail = providerMessage();
         if (status == 403 && detail != null && detail.toLowerCase().contains("denied access")) {

@@ -8,6 +8,11 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### Fixed in 1.3.1
+- **The model you type is now always used.** Before, if a model name wasn't found, Solace quietly switched to the default and saved it over your choice. Now you get a clear message listing the models your key can use. (Only a blank Model box, meaning the default, is replaced automatically when a provider retires it.)
+- Changing a brain's provider now clears its old model name, since names from one provider don't work on another.
+- If your Model box was overwritten by an older version, type your model in again once.
+
 ### New in 1.3.0
 - **Up to 5 AI brains.** Add several providers on the AI Brain page (click **+**). Solace switches between them on its own, so free limits last much longer.
 - **Smart routing.** Story moments and replies go to your best brain. Background work goes to whichever brain has the most room. Solace reads each provider's remaining limits and switches *before* one runs out.
