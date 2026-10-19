@@ -31,13 +31,13 @@ public final class SolaceModels {
             // rising off the top of its head, like hair underwater
             {0, -36, 0, 3.0F, 0}, {4, -34, 2, 2.8F, -0.3F}, {-4, -34, -2, 3.3F, 0.3F},
     };
-    static final int SEGMENTS = 7;
-    static final int FERRO_BLOBS = 7;
+    static final int SEGMENTS = 5;
+    static final int FERRO_BLOBS = 10;
     static final int WAX_BLOBS = 5;
     /** Which way each ferrofluid spike points (xRot, zRot). With no rotation a spike points straight up. */
     static final float[][] SPIKES = {{0, 0}, {3.14F, 0}, {1.57F, 0}, {-1.57F, 0}, {0, 1.57F}, {0, -1.57F},
             {0.8F, 0.8F}, {-0.8F, -0.8F}, {0.8F, -0.8F}, {-0.8F, 0.8F}, {2.3F, 0.8F}, {-2.3F, -0.8F}};
-    static final float SEGMENT_LENGTH = 4.5F;
+    static final float SEGMENT_LENGTH = 3.6F;
 
     private SolaceModels() {
     }
@@ -138,17 +138,17 @@ public final class SolaceModels {
                 PartPose.ZERO);
         // The same mass, a little bigger, for the moving cyan energy around it.
         root.addOrReplaceChild("mass_aura", CubeListBuilder.create()
-                .texOffs(0, 0).addBox(-6, -2, -4.5F, 12, 5, 9, new CubeDeformation(1.2F))
-                .texOffs(0, 0).addBox(-8, -16, -6, 16, 14, 12, new CubeDeformation(1.2F))
-                .texOffs(0, 0).addBox(-7, -26, -5, 14, 10, 10, new CubeDeformation(1.2F))
-                .texOffs(0, 0).addBox(-5, -34, -4.5F, 10, 8, 9, new CubeDeformation(1.2F)),
+                .texOffs(0, 0).addBox(-6, -2, -4.5F, 12, 5, 9, new CubeDeformation(2.0F))
+                .texOffs(0, 0).addBox(-8, -16, -6, 16, 14, 12, new CubeDeformation(2.0F))
+                .texOffs(0, 0).addBox(-7, -26, -5, 14, 10, 10, new CubeDeformation(2.0F))
+                .texOffs(0, 0).addBox(-5, -34, -4.5F, 10, 8, 9, new CubeDeformation(2.0F)),
                 PartPose.ZERO);
         // Ferrofluid: glossy black blobs covered in spikes, rising and sinking through the body like a lava lamp.
         for (int i = 0; i < FERRO_BLOBS; i++) {
             PartDefinition blob = root.addOrReplaceChild("ferro" + i, CubeListBuilder.create().texOffs(0, 0).addBox(-2, -2, -2, 4, 4, 4), PartPose.ZERO);
             for (int k = 0; k < SPIKES.length; k++) {
                 blob.addOrReplaceChild("spike" + k, CubeListBuilder.create().texOffs(0, 0)
-                        .addBox(-0.5F, -4.0F, -0.5F, 1, 4, 1, new CubeDeformation(-0.2F)), PartPose.rotation(SPIKES[k][0], 0, SPIKES[k][1]));
+                        .addBox(-0.5F, -5.0F, -0.5F, 1, 5, 1, new CubeDeformation(-0.05F)), PartPose.rotation(SPIKES[k][0], 0, SPIKES[k][1]));
             }
         }
         // Lava-lamp wax: soft glowing cyan blobs drifting slowly up and down.
@@ -170,7 +170,7 @@ public final class SolaceModels {
 
     /** One piece of a tendril, thinner toward the tip. */
     private static CubeListBuilder segment(int index) {
-        float w = Math.max(1.0F, 4.0F - index * 0.5F);
+        float w = Math.max(0.8F, 2.4F - index * 0.4F);
         return CubeListBuilder.create().texOffs(0, 0).addBox(-w / 2, 0, -w / 2, w, SEGMENT_LENGTH + 0.5F, w);
     }
 }

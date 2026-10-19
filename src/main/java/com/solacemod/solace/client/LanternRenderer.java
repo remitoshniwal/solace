@@ -103,12 +103,12 @@ final class LanternRenderer {
 
         // Lava-lamp wax: soft glowing blobs, added on top so they shine through.
         var waxBuffer = buffer.getBuffer(RenderType.eyes(hollow ? CORE_HOLLOW : CORE));
-        for (ModelPart w : wax) w.render(poseStack, waxBuffer, LightTexture.FULL_BRIGHT, overlay, SolaceRenderer.grey(0.55F));
+        for (ModelPart w : wax) w.render(poseStack, waxBuffer, LightTexture.FULL_BRIGHT, overlay, SolaceRenderer.grey(0.7F));
 
         // The moving energy over the whole shape: cyan streaks flowing up (dim red for the Hollow).
         massAura.yScale = mass.yScale;
-        massAura.render(poseStack, buffer.getBuffer(RenderType.energySwirl(hollow ? AURA_HOLLOW : AURA, (t * 0.004F) % 1.0F, (t * -0.012F) % 1.0F)),
-                LightTexture.FULL_BRIGHT, overlay, SolaceRenderer.grey(0.6F));
+        massAura.render(poseStack, buffer.getBuffer(RenderType.energySwirl(hollow ? AURA_HOLLOW : AURA, (t * 0.006F) % 1.0F, (t * -0.02F) % 1.0F)),
+                LightTexture.FULL_BRIGHT, overlay, SolaceRenderer.grey(1.0F));
 
         // The core, drawn last and added on top, so it shines through the mass. It breathes, with a soft glow around it.
         float beat = 1.0F + Mth.sin(t * (hollow ? 0.3F : 0.12F)) * 0.08F;
@@ -130,16 +130,18 @@ final class LanternRenderer {
             float phase = i * 1.9F;
             float rise = 0.5F + 0.5F * Mth.sin(t * sp + phase);
             ModelPart b = ferro[i];
-            b.x = Mth.sin(t * sp * 0.7F + phase * 2) * 6.0F;
-            b.z = Mth.cos(t * sp * 0.6F + phase) * 3.5F;
-            b.y = -4.0F - rise * 26.0F;
-            float size = 0.7F + (i % 3) * 0.3F;
+            // Some drift out past the surface and crawl back in, like ferrofluid over glass.
+            b.x = Mth.sin(t * sp * 0.7F + phase * 2) * (i % 3 == 0 ? 10.0F : 6.0F);
+            b.z = Mth.cos(t * sp * 0.6F + phase) * (i % 3 == 0 ? 7.0F : 4.0F);
+            b.y = -3.0F - rise * 30.0F;
+            float size = 1.0F + (i % 3) * 0.45F;
             float squash = Mth.sin(t * sp * 2 + phase) * 0.18F;
             b.xScale = b.zScale = size * (1 + squash);
             b.yScale = size * (1 - squash);
             b.yRot = t * 0.01F * (i % 2 == 0 ? 1 : -1);
             for (int k = 0; k < spikes[i].length; k++) {
-                spikes[i][k].yScale = 0.25F + 0.75F * Math.abs(Mth.sin(t * 0.09F * agitation + i * 1.3F + k * 0.7F));
+                spikes[i][k].yScale = 0.2F + 0.8F * Math.abs(Mth.sin(t * 0.09F * agitation + i * 1.3F + k * 0.7F));
+                spikes[i][k].xScale = spikes[i][k].zScale = 1.3F - 0.5F * spikes[i][k].yScale; // thin when long, fat when short
             }
         }
         for (int i = 0; i < wax.length; i++) {
@@ -149,8 +151,8 @@ final class LanternRenderer {
             w.x = Mth.cos(t * sp * 0.8F + phase) * 5.0F;
             w.z = Mth.sin(t * sp * 0.5F + phase) * 3.0F;
             w.y = -6.0F - (0.5F + 0.5F * Mth.sin(t * sp + phase)) * 24.0F;
-            float swell = 0.8F + 0.35F * Mth.sin(t * sp * 3 + phase);
-            w.xScale = w.zScale = swell * 1.1F;
+            float swell = 1.1F + 0.4F * Mth.sin(t * sp * 3 + phase);
+            w.xScale = w.zScale = swell * 1.2F;
             w.yScale = swell * (0.8F + 0.4F * Mth.cos(t * sp * 2 + phase));
         }
     }
