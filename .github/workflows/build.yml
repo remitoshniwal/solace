@@ -110,8 +110,10 @@ jobs:
           ls -la run/screenshots || true
           n=$(ls run/screenshots/*.png 2>/dev/null | wc -l)
           if [ "$n" -eq 0 ]; then
-            msg=$(grep -i "screenshots\|exception\|error" shots.log | tail -40 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')
+            msg=$(grep -i "screenshots\|exception\|error\|caused by\|at com.solacemod" shots.log | grep -v -i "narrator\|flite" | tail -40 | cut -c 1-300 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')
             echo "::warning title=No screenshots::${msg}"
+            echo "----- end of the game log -----"
+            grep -v -i "narrator\|flite" shots.log | tail -80 | cut -c 1-400
           else
             echo "::notice title=Screenshots::${n} screenshots taken"
           fi
