@@ -10,7 +10,7 @@ import net.minecraft.client.model.geom.builders.PartDefinition;
 
 /** The shapes of Solace's two custom forms, built in code (no model files needed). */
 public final class SolaceModels {
-    public static final ModelLayerLocation LUMP = new ModelLayerLocation(Solace.id("lump"), "main");
+    public static final ModelLayerLocation BODY = new ModelLayerLocation(Solace.id("body"), "main");
     public static final ModelLayerLocation LANTERN = new ModelLayerLocation(Solace.id("lantern"), "main");
 
     /**
@@ -34,11 +34,21 @@ public final class SolaceModels {
     private SolaceModels() {
     }
 
-    /** One small cube. The lump layer draws it many times, stretched and squashed. */
-    public static LayerDefinition createLump() {
-        MeshDefinition mesh = new MeshDefinition();
-        mesh.getRoot().addOrReplaceChild("lump", CubeListBuilder.create().texOffs(0, 0).addBox(-1, -1, -1, 2, 2, 2), PartPose.ZERO);
-        return LayerDefinition.create(mesh, 16, 16);
+    /**
+     * The everyday form: a man in a tailored suit. A person-shaped body (same joints as a player, so it walks and
+     * holds things like one), plus a jacket hem that hangs over the hips and swings as he walks, and proper shoes.
+     * Texture: textures/entity/solace.png (painted by tools/make_textures.py).
+     */
+    public static LayerDefinition createBody() {
+        MeshDefinition mesh = net.minecraft.client.model.HumanoidModel.createMesh(net.minecraft.client.model.geom.builders.CubeDeformation.NONE, 0.0F);
+        PartDefinition root = mesh.getRoot();
+        root.getChild("body").addOrReplaceChild("jacket_hem", CubeListBuilder.create().texOffs(16, 32)
+                .addBox(-4.0F, 0.0F, -2.0F, 8, 4, 4, new net.minecraft.client.model.geom.builders.CubeDeformation(0.3F)), PartPose.offset(0.0F, 11.0F, 0.0F));
+        root.getChild("right_leg").addOrReplaceChild("toe", CubeListBuilder.create().texOffs(0, 32)
+                .addBox(-2.0F, 10.0F, -3.0F, 4, 2, 1), PartPose.ZERO);
+        root.getChild("left_leg").addOrReplaceChild("toe", CubeListBuilder.create().texOffs(0, 32).mirror()
+                .addBox(-2.0F, 10.0F, -3.0F, 4, 2, 1), PartPose.ZERO);
+        return LayerDefinition.create(mesh, 64, 64);
     }
 
     /** The Lantern: a tall see-through mass, a core, and tendrils made of jointed segments. About 4 blocks tall. */

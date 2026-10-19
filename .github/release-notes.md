@@ -8,6 +8,12 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### New in 1.4.0
+- **A new look for Solace.** His own model and texture: a calm man in a dark tailored suit, with a jacket hem that swings when he walks. The lumps are gone.
+- **Negative flashes.** Now and then he flickers into his photo negative for a split second, all of him or just his face or a hand. Rare at first, more often each chapter.
+- **Creeping veins.** From chapter 3, dark veins spread up from his collar and cuffs, reaching his eyes by the end.
+- No extra mods needed (no GeckoLib, no Cloth Config).
+
 ### Fixed in 1.3.1
 - **The model you type is now always used.** Before, if a model name wasn't found, Solace quietly switched to the default and saved it over your choice. Now you get a clear message listing the models your key can use. (Only a blank Model box, meaning the default, is replaced automatically when a provider retires it.)
 - Changing a brain's provider now clears its old model name, since names from one provider don't work on another.
@@ -21,7 +27,7 @@ An AI companion that remembers you, and a psychological horror story about the l
 
 ### New in 1.2.0
 - **The whole story, rewritten:** 8 chapters, Maren's house, the confession, Day 1000, and a fifth ending (COLLECTED).
-- **Two forms:** the Mimic (lumps moving under its skin) and the Lantern, its true form.
+- **Two forms:** the Mimic and the Lantern, its true form.
 - **Tether and Debt:** Solace's power grows the longer you're together. Nothing is off limits, but everything has a price.
 - **It moves wrong:** gliding, stuttering, flickering, standing where it shouldn't, copying you.
 - **It does things on its own:** gifts, watching you sleep, rearranging your chests, the Fall.

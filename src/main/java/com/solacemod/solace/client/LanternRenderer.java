@@ -4,8 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.solacemod.solace.Solace;
 import com.solacemod.solace.entity.SolaceEntity;
-import net.minecraft.client.model.PlayerModel;
-import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -17,7 +16,7 @@ import net.minecraft.util.Mth;
 
 /**
  * Solace's true form: a huge see-through teal mass of drifting tendrils with a bright core.
- * Inside the light is a tiny pale figure curled up: the real Solace. The Hollow (the boss) is the same shape, dark, with a red core.
+ * Inside the light is a tiny figure in a suit, curled up: the real Solace. The Hollow (the boss) is the same shape, dark, with a red core.
  */
 final class LanternRenderer {
     private static final ResourceLocation MASS = Solace.id("textures/entity/lantern.png");
@@ -29,7 +28,7 @@ final class LanternRenderer {
     private final ModelPart mass;
     private final ModelPart core;
     private final ModelPart[][] tendrils;
-    private final PlayerModel<SolaceEntity> figure;
+    private final HumanoidModel<SolaceEntity> figure;
 
     LanternRenderer(EntityRendererProvider.Context context) {
         ModelPart root = context.bakeLayer(SolaceModels.LANTERN);
@@ -44,7 +43,7 @@ final class LanternRenderer {
                 tendrils[i][j] = seg;
             }
         }
-        figure = new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER), false);
+        figure = new HumanoidModel<>(context.bakeLayer(SolaceModels.BODY));
         curlUp(figure);
     }
 
@@ -100,8 +99,7 @@ final class LanternRenderer {
     }
 
     /** Knees up, head down, arms around its legs. */
-    private static void curlUp(PlayerModel<SolaceEntity> m) {
-        m.hat.visible = m.jacket.visible = m.leftSleeve.visible = m.rightSleeve.visible = m.leftPants.visible = m.rightPants.visible = false;
+    private static void curlUp(HumanoidModel<SolaceEntity> m) {
         m.head.xRot = 0.9F;
         m.body.xRot = 0.6F;
         m.rightArm.xRot = -1.3F;

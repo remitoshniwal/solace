@@ -79,7 +79,7 @@ public class SolaceEntity extends PathfinderMob {
     private static final EntityDataAccessor<Optional<UUID>> DATA_OWNER = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.OPTIONAL_UUID);
     private static final EntityDataAccessor<Integer> DATA_FORM = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_PRESENCE = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Integer> DATA_LUMPS = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_CORRUPTION = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> DATA_AGITATED = SynchedEntityData.defineId(SolaceEntity.class, EntityDataSerializers.BOOLEAN);
 
     public enum Mode { FOLLOW, STAY, WANDER }
@@ -132,7 +132,7 @@ public class SolaceEntity extends PathfinderMob {
         builder.define(DATA_OWNER, Optional.empty());
         builder.define(DATA_FORM, FORM_NORMAL);
         builder.define(DATA_PRESENCE, Presence.WALK);
-        builder.define(DATA_LUMPS, 0);
+        builder.define(DATA_CORRUPTION, 0);
         builder.define(DATA_AGITATED, false);
     }
 
@@ -252,16 +252,19 @@ public class SolaceEntity extends PathfinderMob {
         entityData.set(DATA_PRESENCE, behaviour);
     }
 
-    /** How many lumps move under its skin (the server sets this from the story chapter). */
-    public int getLumps() {
-        return entityData.get(DATA_LUMPS);
+    /**
+     * How far the wrongness has spread, 0 to 8 (the server sets it from the story chapter).
+     * The client uses it for the creeping veins and how often he flashes into his negative side.
+     */
+    public int getCorruption() {
+        return entityData.get(DATA_CORRUPTION);
     }
 
-    public void setLumps(int lumps) {
-        if (lumps != getLumps()) entityData.set(DATA_LUMPS, lumps);
+    public void setCorruption(int level) {
+        if (level != getCorruption()) entityData.set(DATA_CORRUPTION, level);
     }
 
-    /** Upset: the lumps pulse faster and the Lantern's tendrils thrash. */
+    /** Upset: the negative flashes come more often and the Lantern's tendrils thrash. */
     public boolean isAgitated() {
         return entityData.get(DATA_AGITATED);
     }

@@ -48,7 +48,7 @@ public final class StoryDirector {
             new Beat("c1_ask", 1, 4), new Beat("c1_hum", 1, 11), new Beat("c1_torch", 1, 16),
             new Beat("c2_tether", 2, 3), new Beat("c2_two_places", 2, 11), new Beat("c2_footsteps", 2, 19),
             // PART TWO: STATIC
-            new Beat("c3_page1", 3, 2), new Beat("c3_lumps", 3, 5), new Beat("c3_fall", 3, 10), new Beat("c3_fall_ask", 3, 15),
+            new Beat("c3_page1", 3, 2), new Beat("c3_veins", 3, 5), new Beat("c3_fall", 3, 10), new Beat("c3_fall_ask", 3, 15),
             new Beat("c4_watcher", 4, 2), new Beat("c4_joined", 4, 8), new Beat("c4_page2", 4, 13), new Beat("c4_request", 4, 18),
             new Beat("c4_page3", 4, 22), new Beat("c4_sign", 4, 27),
             // PART THREE: TRUTH
@@ -340,7 +340,7 @@ public final class StoryDirector {
                 Scheduler.later(80, () -> SolaceBrain.event(player, "You both just heard footsteps that weren't the player's. Say something nervous, then brush it off.", true));
             }
             case "c3_page1" -> deliverFragment(player, story, 0, Delivery.GROUND);
-            case "c3_lumps" -> SolaceBrain.event(player, StoryText.C3_LUMPS, false);
+            case "c3_veins" -> SolaceBrain.event(player, StoryText.C3_VEINS, false);
             case "c3_fall" -> {
                 // The first Fall. Waits until you're safe on the ground (and gives up after a while).
                 return com.solacemod.solace.horror.OnItsOwn.fall(player, story) || inChapter(story) > 22;

@@ -93,14 +93,13 @@ public final class SolaceManager {
         return player.position();
     }
 
-    /** How many lumps move under its skin in each chapter (index = chapter). */
-    private static final int[] LUMPS = {0, 1, 2, 4, 6, 9, 12, 16, 20};
-
     static void updateForm(SolaceEntity solace, PlayerStory story) {
         if (solace.isHollow()) return;
         boolean storyOn = com.solacemod.solace.config.SolaceConfig.STORY_ENABLED.get();
-        int lumps = !storyOn ? 0 : story.ending == Ending.NONE ? LUMPS[Math.min(8, story.chapter)] : story.ending == Ending.FOREVER || story.ending == Ending.COLLECTED ? 20 : 0;
-        solace.setLumps(lumps);
+        // Veins and negative flashes grow with the chapter. After FOREVER or COLLECTED they stay; after TOGETHER they're gone.
+        int corruption = !storyOn ? 0 : story.ending == Ending.NONE ? Math.min(8, story.chapter)
+                : story.ending == Ending.FOREVER || story.ending == Ending.COLLECTED ? 8 : 0;
+        solace.setCorruption(corruption);
         if (solace.isShowingLantern()) return;
         boolean uneasy = storyOn && story.ending == Ending.NONE && story.part() >= 3;
         solace.setForm(uneasy || story.ending == Ending.FOREVER || story.ending == Ending.COLLECTED ? SolaceEntity.FORM_UNEASY : SolaceEntity.FORM_NORMAL);
