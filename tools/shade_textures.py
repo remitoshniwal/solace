@@ -18,6 +18,7 @@ Sheet layout (x, y, width, height), shared with tools/models/build_solace.js:
   blades    (128, 192, 128, 64) 2 curved blades, 64x64 each (negative only)
 """
 import math
+import numpy as np
 import random
 from pathlib import Path
 from PIL import Image, ImageChops, ImageDraw, ImageFilter
@@ -158,35 +159,33 @@ def body_tile(w, h, rng, base, streak):
     return img
 
 
-def cloak_sheet(w, h, rng, color, edge, holes=True):
-    """One wide tattered cloth: solid at the top, torn into long ragged tails towards the hem, a few holes."""
+def cloak_sheet(w, h, rng, color, edge, holes=False):
+    """One wide tattered cloth: solid at the top, torn into a few broad, blunt tails towards the hem."""
     img = canvas(w, h)
     d = ImageDraw.Draw(img)
     S = SS
-    pts = [(0, 0), (w * S, 0)]
-    x = w
     hem = []
-    while x > 0:  # walk the hem right to left: long tails and short tears
-        tail = rng.uniform(0.86, 1.0) if rng.random() < 0.45 else rng.uniform(0.6, 0.8)
-        width = rng.uniform(3, 9)
-        hem.append((x * S, h * rng.uniform(0.5, 0.62) * S))
-        hem.append(((x - width / 2) * S, h * tail * S))
+    x = w
+    while x > 0:  # walk the hem right to left: each tatter is a broad tongue with a ragged, blunt end
+        width = min(x, rng.uniform(0.12, 0.2) * w)
+        notch = h * rng.uniform(0.6, 0.68)
+        tail = h * (rng.uniform(0.88, 0.99) if rng.random() < 0.5 else rng.uniform(0.74, 0.84))
+        hem += [(x, notch), (x - width * 0.12, tail - h * 0.03), (x - width * 0.4, tail), (x - width * 0.62, tail - h * 0.02),
+                (x - width * 0.85, tail - h * 0.05), (x - width, notch)]
         x -= width
-    hem.append((0, h * 0.55 * S))
-    d.polygon(pts + hem, fill=color)
-    # folds: long darker and lighter streaks
-    for _ in range(int(w / 3)):
+    outline = [(0, 0), (w, 0)] + hem
+    mask = Image.new("L", img.size, 0)
+    ImageDraw.Draw(mask).polygon([(px * S, py * S) for px, py in outline], fill=255)
+    cloth = Image.new("RGBA", img.size, color)
+    cd = ImageDraw.Draw(cloth)
+    # folds: broad darker and lighter bands, kept inside the cloth
+    for _ in range(int(w / 8)):
         x0 = rng.uniform(0, w)
-        c = tuple(max(0, min(255, v + rng.choice((-14, -8, 10, 16)))) for v in color[:3]) + (255,)
-        stroke(d, (x0 * S, 0), ((x0 + rng.uniform(-2, 2)) * S, h * 0.5 * S), ((x0 + rng.uniform(-3, 3)) * S, h * 0.9 * S), rng.uniform(0.5, 1.6) * S, 0.3 * S, c)
-    if edge:  # frayed light edges along the tears
-        for i in range(1, len(hem) - 1):
-            d.line([hem[i - 1], hem[i]], fill=edge, width=int(S * 0.9))
-    if holes:
-        for _ in range(5):
-            cx, cy = rng.uniform(0.1, 0.9) * w, rng.uniform(0.35, 0.6) * h
-            r = rng.uniform(1.0, 2.6)
-            d.ellipse([(cx - r) * S, (cy - r * 1.8) * S, (cx + r) * S, (cy + r * 1.8) * S], fill=(0, 0, 0, 0))
+        c = tuple(max(0, min(255, v + rng.choice((-12, -6, 8, 12)))) for v in color[:3]) + (255,)
+        stroke(cd, (x0 * S, 0), ((x0 + rng.uniform(-2, 2)) * S, h * 0.5 * S), ((x0 + rng.uniform(-3, 3)) * S, h * S), rng.uniform(2, 4) * S, 1.5 * S, c)
+    if edge:  # a light frayed edge along the tears
+        ImageDraw.Draw(cloth).line([(px * S, py * S) for px, py in hem], fill=edge, width=int(S * 1.2))
+    img.paste(cloth, (0, 0), mask)
     return shrink(img)
 
 
@@ -250,7 +249,7 @@ def sheet(negative, seed=7):
         bd.line([(0, y), (63, y + 3)], fill=(30, 30, 36, 255))
     main.paste(band, (192, 64))
     # Short over-skirt for the negative's robe: white tatters over the black.
-    main.alpha_composite(cloak_sheet(64, 32, rng, (238, 238, 242, 255) if negative else robe, (255, 255, 255, 255) if negative else None, holes=False), (192, 96))
+    main.alpha_composite(cloak_sheet(64, 32, rng, (238, 238, 242, 255) if negative else robe, (255, 255, 255, 255) if negative else None), (192, 96))
     for i in range(2):
         img = canvas(64, 64)
         d = ImageDraw.Draw(img)
@@ -295,30 +294,57 @@ def radial(size, stops):
     return img
 
 
-def corona(size, seed):
-    """Light breaking outward in uneven rays, cyan at the edges."""
-    rng = random.Random(seed)
-    img = radial(size, [(0, (255, 255, 255, 255)), (0.18, (210, 255, 255, 230)), (0.5, (60, 200, 220, 110)), (1.0, (0, 60, 80, 0))])
-    rays = Image.new("RGBA", (size * SS, size * SS), (0, 0, 0, 0))
-    d = ImageDraw.Draw(rays)
-    c = size * SS / 2
-    for _ in range(26):
-        a = rng.uniform(0, 2 * math.pi)
-        ln = rng.uniform(0.45, 0.98) * c
-        w = rng.uniform(0.01, 0.05) * c
-        d.polygon([(c + math.cos(a + 1.57) * w, c + math.sin(a + 1.57) * w), (c + math.cos(a) * ln, c + math.sin(a) * ln),
-                   (c + math.cos(a - 1.57) * w, c + math.sin(a - 1.57) * w)], fill=(190, 250, 255, rng.randint(70, 160)))
-    rays = shrink(rays.filter(ImageFilter.GaussianBlur(SS * 1.5)))
-    img.alpha_composite(rays)
-    return img
+def fbm(size, seed, octaves=5, base=4):
+    """Smooth random clouds (fractal noise), values 0..1."""
+    rng = np.random.default_rng(seed)
+    out = np.zeros((size, size))
+    amp, total = 1.0, 0.0
+    for o in range(octaves):
+        n = base * 2 ** o
+        grid = rng.random((n + 1, n + 1))
+        img = Image.fromarray((grid * 255).astype(np.uint8)).resize((size, size), Image.BICUBIC)
+        out += np.asarray(img, dtype=float) / 255 * amp
+        total += amp
+        amp *= 0.5
+    return out / total
 
 
-def streak(w, h):
-    """One flying spark: a thin bright dash."""
-    img = canvas(w, h)
-    d = ImageDraw.Draw(img)
-    d.rounded_rectangle([w * 0.38 * SS, 0, w * 0.62 * SS, h * SS], radius=w * 0.2 * SS, fill=(255, 255, 255, 255))
-    return shrink(img.filter(ImageFilter.GaussianBlur(SS * 0.7)))
+def plasma(size, seed, reach=0.9, veins=1.0, glow=1.0):
+    """
+    A ball of blue plasma (reference: the energy ball picture): a white-hot middle, lightning-like veins branching
+    outwards through blue cloud, and a ragged, uneven outline instead of a neat circle.
+    """
+    c = (size - 1) / 2
+    y, x = np.mgrid[0:size, 0:size]
+    dx, dy = (x - c) / c, (y - c) / c
+    r = np.hypot(dx, dy)
+    ang = np.arctan2(dy, dx)
+    # warp the space with noise so the veins wander and fork
+    wx, wy = fbm(size, seed + 1, base=3), fbm(size, seed + 2, base=3)
+    n = fbm(size, seed + 3, octaves=6, base=4)
+    warped = np.asarray(Image.fromarray((n * 255).astype(np.uint8)).transform(
+        (size, size), Image.AFFINE, (1, 0, 0, 0, 1, 0)), dtype=float) / 255
+    ridge = 1 - np.abs(2 * fbm(size, seed + 4, octaves=6, base=5) - 1)          # thin bright lines where the noise crosses the middle
+    ridge2 = 1 - np.abs(2 * fbm(size, seed + 5, octaves=5, base=8) - 1)
+    lines = np.clip((ridge ** 10) * 1.3 + (ridge2 ** 14) * 0.9, 0, 1) * veins
+    # a ragged outline: how far the plasma reaches depends on direction, unevenly
+    edge_noise = fbm(size, seed + 6, octaves=4, base=3)
+    lobes = 0.78 + 0.12 * np.sin(ang * 3 + seed) + 0.32 * (edge_noise - 0.5) * 2 + 0.2 * (wx - 0.5)
+    limit = np.clip(reach * lobes, 0.35, 0.98)
+    fall = np.clip(1 - r / limit, 0, 1)
+    cloud = (fall ** 1.1) * (0.3 + 0.7 * warped) * glow
+    core = np.clip(1 - r / 0.3, 0, 1) ** 1.4
+    v = np.clip(cloud * 0.8 + lines * (fall ** 0.6) * 1.1 + core * 1.2, 0, 1.6)
+    # colour: deep blue -> bright blue -> pale cyan -> white as it gets brighter
+    stops = [(0.0, (0, 0, 0)), (0.18, (10, 30, 150)), (0.45, (35, 110, 255)), (0.8, (120, 200, 255)), (1.1, (225, 245, 255)), (1.6, (255, 255, 255))]
+    rgb = np.zeros((size, size, 3))
+    for (a0, c0), (a1, c1) in zip(stops, stops[1:]):
+        m = (v >= a0) & (v <= a1)
+        f = ((v - a0) / (a1 - a0))[m][:, None]
+        rgb[m] = np.array(c0) * (1 - f) + np.array(c1) * f
+    alpha = np.clip(v * 1.6, 0, 1) * 255
+    out = np.dstack([rgb, alpha]).astype(np.uint8)
+    return Image.fromarray(out, "RGBA")
 
 
 def smoke(size, seed):
@@ -355,9 +381,9 @@ if __name__ == "__main__":
     m, g = sheet(True)
     m.save(OUT / "solace_shade_negative.png")
     premultiplied(g).save(OUT / "solace_shade_negative_glow.png")
-    premultiplied(radial(64, [(0, (255, 255, 255, 255)), (0.35, (235, 255, 255, 255)), (0.7, (150, 240, 255, 120)), (1.0, (40, 160, 200, 0))])).save(OUT / "orb_core.png")
-    premultiplied(corona(128, 3)).save(OUT / "orb_corona.png")
-    premultiplied(radial(64, [(0, (120, 230, 245, 140)), (0.6, (30, 140, 170, 60)), (1.0, (0, 40, 60, 0))])).save(OUT / "orb_haze.png")
-    premultiplied(streak(8, 32)).save(OUT / "orb_streak.png")
+    premultiplied(radial(64, [(0, (255, 255, 255, 255)), (0.35, (235, 250, 255, 255)), (0.7, (140, 200, 255, 120)), (1.0, (30, 80, 220, 0))])).save(OUT / "orb_core.png")
+    premultiplied(radial(64, [(0, (60, 120, 255, 150)), (0.5, (20, 60, 200, 70)), (1.0, (0, 10, 60, 0))])).save(OUT / "orb_haze.png")
+    for i, (reach, veins, glow) in enumerate(((0.8, 1.0, 1.0), (0.95, 0.8, 0.8), (1.0, 0.6, 0.55))):
+        premultiplied(plasma(256, 11 + i * 17, reach, veins, glow)).save(OUT / f"orb_plasma_{i}.png")
     smoke(64, 5).save(OUT / "orb_smoke.png")
     print("Textures written to", OUT)

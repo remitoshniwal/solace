@@ -15,7 +15,8 @@ import java.io.InputStream;
 
 /**
  * Solace's body: the Blockbench model in assets/solace/models/entity/solace.bbmodel (made with tools/models).
- * Headless and eyeless. The normal form is dark and smoky; the negative is a white flaming wraith. Both are the same
+ * Headless and eyeless: a high coat collar stands round an empty hollow. The normal form is black with spiked
+ * shoulders and a tattered cloak; the negative is a white flaming wraith with scythe blades. Both are the same
  * model: parts named n_... show only in the normal form, x_... only in the negative, and the texture sheet swaps.
  * Shared by Solace itself and its copy in the distance ("two places").
  */
@@ -25,7 +26,6 @@ final class SolaceBody {
     private static final ResourceLocation NEGATIVE = Solace.id("textures/entity/solace_shade_negative.png");
     private static final ResourceLocation NEGATIVE_GLOW = Solace.id("textures/entity/solace_shade_negative_glow.png");
     private static final String MODEL = "/assets/solace/models/entity/solace.bbmodel";
-    private static final String[] WISPS = {"n_wisp_back0", "n_wisp_back1", "n_wisp_back2", "n_wisp_back3", "n_wisp_arm_r", "n_wisp_arm_l", "n_wisp_leg_r", "n_wisp_leg_l"};
     private static final String[] FLAMES = {"x_flame_r", "x_flame_l", "x_flame_r2", "x_flame_l2"};
 
     private static BbModel model;
@@ -76,9 +76,6 @@ final class SolaceBody {
         m.bone("forearm_l").rot(Mth.sin(t * 0.067F + seed + 2) * 5, 0, 0);
         m.bone("hand_r").rot(Mth.sin(t * 0.13F + seed) * 6, 0, 0);
         m.bone("hand_l").rot(Mth.sin(t * 0.12F + seed + 1) * 6, 0, 0);
-        for (int i = 0; i < WISPS.length; i++) {
-            m.bone(WISPS[i]).rot(Mth.sin(t * 0.09F + i * 1.7F) * 10 + amount * 12, 0, Mth.cos(t * 0.07F + i) * 8);
-        }
         float spikes = 0.75F + 0.09F * Math.max(0, Math.min(4, stage));
         m.bone("n_spikes_r").scale(spikes);
         m.bone("n_spikes_l").scale(spikes);
