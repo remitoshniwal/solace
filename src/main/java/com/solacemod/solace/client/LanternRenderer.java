@@ -43,11 +43,10 @@ final class LanternRenderer {
         poseStack.translate(0, (FLOAT + Mth.sin(t * 0.04F) * 0.06F) * size, 0);
         poseStack.scale(size, size, size);
         poseStack.mulPose(Minecraft.getInstance().getEntityRenderDispatcher().cameraOrientation());
-        poseStack.mulPose(Axis.YP.rotationDegrees(180.0F)); // (as vanilla does for its billboards, so the faces point at the camera)
 
         // Smoke behind and round it (drawn normally, so it darkens what's behind).
         VertexConsumer smoke = buffer.getBuffer(RenderType.entityTranslucent(SMOKE));
-        int smokeColor = hollow ? 0xF0100406 : 0xB0000000;
+        int smokeColor = hollow ? 0xE0100406 : 0x90000000;
         spin(poseStack, smoke, hollow ? 2.2F : 1.6F, t * 0.25F, smokeColor, packedLight, -0.02F);
         spin(poseStack, smoke, hollow ? 1.9F : 1.3F, -t * 0.4F + 70, smokeColor, packedLight, -0.01F);
 

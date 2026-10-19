@@ -20,7 +20,7 @@ Sheet layout (x, y, width, height), shared with tools/models/build_solace.js:
 import math
 import random
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 OUT = Path(__file__).resolve().parent.parent / "src/main/resources/assets/solace/textures/entity"
 SS = 4  # draw 4x bigger, then shrink: soft, painterly edges
@@ -190,6 +190,17 @@ def cloak_sheet(w, h, rng, color, edge, holes=True):
     return shrink(img)
 
 
+def rim_glow(img, color, strength):
+    """A thin glowing line along the edges of a cut-out shape."""
+    a = img.split()[3].point(lambda v: 255 if v > 30 else 0)
+    edge = a.filter(ImageFilter.FIND_EDGES).filter(ImageFilter.GaussianBlur(0.6)).point(lambda v: min(255, v * strength // 100))
+    out = Image.new("RGBA", img.size, color + (0,))
+    mask = Image.new("L", img.size, 0)
+    ImageDraw.Draw(mask).rectangle([2, int(img.height * 0.4), img.width - 3, img.height], fill=255)  # only the torn hem, not the region's border
+    out.putalpha(Image.composite(edge, Image.new("L", img.size, 0), ImageChops.multiply(a, mask)))
+    return out
+
+
 def gradient_strip(w, h, base, tip, rng):
     """Spikes and claws: base colour at the top fading to the tip colour at the bottom, with faint ridges."""
     img = Image.new("RGBA", (w, h))
@@ -220,12 +231,18 @@ def sheet(negative, seed=7):
         main.alpha_composite(w_img, (64 + i * 32, 0))
         if w_glow:
             glow.alpha_composite(w_glow, (64 + i * 32, 0))
-    main.alpha_composite(cloak_sheet(128, 128, rng, robe, robe_edge), (0, 64))
+    cloak = cloak_sheet(128, 128, rng, robe, robe_edge)
+    main.alpha_composite(cloak, (0, 64))
+    if not negative:
+        glow.alpha_composite(rim_glow(cloak, (190, 200, 225), 150), (0, 64))  # the torn edges shine faintly in the dark
     if negative:
         main.paste(gradient_strip(32, 64, (235, 236, 240), (255, 255, 255), rng), (128, 64))   # spikes (unused)
         main.paste(gradient_strip(32, 64, (225, 226, 232), (255, 255, 255), rng), (160, 64))   # claws and bone
     else:
         main.paste(gradient_strip(32, 64, (14, 14, 17), (40, 40, 48), rng), (128, 64))         # spikes: black, edges catch a little light
+        tips = Image.new("RGBA", (32, 64), (0, 0, 0, 0))
+        ImageDraw.Draw(tips).rectangle([0, 48, 31, 63], fill=(170, 180, 205, 90))
+        glow.alpha_composite(tips.filter(ImageFilter.GaussianBlur(3)), (128, 64))       # and their tips glint
         main.paste(gradient_strip(32, 64, (20, 19, 23), (120, 116, 124), rng), (160, 64))     # claws: pale at the tips
     band = Image.new("RGBA", (64, 32), (12, 12, 16, 255) if negative else (22, 22, 26, 255))
     bd = ImageDraw.Draw(band)
@@ -309,9 +326,10 @@ def smoke(size, seed):
     rng = random.Random(seed)
     img = canvas(size, size)
     d = ImageDraw.Draw(img)
-    for _ in range(9):
-        cx, cy = rng.uniform(0.25, 0.75) * size, rng.uniform(0.25, 0.75) * size
-        r = rng.uniform(0.12, 0.3) * size
+    for _ in range(14):  # puffs in a loose ring round the middle, so the smoke never hides the light itself
+        ang, rad = rng.uniform(0, 2 * math.pi), rng.uniform(0.22, 0.34) * size
+        cx, cy = size / 2 + math.cos(ang) * rad, size / 2 + math.sin(ang) * rad
+        r = rng.uniform(0.08, 0.18) * size
         d.ellipse([(cx - r) * SS, (cy - r) * SS, (cx + r) * SS, (cy + r) * SS], fill=(8, 12, 16, rng.randint(60, 140)))
     return shrink(img.filter(ImageFilter.GaussianBlur(SS * 3)))
 
