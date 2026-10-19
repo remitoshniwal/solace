@@ -26,6 +26,7 @@ final class LanternRenderer {
 
     private final ModelPart mass;
     private final ModelPart core;
+    private final ModelPart coreGlow;
     private final ModelPart[][] tendrils;
     private final SolaceModel<SolaceEntity> figure;
 
@@ -33,6 +34,7 @@ final class LanternRenderer {
         ModelPart root = context.bakeLayer(SolaceModels.LANTERN);
         mass = root.getChild("mass");
         core = root.getChild("core");
+        coreGlow = root.getChild("core_glow");
         tendrils = new ModelPart[SolaceModels.TENDRILS.length][SolaceModels.SEGMENTS];
         for (int i = 0; i < tendrils.length; i++) {
             ModelPart seg = root.getChild("t" + i);
@@ -70,17 +72,20 @@ final class LanternRenderer {
         figure.renderEyes(poseStack, buffer.getBuffer(RenderType.eyes(FIGURE)), LightTexture.FULL_BRIGHT, overlay, -1);
         poseStack.popPose();
 
-        // The core glows at full brightness and breathes.
-        float beat = 1.0F + Mth.sin(t * (hollow ? 0.3F : 0.12F)) * 0.08F;
-        core.xScale = core.yScale = core.zScale = beat;
-        core.render(poseStack, buffer.getBuffer(RenderType.entityTranslucentEmissive(hollow ? CORE_HOLLOW : CORE)), LightTexture.FULL_BRIGHT, overlay);
-
-        // The mass and tendrils: glowing teal, or the Hollow's near-black.
+        // The mass and tendrils: see-through glowing teal, or the Hollow's near-black.
         var consumer = buffer.getBuffer(hollow ? RenderType.entityTranslucent(MASS_HOLLOW) : RenderType.entityTranslucentEmissive(MASS));
         int light = hollow ? packedLight : LightTexture.FULL_BRIGHT;
         mass.yScale = 1.0F + Mth.sin(t * 0.05F) * 0.03F;
         mass.render(poseStack, consumer, light, overlay);
         for (ModelPart[] tendril : tendrils) tendril[0].render(poseStack, consumer, light, overlay);
+
+        // The core, drawn last and added on top, so it shines through the mass. It breathes, with a soft glow around it.
+        float beat = 1.0F + Mth.sin(t * (hollow ? 0.3F : 0.12F)) * 0.08F;
+        core.xScale = core.yScale = core.zScale = beat;
+        ResourceLocation coreTex = hollow ? CORE_HOLLOW : CORE;
+        core.render(poseStack, buffer.getBuffer(RenderType.eyes(coreTex)), LightTexture.FULL_BRIGHT, overlay);
+        coreGlow.xScale = coreGlow.yScale = coreGlow.zScale = beat;
+        coreGlow.render(poseStack, buffer.getBuffer(RenderType.eyes(coreTex)), LightTexture.FULL_BRIGHT, overlay, SolaceRenderer.grey(0.22F));
         poseStack.popPose();
     }
 

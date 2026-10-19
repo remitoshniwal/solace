@@ -85,8 +85,8 @@ public final class SolaceModels {
 
         // Where the face should be: two eyes, floating in the empty collar. And the head that only exists in the negative.
         root.addOrReplaceChild("eyes", CubeListBuilder.create()
-                .texOffs(28, 37).addBox(-2.2F, -3.0F, -1.5F, 1, 1, 1, new CubeDeformation(grow - 0.15F))
-                .texOffs(28, 37).addBox(1.2F, -3.0F, -1.5F, 1, 1, 1, new CubeDeformation(grow - 0.15F)),
+                .texOffs(28, 37).addBox(-2.3F, -3.0F, -1.5F, 1, 1, 1, new CubeDeformation(grow * 1.6F - 0.05F))
+                .texOffs(28, 37).addBox(1.3F, -3.0F, -1.5F, 1, 1, 1, new CubeDeformation(grow * 1.6F - 0.05F)),
                 PartPose.offset(0.0F, -7.5F, 0.0F));
         root.addOrReplaceChild("head", CubeListBuilder.create().texOffs(0, 37).addBox(-3.5F, -8.0F, -3.5F, 7, 8, 7, g),
                 PartPose.offset(0.0F, -7.5F, 0.0F));
@@ -122,12 +122,18 @@ public final class SolaceModels {
     public static LayerDefinition createLantern() {
         MeshDefinition mesh = new MeshDefinition();
         PartDefinition root = mesh.getRoot();
+        // Layers of different sizes, widest in the middle, so it reads as a rounded mass rather than a box.
         root.addOrReplaceChild("mass", CubeListBuilder.create()
-                .texOffs(0, 0).addBox(-9, -24, -6, 18, 26, 12)     // body
-                .texOffs(0, 0).addBox(-6, -36, -6, 12, 12, 12)     // hood
-                .texOffs(0, 0).addBox(-7, -30, -5, 14, 8, 10),     // between the two, so it isn't boxy
+                .texOffs(0, 0).addBox(-6, -2, -4.5F, 12, 5, 9)      // the trailing bottom
+                .texOffs(0, 0).addBox(-8, -16, -6, 16, 14, 12)      // belly, widest
+                .texOffs(0, 0).addBox(-9.5F, -12, -4, 19, 6, 8)     // bulge at the sides
+                .texOffs(0, 0).addBox(-7, -26, -5, 14, 10, 10)      // chest
+                .texOffs(0, 0).addBox(-5, -34, -4.5F, 10, 8, 9)     // hood
+                .texOffs(0, 0).addBox(-3, -38, -3, 6, 4, 6),        // crown
                 PartPose.ZERO);
         root.addOrReplaceChild("core", CubeListBuilder.create().texOffs(0, 0).addBox(-4, -4, -4, 8, 8, 8), PartPose.offset(0, -14, 0));
+        root.addOrReplaceChild("core_glow", CubeListBuilder.create().texOffs(0, 0).addBox(-4, -4, -4, 8, 8, 8, new CubeDeformation(3.0F)),
+                PartPose.offset(0, -14, 0));
         for (int i = 0; i < TENDRILS.length; i++) {
             float[] t = TENDRILS[i];
             PartDefinition seg = root.addOrReplaceChild("t" + i, segment(0), PartPose.offsetAndRotation(t[0], t[1], t[2], t[3], 0, t[4]));

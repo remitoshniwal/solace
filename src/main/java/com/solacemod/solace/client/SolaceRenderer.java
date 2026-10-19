@@ -54,7 +54,7 @@ public class SolaceRenderer extends MobRenderer<SolaceEntity, SolaceModel<Solace
         auraModel = new SolaceModel<>(context.bakeLayer(SolaceModels.BODY_AURA));
         // Order matters: veins and eyes are drawn on the normal parts, then the negative parts are drawn last.
         addLayer(new Veins(this));
-        addLayer(new Eyes(this));
+        addLayer(new Eyes(this, auraModel));
         addLayer(new Negative(this, auraModel));
         lantern = new LanternRenderer(context);
     }
@@ -175,25 +175,26 @@ public class SolaceRenderer extends MobRenderer<SolaceEntity, SolaceModel<Solace
         float yaw = Mth.rotLerp(partialTick, e.yBodyRotO, e.yBodyRot) * ((float) Math.PI / 180F);
         double rx = -Mth.cos(yaw), rz = -Mth.sin(yaw);   // his right side
         double fx = -Mth.sin(yaw), fz = Mth.cos(yaw);     // in front of him
-        DustParticleOptions white = new DustParticleOptions(new Vector3f(0.95F, 0.97F, 1.0F), 0.7F);
+        DustParticleOptions white = new DustParticleOptions(new Vector3f(0.95F, 0.97F, 1.0F), 0.45F);
         for (int side : new int[]{1, -1}) {
             int part = side == 1 ? SolaceModel.RIGHT_ARM : SolaceModel.LEFT_ARM;
             if ((mask & part) == 0) continue;
             double hx = x + rx * 0.33 * side + fx * 0.08, hy = y + 0.55, hz = z + rz * 0.33 * side + fz * 0.08;
-            level.addParticle(white, hx + r.nextGaussian() * 0.05, hy + r.nextGaussian() * 0.05, hz + r.nextGaussian() * 0.05, 0, 0, 0);
-            if (r.nextInt(full ? 3 : 6) == 0) {
+            if (r.nextInt(2) == 0) level.addParticle(white, hx + r.nextGaussian() * 0.05, hy + r.nextGaussian() * 0.05, hz + r.nextGaussian() * 0.05, 0, 0, 0);
+            if (r.nextInt(full ? 5 : 9) == 0) {
                 level.addParticle(ParticleTypes.ELECTRIC_SPARK, hx, hy, hz, r.nextGaussian() * 0.08, r.nextGaussian() * 0.08, r.nextGaussian() * 0.08);
             }
         }
-        if ((mask & SolaceModel.HEAD) != 0 && r.nextInt(full ? 2 : 4) == 0) {
+        if ((mask & SolaceModel.HEAD) != 0 && r.nextInt(full ? 6 : 10) == 0) {
             level.addParticle(ParticleTypes.END_ROD, x + r.nextGaussian() * 0.15, y + 2.1, z + r.nextGaussian() * 0.15, 0, 0.015, 0);
         }
         if (full) {
-            for (int i = 0; i < 2; i++) {
-                level.addParticle(ParticleTypes.END_ROD, x + r.nextGaussian() * 0.3, y + 0.3 + r.nextDouble() * 1.7, z + r.nextGaussian() * 0.3,
-                        0, 0.02 + r.nextDouble() * 0.03, 0);
+            // A few specks of light rising off him, and a thin thread of dark smoke now and then. Subtle, not a firework.
+            if (r.nextInt(4) == 0) {
+                level.addParticle(ParticleTypes.END_ROD, x + r.nextGaussian() * 0.35, y + 0.3 + r.nextDouble() * 1.7, z + r.nextGaussian() * 0.35,
+                        0, 0.01 + r.nextDouble() * 0.02, 0);
             }
-            if (r.nextInt(4) == 0) level.addParticle(ParticleTypes.LARGE_SMOKE, x + r.nextGaussian() * 0.3, y + 0.4 + r.nextDouble(), z + r.nextGaussian() * 0.3, 0, 0.02, 0);
+            if (r.nextInt(8) == 0) level.addParticle(ParticleTypes.SMOKE, x + r.nextGaussian() * 0.25, y + 0.5 + r.nextDouble() * 1.2, z + r.nextGaussian() * 0.25, 0, 0.015, 0);
         }
     }
 
@@ -216,9 +217,11 @@ public class SolaceRenderer extends MobRenderer<SolaceEntity, SolaceModel<Solace
     /** His eyes glow, always: two points of light where a face should be. They blink now and then. */
     private static final class Eyes extends RenderLayer<SolaceEntity, SolaceModel<SolaceEntity>> {
         private static final RenderType GLOW = RenderType.eyes(NORMAL);
+        private final SolaceModel<SolaceEntity> halo;
 
-        Eyes(RenderLayerParent<SolaceEntity, SolaceModel<SolaceEntity>> parent) {
+        Eyes(RenderLayerParent<SolaceEntity, SolaceModel<SolaceEntity>> parent, SolaceModel<SolaceEntity> halo) {
             super(parent);
+            this.halo = halo;
         }
 
         @Override
@@ -228,7 +231,11 @@ public class SolaceRenderer extends MobRenderer<SolaceEntity, SolaceModel<Solace
             if (!model.eyes.visible || entity.isInvisible()) return;
             int blink = Math.floorMod((int) (ageInTicks / 4) * 2654435 + entity.getId(), 41);
             if (blink == 0) return;
-            model.renderEyes(poseStack, buffer.getBuffer(GLOW), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, grey(neon(ageInTicks, entity.getId() + 7)));
+            float level = neon(ageInTicks, entity.getId() + 7);
+            model.renderEyes(poseStack, buffer.getBuffer(GLOW), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, grey(level));
+            // A soft glow around each eye: the same eyes, bigger and dimmer, added on top.
+            halo.copyPose(model);
+            halo.renderEyes(poseStack, buffer.getBuffer(GLOW), LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, grey(level * 0.35F));
         }
     }
 

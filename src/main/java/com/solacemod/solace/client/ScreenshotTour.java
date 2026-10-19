@@ -95,7 +95,7 @@ public final class ScreenshotTour {
         list.add(new Stop(List.of("tp " + me + " 3.2 -60 2.0 60 8"), 20, "3_normal_side_night.png"));
         list.add(new Stop(List.of("tp " + me + " 0.5 -60 0.5 0 8", "solace admin negative " + me), 30, "4_negative_night.png"));
         list.add(new Stop(List.of("time set noon"), 20, "5_negative_day.png"));
-        list.add(new Stop(List.of("solace admin chapter " + me + " 7", "time set midnight"), 40, null));
+        list.add(new Stop(List.of("solace admin chapter " + me + " 7", "time set midnight"), 220, null)); // let the negative wear off
         list.add(new Stop(List.of("tp " + solace + " 0.5 -60 4.0 180 0", "tp " + me + " 0.5 -60 1.5 0 15"), 30, "6_veins_closeup_night.png"));
         list.add(new Stop(List.of("tp " + me + " 0.5 -60 -6.5 0 -12", "solace admin lantern " + me), 40, "7_lantern_night.png"));
         list.add(new Stop(List.of("time set noon"), 20, "8_lantern_day.png"));

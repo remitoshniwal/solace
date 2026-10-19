@@ -395,7 +395,7 @@ if __name__ == "__main__":
     aura("solace_aura.png")
     figure("watcher.png", skin=(200, 204, 210), hair=(150, 140, 130), cloak=(185, 190, 198), pants=(165, 170, 178), eyes=(0, 0, 0),
            slim=True, alpha=150, seed=4)
-    lantern("lantern.png", mass=(46, 196, 190), edge=(150, 255, 245), alpha=120)
+    lantern("lantern.png", mass=(46, 196, 190), edge=(150, 255, 245), alpha=85)
     lantern("lantern_hollow.png", mass=(14, 18, 22), edge=(70, 10, 14), alpha=200, seed=8)
     core("lantern_core.png", inner=(235, 255, 250), outer=(120, 255, 235))
     core("lantern_core_hollow.png", inner=(255, 90, 70), outer=(200, 10, 10), seed=9)
