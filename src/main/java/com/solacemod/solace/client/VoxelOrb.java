@@ -40,6 +40,7 @@ final class VoxelOrb {
         double ang = 2 * Math.PI * frame / FRAMES;
         double ox = Math.cos(ang) * 1.6, oz = Math.sin(ang) * 1.6;
         int[][][] level = new int[N][N][N]; // -1 empty, 0 hottest .. 4 skin
+        boolean[][][] arc = new boolean[N][N][N];
         float c = (N - 1) / 2F, radius = N / 2F - 0.6F;
         for (int x = 0; x < N; x++) for (int y = 0; y < N; y++) for (int z = 0; z < N; z++) {
             float dx = x - c, dy = y - c, dz = z - c;
@@ -68,6 +69,7 @@ final class VoxelOrb {
                 vz += rnd.nextGaussian() * 0.6;
                 int ix = (int) Math.round(px), iy = (int) Math.round(py), iz = (int) Math.round(pz);
                 if (ix < 0 || iy < 0 || iz < 0 || ix >= N || iy >= N || iz >= N) break;
+                if (level[ix][iy][iz] < 0) arc[ix][iy][iz] = true;
                 level[ix][iy][iz] = Math.min(level[ix][iy][iz] < 0 ? 9 : level[ix][iy][iz], 1);
             }
         }
@@ -87,7 +89,7 @@ final class VoxelOrb {
                 Face face = face(x - c, y - c, z - c, d, palette[Math.min(lv, 4)] & 0xFFFFFF | alpha);
                 if (solid) core.add(face);
                 else shell.add(face);
-                if (nl < 0) outer.add(face);
+                if (nl < 0 && !arc[x][y][z]) outer.add(face); // (the thin lightning arcs get no outline)
             }
         }
         return new Frame(core, shell, outline(outer, outlineColor));
