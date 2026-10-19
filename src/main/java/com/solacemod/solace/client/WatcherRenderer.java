@@ -13,42 +13,36 @@ import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nullable;
 
-/** Draws the Watcher: a faded, see-through, player-shaped figure. */
+/** Draws the Watcher: a faded, see-through, player-shaped figure. Or, for "two places", a solid copy of Solace. */
 public class WatcherRenderer extends MobRenderer<WatcherEntity, EntityModel<WatcherEntity>> {
     private static final ResourceLocation TEXTURE = Solace.id("textures/entity/watcher.png");
-    private static final ResourceLocation SOLACE = Solace.id("textures/entity/solace.png");
-    private final EntityModel<WatcherEntity> slim;
-    /** The "two places" copy of Solace uses his body, glowing eyes and all. */
-    private final SolaceModel<WatcherEntity> suited;
+    /** The "two places" copy of Solace uses its body, glowing eyes and all. */
+    private final com.solacemod.solace.client.mesh.Figure copy = new com.solacemod.solace.client.mesh.Figure(0);
 
     public WatcherRenderer(EntityRendererProvider.Context context) {
         super(context, new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER_SLIM), true), 0.0F);
-        slim = getModel();
-        suited = new SolaceModel<>(context.bakeLayer(SolaceModels.BODY));
-        addLayer(new net.minecraft.client.renderer.entity.layers.RenderLayer<>(this) {
-            @Override
-            public void render(PoseStack pose, net.minecraft.client.renderer.MultiBufferSource buffer, int light, WatcherEntity entity,
-                               float limbSwing, float limbSwingAmount, float partialTick, float age, float yaw, float pitch) {
-                if (entity.isMimic()) suited.renderEyes(pose, buffer.getBuffer(RenderType.eyes(SOLACE)), 0xF000F0,
-                        net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, -1);
-            }
-        });
     }
 
-    /** A mimic is drawn as a solid copy of Solace, hovering like it does. */
     @Override
     public void render(WatcherEntity entity, float entityYaw, float partialTick, PoseStack poseStack,
                        net.minecraft.client.renderer.MultiBufferSource buffer, int packedLight) {
-        model = entity.isMimic() ? suited : slim;
+        if (!entity.isMimic()) {
+            super.render(entity, entityYaw, partialTick, poseStack, buffer, packedLight);
+            return;
+        }
+        float t = entity.tickCount + partialTick;
+        float bodyYaw = net.minecraft.util.Mth.rotLerp(partialTick, entity.yBodyRotO, entity.yBodyRot);
+        copy.pose(0, 0, t, 0, 0, 0, entity.getId());
         poseStack.pushPose();
-        if (entity.isMimic()) poseStack.translate(0.0, 0.12 + Math.sin((entity.tickCount + partialTick) * 0.06) * 0.06, 0.0);
-        super.render(entity, entityYaw, partialTick, poseStack, buffer, packedLight);
+        poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(-bodyYaw));
+        poseStack.translate(0.0, 0.12 + Math.sin(t * 0.06) * 0.06, 0.0);
+        FigureRenderer.draw(copy, poseStack, buffer, packedLight, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, 0, 0, 1.0F, false, t);
         poseStack.popPose();
     }
 
     @Override
     public ResourceLocation getTextureLocation(WatcherEntity entity) {
-        return entity.isMimic() ? SOLACE : TEXTURE;
+        return TEXTURE;
     }
 
     @Override
@@ -59,7 +53,7 @@ public class WatcherRenderer extends MobRenderer<WatcherEntity, EntityModel<Watc
     @Nullable
     @Override
     protected RenderType getRenderType(WatcherEntity entity, boolean bodyVisible, boolean translucent, boolean glowing) {
-        return entity.isMimic() ? RenderType.entityCutoutNoCull(SOLACE) : RenderType.entityTranslucent(getTextureLocation(entity));
+        return RenderType.entityTranslucent(getTextureLocation(entity));
     }
 
     @Override

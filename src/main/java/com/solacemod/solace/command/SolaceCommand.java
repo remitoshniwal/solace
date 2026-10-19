@@ -60,6 +60,28 @@ public final class SolaceCommand {
                             if (err != null) ctx.getSource().sendFailure(Component.literal(err));
                             return err == null ? 1 : 0;
                         })))
+                .then(Commands.literal("join").executes(ctx -> {
+                    ServerPlayer p = ctx.getSource().getPlayerOrException();
+                    PlayerStory s = story(ctx, p);
+                    if (!"opt_in".equals(com.solacemod.solace.config.SolaceConfig.WHO_GETS_SOLACE.get())) {
+                        return msg(ctx, "Everyone gets a Solace on this server. " + (s.met ? "Yours is already here." : "Yours will find you soon."));
+                    }
+                    if (s.joined) return msg(ctx, "You already joined. " + (s.met ? "Solace is with you." : "It will find you soon."));
+                    s.joined = true;
+                    return msg(ctx, "You joined. In about 30 seconds, something will find you.");
+                }))
+                .then(Commands.literal("leave")
+                        .executes(ctx -> msg(ctx, "This sends your Solace away (your story is kept, /solace join brings it back). Type /solace leave confirm"))
+                        .then(Commands.literal("confirm").executes(ctx -> {
+                            ServerPlayer p = ctx.getSource().getPlayerOrException();
+                            if (!"opt_in".equals(com.solacemod.solace.config.SolaceConfig.WHO_GETS_SOLACE.get())) {
+                                return fail(ctx, "On this server everyone has a Solace. The server owner can change that in Solace setup.");
+                            }
+                            PlayerStory s = story(ctx, p);
+                            s.joined = false;
+                            SolaceManager.remove(ctx.getSource().getServer(), s);
+                            return msg(ctx, "Solace is gone. For now.");
+                        })))
                 .then(Commands.literal("forget")
                         .executes(ctx -> msg(ctx, "This makes Solace forget everything it knows about you, in every world. Type /solace forget confirm"))
                         .then(Commands.literal("confirm").executes(SolaceCommand::forget)))
@@ -173,6 +195,7 @@ public final class SolaceCommand {
                 "  /solace test            test your AI provider settings",
                 "  /solace forget          make Solace forget you (memory wipe)",
                 "  /solace reset           restart the story in this world",
+                "  /solace join / leave    multiplayer: get (or send away) your own Solace, if the server asks you to opt in",
                 "Try asking: \"follow me\", \"mine 10 iron\", \"build a shelter\", \"craft a stone pickaxe\", \"guard me\", \"give me your cobblestone\""
         };
         for (String l : lines) ctx.getSource().sendSuccess(() -> Component.literal(l).withStyle(ChatFormatting.GRAY), false);

@@ -142,6 +142,7 @@ public final class StoryDirector {
         MinecraftServer server = player.getServer();
         if (server == null) return;
         long now = server.getTickCount();
+        if (!story.wantsSolace()) return; // opt-in server, and this player hasn't joined
         if (!story.met) {
             long since = ONLINE_SINCE.computeIfAbsent(player.getUUID(), k -> now);
             if (now - since >= 20 * 30 && !player.isSpectator() && player.isAlive()) meet(player, story);

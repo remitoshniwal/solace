@@ -97,6 +97,8 @@ public final class PlayerStory {
     public int deaths;
     public int timesHurtSolace;
     public int giftsGiven;
+    /** Opted in with /solace join (only matters when the server is set to "opt_in"). */
+    public boolean joined;
     public long lastHurtCommentTick;
 
     // Solace's body (backup so it survives chunk unloading / dimension changes)
@@ -138,7 +140,12 @@ public final class PlayerStory {
 
     /** True while Solace should exist in the world for this player. */
     public boolean solaceShouldExist() {
-        return met && ending != Ending.RELEASE && ending != Ending.ERASE;
+        return met && ending != Ending.RELEASE && ending != Ending.ERASE && wantsSolace();
+    }
+
+    /** False on an "opt_in" server for players who haven't typed /solace join. */
+    public boolean wantsSolace() {
+        return joined || !"opt_in".equals(com.solacemod.solace.config.SolaceConfig.WHO_GETS_SOLACE.get());
     }
 
     public void addEvent(String event) {
@@ -200,6 +207,7 @@ public final class PlayerStory {
         t.putInt("Deaths", deaths);
         t.putInt("HurtSolace", timesHurtSolace);
         t.putInt("Gifts", giftsGiven);
+        t.putBoolean("Joined", joined);
         t.put("Inventory", inventoryBackup);
         t.putString("Mode", mode);
         t.putBoolean("Guard", guard);
@@ -254,6 +262,7 @@ public final class PlayerStory {
         s.deaths = t.getInt("Deaths");
         s.timesHurtSolace = t.getInt("HurtSolace");
         s.giftsGiven = t.getInt("Gifts");
+        s.joined = t.getBoolean("Joined");
         s.inventoryBackup = t.getList("Inventory", Tag.TAG_COMPOUND);
         s.mode = t.contains("Mode") ? t.getString("Mode") : "FOLLOW";
         s.guard = t.getBoolean("Guard");

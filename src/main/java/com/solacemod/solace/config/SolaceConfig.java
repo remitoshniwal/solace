@@ -51,6 +51,7 @@ public final class SolaceConfig {
     // Story
     public static final ModConfigSpec.BooleanValue STORY_ENABLED;
     public static final ModConfigSpec.DoubleValue STORY_SPEED;
+    public static final ModConfigSpec.ConfigValue<String> WHO_GETS_SOLACE;
 
     // Horror
     public static final ModConfigSpec.DoubleValue HORROR_INTENSITY;
@@ -149,6 +150,9 @@ public final class SolaceConfig {
                 .define("storyEnabled", true);
         STORY_SPEED = b.comment("Story pace. 1.0 = about 3 hours of play to reach the ending. 2.0 = twice as fast.")
                 .defineInRange("storySpeed", 1.0, 0.1, 20.0);
+        WHO_GETS_SOLACE = b.comment("Multiplayer: who gets their own Solace.",
+                        "everyone = every player. opt_in = only players who type /solace join (saves AI requests on busy servers).")
+                .defineInList("whoGetsSolace", "everyone", java.util.Arrays.asList("everyone", "opt_in"));
         b.pop();
 
         b.push("horror");

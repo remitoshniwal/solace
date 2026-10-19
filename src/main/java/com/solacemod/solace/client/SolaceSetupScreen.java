@@ -105,6 +105,7 @@ public final class SolaceSetupScreen extends Screen {
     private String listenMode;
     private boolean ambient;
     private boolean crossWorld;
+    private String whoGets;
 
     private Component status = Component.empty();
     private boolean testing;
@@ -170,6 +171,7 @@ public final class SolaceSetupScreen extends Screen {
         listenMode = SolaceConfig.LISTEN_MODE.get();
         ambient = SolaceConfig.AMBIENT_CHATTER.get();
         crossWorld = SolaceConfig.CROSS_WORLD_MEMORY.get();
+        whoGets = SolaceConfig.WHO_GETS_SOLACE.get();
     }
 
     private void save() {
@@ -201,6 +203,7 @@ public final class SolaceSetupScreen extends Screen {
         SolaceConfig.LISTEN_MODE.set(listenMode);
         SolaceConfig.AMBIENT_CHATTER.set(ambient);
         SolaceConfig.CROSS_WORLD_MEMORY.set(crossWorld);
+        SolaceConfig.WHO_GETS_SOLACE.set(whoGets);
         SolaceConfig.SPEC.save();
 
         ClientConfig.VOICE_INPUT.set(voiceIn);
@@ -557,7 +560,13 @@ public final class SolaceSetupScreen extends Screen {
         addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "Across all worlds" : "Only in this world"))
                 .withValues(List.of(true, false)).withInitialValue(crossWorld).displayOnlyValue()
                 .create(controlX(), rowY(5), controlWidth(), 20, Component.literal("Memory"), (b, v) -> crossWorld = v));
-        note(rowY(6) + 2, Component.literal("Give Solace items by right-clicking it while holding them."));
+        label(6, "Who gets one");
+        addRenderableWidget(CycleButton.<String>builder(v -> Component.literal(v.equals("opt_in") ? "Only players who type /solace join" : "Every player"))
+                .withValues(List.of("everyone", "opt_in")).withInitialValue(whoGets).displayOnlyValue()
+                .withTooltip(v -> Tooltip.create(Component.literal("Multiplayer: each player gets their own Solace. On a busy server, "
+                        + "letting players opt in saves AI requests (the server owner pays for all of them).")))
+                .create(controlX(), rowY(6), controlWidth(), 20, Component.literal("Who gets one"), (b, v) -> whoGets = v));
+        note(rowY(7) + 2, Component.literal("Give Solace items by right-clicking it while holding them."));
     }
 
     // ---------- Widgets ----------
