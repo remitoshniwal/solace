@@ -150,6 +150,7 @@ public final class PlayerStory {
 
     public void addEvent(String event) {
         recentEvents.add(event);
+        PlaytestLog.log(this, null, "EVENT", event);
         while (recentEvents.size() > 10) recentEvents.remove(0);
     }
 

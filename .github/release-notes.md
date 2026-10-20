@@ -8,6 +8,10 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### New in 1.6.2
+- **Playtest tools.** `/solace note <text>` saves a note about the moment you're in. `/solace admin playtest on` writes a timeline of the whole story (chapters, pages, scares, what Solace said) to `solace/playtest/` in your Minecraft folder. How to run a playtest: [docs/PLAYTEST.md](https://github.com/remitoshniwal/solace/blob/main/docs/PLAYTEST.md).
+- **Fixed:** a story speed of 3 no longer turns into 2 when you save the setup screen.
+
 ### New in 1.6.1
 - **A whole new look, made in Blockbench.** Solace is now headless and eyeless: a laced collar stands round an empty hollow where its head should be.
   - **Normal form:** a gaunt shadow in dark grey armour, with black spikes on its shoulders, a short ragged robe, long arms and clawed hands, and a thin white outline. Its spikes grow as the story goes on.

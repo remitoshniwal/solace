@@ -180,6 +180,7 @@ public final class HorrorDirector {
     }
 
     private static void run(ServerPlayer player, PlayerStory story, Kind kind) {
+        com.solacemod.solace.story.PlaytestLog.log(story, player, "SCARE", kind.name().toLowerCase(java.util.Locale.ROOT));
         ServerLevel level = player.serverLevel();
         switch (kind) {
             case FOOTSTEPS -> footsteps(player);

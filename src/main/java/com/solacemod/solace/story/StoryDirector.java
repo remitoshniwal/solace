@@ -89,6 +89,7 @@ public final class StoryDirector {
         story.lastInteractionTick = server.getTickCount();
         story.lastAmbientTick = server.getTickCount();
         story.playerName = player.getGameProfile().getName();
+        PlaytestLog.log(story, player, "JOIN", "logged in");
         if (story.bossActive) {
             // The game was closed during the boss fight. Ask again later.
             story.bossActive = false;
@@ -119,6 +120,7 @@ public final class StoryDirector {
 
     public static void onLogout(ServerPlayer player, PlayerStory story) {
         ONLINE_SINCE.remove(player.getUUID());
+        PlaytestLog.log(story, player, "LEAVE", "logged out");
         story.lastLogoutMs = System.currentTimeMillis();
         MinecraftServer server = player.getServer();
         if (server == null) return;
@@ -172,7 +174,10 @@ public final class StoryDirector {
                 if (beat.chapter() == story.chapter && m >= beat.minute() && !story.beatsDone.contains(beat.id())) {
                     LAST_BEAT.put(player.getUUID(), now);
                     // A scene can wait for the right moment (returns false): then it's tried again later.
-                    if (runBeat(player, story, beat.id())) story.beatsDone.add(beat.id());
+                    if (runBeat(player, story, beat.id())) {
+                        story.beatsDone.add(beat.id());
+                        PlaytestLog.log(story, player, "SCENE", beat.id());
+                    }
                     StoryData.get(server).setDirty();
                     break;
                 }
@@ -286,6 +291,7 @@ public final class StoryDirector {
         story.chapter = 1;
         story.chapterStartMin = minutes(story);
         story.playerName = player.getGameProfile().getName();
+        PlaytestLog.log(story, player, "MEET", "Solace appeared");
         GlobalMemory.Entry g = GlobalMemory.get(player.getUUID());
         g.worldsMet++;
         g.name = story.playerName;
@@ -304,6 +310,8 @@ public final class StoryDirector {
     }
 
     private static void startChapter(ServerPlayer player, PlayerStory story, int chapter) {
+        PlaytestLog.log(story, player, "CHAPTER", String.format(java.util.Locale.ROOT, "chapter %d is over after %.1f real minutes, starting chapter %d",
+                story.chapter, inChapter(story) / SolaceConfig.STORY_SPEED.get(), chapter));
         story.chapter = chapter;
         story.chapterStartMin = minutes(story);
         story.addEvent("the story moved on to chapter " + chapter);
@@ -464,6 +472,7 @@ public final class StoryDirector {
         solace.showLantern(20 * 60, true);
         ServerLevel level = player.serverLevel();
         boolean frozen = com.solacemod.solace.horror.WorldFreeze.freeze(server);
+        if (!frozen) PlaytestLog.log(story, player, "SCENE", "the world freeze was skipped (more than one player online, or the game was already frozen)");
         story.addEvent("you showed the player your true shape and confessed that you kept Maren" + (frozen ? " (the whole world stood still)" : ""));
         Sounds.playFor(player, player.position(), Sounds.get("block.beacon.ambient"), 1.0F, 0.5F);
         for (int i = 0; i < 4; i++) Scheduler.later(30 + i * 40, () -> Sounds.playFor(player, player.position(), Sounds.get("entity.warden.heartbeat"), 1.0F, 0.6F));
@@ -489,6 +498,7 @@ public final class StoryDirector {
     public static void deliverFragment(ServerPlayer player, PlayerStory story, int index, Delivery how) {
         story.fragmentDeliveredAt.put(index, player.serverLevel().getGameTime());
         story.fragmentsDelivered.add(index);
+        PlaytestLog.log(story, player, "PAGE", "page " + (index + 1) + " delivered (" + how.name().toLowerCase(java.util.Locale.ROOT) + ")");
         switch (how) {
             case GROUND -> {
                 Fragments.dropAt(player.serverLevel(), player.position().add(player.getLookAngle().multiply(-2, 0, -2)), index);
@@ -517,6 +527,7 @@ public final class StoryDirector {
             if (story.fragmentsFound.contains(idx)) continue;
             if (gameTime - e.getValue() > 20 * 60 * 4) {
                 e.setValue(gameTime);
+                PlaytestLog.log(story, player, "PAGE", "page " + (idx + 1) + " was never picked up, so it was slipped into the pocket");
                 pocket(player, idx);
                 StoryData.get(server).setDirty();
                 return;
@@ -548,6 +559,7 @@ public final class StoryDirector {
         MinecraftServer server = player.getServer();
         if (server == null) return;
         boolean again = story.choicePending;
+        PlaytestLog.log(story, player, "QUESTION", again ? "asked again (no answer yet)" : "Solace asks its question");
         story.choicePending = true;
         story.lastChoicePromptTick = server.getTickCount();
         SolaceEntity solace = SolaceManager.find(server, story);
@@ -773,6 +785,7 @@ public final class StoryDirector {
 
     private static void finishEnding(ServerPlayer player, PlayerStory story, Ending ending, String description) {
         if (player.isRemoved()) return;
+        PlaytestLog.log(story, player, "ENDING", ending.name());
         GlobalMemory.recordEnding(player.getUUID(), ending);
         long found = GlobalMemory.distinctEndings(player.getUUID());
         Titles.show(player, Component.literal("ENDING: " + ending.name()).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD),
@@ -789,6 +802,7 @@ public final class StoryDirector {
     /** Jumps a player to the start of a chapter (for testing). Earlier pages count as found, earlier scenes as done. */
     public static void setChapter(ServerPlayer player, PlayerStory story, int chapter) {
         int ch = Math.max(1, Math.min(8, chapter));
+        PlaytestLog.log(story, player, "ADMIN", "jumped to chapter " + ch + " with /solace admin (times in the next line don't count)");
         story.playTicks = (long) (DEFAULT_START[ch] / SolaceConfig.STORY_SPEED.get() * 1200);
         story.choicePending = false;
         for (int i = 0; i < PAGES_TO_LEAVE[ch - 1]; i++) {

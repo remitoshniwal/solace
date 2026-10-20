@@ -22,6 +22,10 @@ neoForge {
             if (System.getenv('SOLACE_SCREENSHOTS') != null) {
                 systemProperty 'solace.screenshots', 'true'
             }
+            // SOLACE_TOUR=playtest tries the playtest tools in a fresh world and quits.
+            if (System.getenv('SOLACE_TOUR') != null) {
+                systemProperty 'solace.tour', System.getenv('SOLACE_TOUR')
+            }
         }
         server {
             server()

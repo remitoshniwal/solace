@@ -4,7 +4,7 @@
 
 Minecraft **1.21.1**, **NeoForge**. Works in singleplayer and on servers.
 
-Solace shows up about 30 seconds after you join a world. It's a quiet, pale figure that follows you, talks to you, cheers you on in fights (and now and then ends one with a single hit), mines, builds and crafts. It's sweet at first. Then you start finding torn journal pages from a player named Maren, and you see someone standing far away who vanishes when you look straight at them...
+Solace shows up about 30 seconds after you join a world. It's a tall, headless figure in dark armour that follows you, talks to you, cheers you on in fights (and now and then ends one with a single hit), mines, builds and crafts. It's sweet at first. Then you start finding torn journal pages from a player named Maren, and you see someone standing far away who vanishes when you look straight at them...
 
 ## What it can do
 
@@ -85,9 +85,10 @@ Open setup and go to the **Voice** page:
 | `/solace pockets` | Open Solace's inventory (or right-click it with an empty hand) |
 | `/solace status` | Story progress, trust, and how each AI brain is doing |
 | `/solace test` | Test each AI brain |
+| `/solace note <text>` | Playtesting: save a note about this moment (see [docs/PLAYTEST.md](docs/PLAYTEST.md)) |
 | `/solace forget confirm` | Wipe Solace's memory of you (all worlds) |
 | `/solace reset confirm` | Restart the story in this world |
-| `/solace admin ...` | Server operators, for testing: `chapter`, `trust`, `bond`, `fragment`, `horror`, `presence`, `lantern`, `question` (see [docs/STORY.md](docs/STORY.md)) |
+| `/solace admin ...` | Server operators, for testing: `chapter`, `trust`, `bond`, `fragment`, `horror`, `presence`, `lantern`, `question`, `playtest on/off` (see [docs/STORY.md](docs/STORY.md)) |
 
 **Tip:** give Solace items by right-clicking it while holding them, or just throw them to it (Q). It doesn't need tools to mine (a pickaxe only makes it faster). Ask it for something it doesn't have and it makes it with its power, if it's strong enough. It needs blocks to build and coal + sticks to make torches.
 
@@ -111,7 +112,8 @@ The mod ends up in `build/libs/`. Other useful commands:
 
 - `./gradlew runClient` starts Minecraft with the mod for testing
 - `./gradlew aiTest` runs the AI self-tests (no Minecraft, no API key, no cost)
-- `python3 tools/make_textures.py` regenerates the textures (or edit the PNGs in `src/main/resources/assets/solace/textures/entity/`, they use the normal player-skin layout)
+- `python3 tools/shade_textures.py` repaints Solace's textures; `python3 tools/make_textures.py` the Watcher's and the logo
+- Solace's model is `src/main/resources/assets/solace/models/entity/solace.bbmodel` (open it in Blockbench)
 
 Pushing to GitHub builds and tests the mod automatically (see `.github/workflows/build.yml`). To publish a new version: change `mod_version` in `gradle.properties`, and push to `main`. After the tests pass, a new Release (like `v1.0.1`) with the jar appears on the Releases page automatically.
 

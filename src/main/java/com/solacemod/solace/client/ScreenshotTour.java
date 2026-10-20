@@ -25,10 +25,12 @@ import java.util.List;
  * Test-only "photo tour", used by the automatic build to take real screenshots of Solace's forms.
  * Only runs when the game is started with -Dsolace.screenshots=true (players never see it):
  * it makes a flat creative world, waits for Solace to appear, poses it, takes pictures, and quits.
+ * With -Dsolace.tour=playtest it runs the playtest commands instead (/solace note, the playtest log) and takes one picture at the end.
  */
 @EventBusSubscriber(modid = Solace.MODID, value = Dist.CLIENT)
 public final class ScreenshotTour {
-    private static final boolean ENABLED = Boolean.getBoolean("solace.screenshots");
+    private static final boolean PLAYTEST = "playtest".equals(System.getProperty("solace.tour"));
+    private static final boolean ENABLED = Boolean.getBoolean("solace.screenshots") || PLAYTEST;
     private static boolean worldRequested;
     private static int ticks;
     private static int step;
@@ -56,11 +58,11 @@ public final class ScreenshotTour {
         }
         MinecraftServer server = mc.getSingleplayerServer();
         if (server == null) return;
-        mc.options.hideGui = true;
+        mc.options.hideGui = !PLAYTEST;
         ticks++;
         // Solace appears 30 seconds after the player joins.
         if (ticks < 20 * 36) return;
-        if (stops == null) stops = plan(mc.player.getGameProfile().getName());
+        if (stops == null) stops = PLAYTEST ? playtestPlan(mc.player.getGameProfile().getName()) : plan(mc.player.getGameProfile().getName());
         if (wait > 0) {
             wait--;
             return;
@@ -100,6 +102,22 @@ public final class ScreenshotTour {
         list.add(new Stop(List.of("tp " + me + " 0.5 -60 1.3 0 14", "solace admin lantern " + me), 40, "7_lantern_night.png"));
         list.add(new Stop(List.of("gamerule doDaylightCycle false"), 25, "8_lantern_night_later.png")); // a moment later: the blobs have moved
         list.add(new Stop(List.of("time set noon"), 20, "9_lantern_day.png"));
+        return list;
+    }
+
+    /** Tries every playtest tool once. Check run/solace/playtest/ afterwards. */
+    private static List<Stop> playtestPlan(String me) {
+        String asMe = "execute as " + me + " run ";
+        List<Stop> list = new ArrayList<>();
+        list.add(new Stop(List.of(asMe + "solace note a note before the log is on"), 20, null));
+        list.add(new Stop(List.of("solace admin playtest on"), 20, null));
+        list.add(new Stop(List.of("solace admin chapter " + me + " 3"), 60, null));
+        list.add(new Stop(List.of("solace admin horror " + me + " footsteps"), 40, null));
+        list.add(new Stop(List.of(asMe + "solace say hello, can you hear me?"), 60, null));
+        list.add(new Stop(List.of("solace admin fragment " + me + " 2"), 20 * 40, null)); // time for chapter 3's first scenes
+        list.add(new Stop(List.of(asMe + "solace note found page two, testing"), 20, null));
+        list.add(new Stop(List.of("solace admin playtest off"), 20, null));
+        list.add(new Stop(List.of("solace admin horror " + me + " footsteps", asMe + "solace note a note after the log is off"), 30, "playtest_end.png"));
         return list;
     }
 

@@ -56,7 +56,7 @@ public final class SolaceSetupScreen extends Screen {
         PROVIDER_NOTES.put("custom", "Any OpenAI-compatible server. Fill in Server URL and Model.");
     }
 
-    private static final List<Double> SPEEDS = List.of(0.5, 1.0, 2.0, 5.0, 10.0);
+    private static final List<Double> SPEEDS = List.of(0.5, 1.0, 2.0, 3.0, 5.0, 10.0);
     private static final List<Double> INTENSITIES = List.of(0.0, 0.5, 1.0, 2.0, 3.0);
     private static final List<Integer> DAILY_LIMITS = List.of(50, 100, 200, 400, 1000, 3000, 0);
 

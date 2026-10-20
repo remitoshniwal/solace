@@ -13,6 +13,7 @@ import com.solacemod.solace.story.AiService;
 import com.solacemod.solace.story.Fragments;
 import com.solacemod.solace.story.GlobalMemory;
 import com.solacemod.solace.story.PlayerStory;
+import com.solacemod.solace.story.PlaytestLog;
 import com.solacemod.solace.story.SolaceBrain;
 import com.solacemod.solace.story.SolaceManager;
 import com.solacemod.solace.story.StoryData;
@@ -46,6 +47,7 @@ public final class SolaceCommand {
                             new com.solacemod.solace.network.ModNetwork.OpenSetupPayload(false));
                     return 1;
                 }))
+                .then(Commands.literal("note").then(Commands.argument("text", StringArgumentType.greedyString()).executes(SolaceCommand::note)))
                 .then(Commands.literal("come").executes(SolaceCommand::come))
                 .then(Commands.literal("status").executes(SolaceCommand::status))
                 .then(Commands.literal("pockets").executes(SolaceCommand::pockets))
@@ -89,6 +91,9 @@ public final class SolaceCommand {
                         .executes(ctx -> msg(ctx, "This restarts your Solace story in this world from the beginning. Type /solace reset confirm"))
                         .then(Commands.literal("confirm").executes(SolaceCommand::reset)))
                 .then(Commands.literal("admin").requires(src -> src.hasPermission(2))
+                        .then(Commands.literal("playtest")
+                                .then(Commands.literal("on").executes(ctx -> playtest(ctx, true)))
+                                .then(Commands.literal("off").executes(ctx -> playtest(ctx, false))))
                         .then(Commands.literal("chapter").then(Commands.argument("player", EntityArgument.player())
                                 .then(Commands.argument("chapter", IntegerArgumentType.integer(1, 8)).executes(ctx -> {
                                     ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
@@ -192,6 +197,7 @@ public final class SolaceCommand {
                 "  /solace come            call Solace to you",
                 "  /solace pockets         open Solace's inventory (or right-click it with an empty hand)",
                 "  /solace status          story progress and AI connection",
+                "  /solace note <text>     playtesting: save a note about this moment (see docs/PLAYTEST.md)",
                 "  /solace test            test your AI provider settings",
                 "  /solace forget          make Solace forget you (memory wipe)",
                 "  /solace reset           restart the story in this world",
@@ -200,6 +206,23 @@ public final class SolaceCommand {
         };
         for (String l : lines) ctx.getSource().sendSuccess(() -> Component.literal(l).withStyle(ChatFormatting.GRAY), false);
         return 1;
+    }
+
+    private static int note(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        java.nio.file.Path f = PlaytestLog.note(story(ctx, player), player, StringArgumentType.getString(ctx, "text"));
+        if (f == null) return fail(ctx, "Couldn't save the note.");
+        ctx.getSource().sendSuccess(() -> Component.literal("Noted.").withStyle(ChatFormatting.GRAY), false);
+        return 1;
+    }
+
+    private static int playtest(CommandContext<CommandSourceStack> ctx, boolean on) {
+        com.solacemod.solace.config.SolaceConfig.PLAYTEST_LOG.set(on);
+        com.solacemod.solace.config.SolaceConfig.SPEC.save();
+        java.nio.file.Path f = PlaytestLog.file();
+        String where = f == null ? "" : " File: " + net.neoforged.fml.loading.FMLPaths.GAMEDIR.get().relativize(f);
+        return msg(ctx, on ? "Playtest log on. Everything that happens is written down." + where
+                : "Playtest log off. Notes from /solace note are still saved." + where);
     }
 
     private static int come(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {

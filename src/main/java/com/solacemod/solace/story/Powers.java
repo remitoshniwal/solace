@@ -151,7 +151,10 @@ public final class Powers {
             else if (solace != null && cost > 0 && story.chapter >= 3 && SolaceConfig.STORY_ENABLED.get()) solace.goNegative(40);
         }
         // Solace already announced what it was doing. Only follow up when there's news: what "find" found, or a failure.
-        if (failed || type.equals("find")) return result;
+        if (failed || type.equals("find")) {
+            PlaytestLog.log(story, owner, "POWER", type + ": " + result);
+            return result;
+        }
         story.addEvent("you used your power: " + result);
         return null;
     }

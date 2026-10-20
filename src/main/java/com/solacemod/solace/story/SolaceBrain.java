@@ -108,6 +108,7 @@ public final class SolaceBrain {
         if (!story.met || !story.solaceShouldExist()) return;
         story.lastInteractionTick = server.getTickCount();
         Bond.onTalk(story, server.getTickCount());
+        PlaytestLog.log(story, player, "YOU", "\"" + text + "\"");
         String line = player.getGameProfile().getName() + ": " + text;
         if (BUSY.contains(player.getUUID())) {
             PENDING.computeIfAbsent(player.getUUID(), k -> new ArrayList<>()).add(line);
@@ -196,6 +197,7 @@ public final class SolaceBrain {
             if (!ignoreExistence && !liveStory.solaceShouldExist()) return;
             if (err != null) {
                 boolean busy = com.solacemod.solace.ai.Http.unwrap(err) instanceof com.solacemod.solace.ai.BrainPool.BusyException;
+                if (busy) PlaytestLog.log(liveStory, live, "AI BUSY", com.solacemod.solace.ai.Http.unwrap(err).getMessage());
                 if (busy && important) {
                     live.displayClientMessage(Component.literal(com.solacemod.solace.ai.Http.unwrap(err).getMessage()).withStyle(ChatFormatting.DARK_GRAY), true);
                 } else if (!busy) {
@@ -235,6 +237,7 @@ public final class SolaceBrain {
 
     private static void notifyError(ServerPlayer player, Throwable err) {
         Solace.LOGGER.warn("Solace AI request failed: {}", AiService.hintFor(err));
+        if (player.getServer() != null) PlaytestLog.log(StoryData.get(player.getServer()).get(player.getUUID()), player, "AI ERROR", AiService.hintFor(err));
         long now = System.currentTimeMillis();
         Long last = LAST_ERROR_NOTICE.get(player.getUUID());
         if (last != null && now - last < 5 * 60_000) return;
@@ -348,6 +351,7 @@ public final class SolaceBrain {
     /** Shows Solace's line in chat and sends it to the player's game for text-to-speech. */
     public static void display(ServerPlayer owner, @Nullable SolaceEntity solace, PlayerStory story, String text, String emotion) {
         Component message = format(story, solace, text, emotion);
+        PlaytestLog.log(story, owner, "SOLACE", "\"" + text + "\"" + (emotion == null || emotion.isBlank() ? "" : " (" + emotion + ")"));
         if (solace != null && emotion != null && java.util.Set.of("angry", "sad", "glitch", "afraid")
                 .contains(emotion.toLowerCase(java.util.Locale.ROOT))) {
             solace.agitate(20 * 8);
