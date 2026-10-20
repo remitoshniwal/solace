@@ -12,7 +12,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 
 /**
- * The little flame in the top left corner: how strong Solace is right now, and how much you owe it. No numbers.
+ * The little flame just left of the hotbar: how strong Solace is right now, and how much you owe it. No numbers.
  * The flame fills up from the bottom with Solace's strength (Tether). Black cracks spread through it as your debt grows.
  * While Solace is waiting for something it asked you for, the flame flickers.
  * Players can turn it off in Solace setup (Story page) or with display.bondHint in config/solace-client.toml.
@@ -48,14 +48,20 @@ public final class BondHint {
             {8, 7}, {9, 12}, {10, 11}, {5, 9}, {7, 6}};
     private static final int[] CRACKS_PER_BAND = {0, 4, 8, CRACKS.length};
 
-    private static final int OUTLINE = 0xE0101014;
-    private static final int OUTLINE_GHOST = 0x8C5A5A64;
-    private static final int EDGE = 0xFF9FC3FF;
-    private static final int MIDDLE = 0xFFD6E6FF;
+    // Black and white, like Solace itself: a black flame with a white outline (its normal form)
+    // that fills up with white (its negative) as it gets stronger.
+    private static final int OUTLINE = 0xFFFFFFFF;
+    private static final int EDGE = 0xFFA8A8A8;
+    private static final int MIDDLE = 0xFFE2E2E2;
     private static final int CORE = 0xFFFFFFFF;
-    private static final int EMPTY = 0x50000000;
+    private static final int EMPTY = 0xF0080808;
     private static final int CRACK = 0xFF000000;
-    private static final int MARGIN = 6;
+    /** Cracks in the black (empty) part are drawn grey so they still show. */
+    private static final int CRACK_ON_EMPTY = 0xFF6A6A6A;
+    /** Each pixel of the drawing is this many GUI pixels (2 = twice the size of a heart icon). */
+    private static final int SCALE = 2;
+    /** Gap between the flame and the hotbar (or the off-hand slot), in GUI pixels. */
+    private static final int GAP = 4;
 
     private static boolean show;
     private static int targetPercent;
@@ -101,6 +107,16 @@ public final class BondHint {
         // The tip sways a little.
         int sway = Math.round((float) Math.sin(time * 0.07F) * 0.8F);
 
+        // Just left of the hotbar, sitting on the bottom of the screen. Moves over if the off-hand slot is on that side.
+        boolean offhandLeft = !mc.player.getOffhandItem().isEmpty()
+                && mc.player.getMainArm().getOpposite() == net.minecraft.world.entity.HumanoidArm.LEFT;
+        int width = SHAPE[0].length() * SCALE;
+        int left = g.guiWidth() / 2 - 91 - (offhandLeft ? 29 : 0) - GAP - width;
+        int top = g.guiHeight() - SHAPE.length * SCALE;
+        g.pose().pushPose();
+        g.pose().translate(left, top, 0);
+        g.pose().scale(SCALE, SCALE, 1);
+
         for (int y = 0; y < SHAPE.length; y++) {
             String row = SHAPE[y];
             int shift = y <= 2 ? sway : 0;
@@ -110,8 +126,7 @@ public final class BondHint {
                 if (c == '.') continue;
                 int color;
                 if (c == 'o') {
-                    // The outline is solid next to the lit part, faint around the empty part (so you can see how big it can get).
-                    color = y >= firstLit - 1 ? OUTLINE : OUTLINE_GHOST;
+                    color = OUTLINE;
                 } else if (!rowLit) {
                     color = EMPTY;
                 } else {
@@ -126,11 +141,14 @@ public final class BondHint {
         for (int i = 0; i < cracks; i++) {
             int x = CRACKS[i][0];
             int y = CRACKS[i][1];
-            pixel(g, x + (y <= 2 ? sway : 0), y, pulse ? 0xFF2A0A0A : CRACK);
+            int color = y >= firstLit ? CRACK : CRACK_ON_EMPTY;
+            if (pulse) color = CRACK_ON_EMPTY;
+            pixel(g, x + (y <= 2 ? sway : 0), y, color);
         }
+        g.pose().popPose();
     }
 
     private static void pixel(GuiGraphics g, int x, int y, int color) {
-        g.fill(MARGIN + x, MARGIN + y, MARGIN + x + 1, MARGIN + y + 1, color);
+        g.fill(x, y, x + 1, y + 1, color);
     }
 }

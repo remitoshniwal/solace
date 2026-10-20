@@ -66,7 +66,7 @@ public final class ClientConfig {
         b.pop();
 
         b.comment("What Solace shows on your screen.").push("display");
-        BOND_HINT = b.comment("A small flame in the top left corner: how strong Solace is right now, and how much you owe it. No numbers.")
+        BOND_HINT = b.comment("A small flame next to the hotbar: how strong Solace is right now, and how much you owe it. No numbers.")
                 .define("bondHint", true);
         b.pop();
 

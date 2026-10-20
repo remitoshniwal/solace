@@ -124,7 +124,7 @@ public final class Bond {
         }
     }
 
-    // ---------- The flame in the corner (client/BondHint) ----------
+    // ---------- The flame next to the hotbar (client/BondHint) ----------
 
     /** Tells the player's game about the bond: at most every 5 seconds, and only when something changed. */
     static void sendHint(ServerPlayer player, PlayerStory story) {

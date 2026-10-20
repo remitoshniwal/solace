@@ -71,7 +71,7 @@ public final class ModNetwork {
     }
 
     /**
-     * Server -> client: the bond, for the little flame in the corner (client/BondHint).
+     * Server -> client: the bond, for the little flame next to the hotbar (client/BondHint).
      * tetherPercent = Solace's strength compared with this chapter's maximum (0 to 100). debtBand: 0 = under 30, 1 = 30+, 2 = 60+, 3 = 100+.
      */
     public record BondPayload(int tetherPercent, int debtBand, boolean request, boolean show) implements CustomPacketPayload {

@@ -132,7 +132,7 @@ public final class ScreenshotTour {
         return list;
     }
 
-    /** Pictures for Phase 2 (1.7.0): the bond hint in the corner, the toasts, the advancements tab. The GUI stays on. */
+    /** Pictures for Phase 2 (1.7.0): the bond hint next to the hotbar, the toasts, the advancements tab. The GUI stays on. */
     private static List<Stop> phase2Plan(String me) {
         String solace = "@e[type=solace:solace,limit=1]";
         List<Stop> list = new ArrayList<>();
@@ -145,6 +145,8 @@ public final class ScreenshotTour {
         list.add(new Stop(List.of("solace admin power " + me + " heal"), 30, "p2_3_price_toast.png"));
         list.add(new Stop(List.of("solace admin bond " + me + " 1000 65"), 40, "p2_4_owed_toast.png"));
         list.add(new Stop(List.of("time set midnight"), 160, "p2_5_hint_debt_night.png"));
+        list.add(new Stop(List.of("time set noon", "item replace entity " + me + " weapon.offhand with minecraft:torch"), 30, "p2_5b_offhand.png"));
+        list.add(new Stop(List.of("item replace entity " + me + " weapon.offhand with minecraft:air"), 10, null));
         list.add(new Stop(List.of("solace admin bond " + me + " 1000 0", "time set noon",
                 "advancement grant " + me + " only solace:story/knew_my_name", "advancement grant " + me + " only solace:story/first_page"), 30, "p2_6_page_toast.png"));
         list.add(new Stop(List.of("#advancements"), 40, "p2_7_advancements.png"));

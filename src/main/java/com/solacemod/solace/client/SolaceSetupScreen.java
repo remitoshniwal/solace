@@ -538,7 +538,7 @@ public final class SolaceSetupScreen extends Screen {
         }, "A harmless fake crash screen. Closes by itself or with Esc."));
         label(5, "Help");
         addRenderableWidget(toggle(controlX(), rowY(5), half, "Bond hint", bondHint, v -> bondHint = v,
-                "A small flame in the corner: how strong Solace is, and how much you owe it. Just for you."));
+                "A small flame next to your hotbar: how strong Solace is, and how much you owe it. Just for you."));
         addRenderableWidget(toggle(controlX() + half + 3, rowY(5), half, "Hints when stuck", nudges, v -> nudges = v,
                 "Small hints when a page is lying nearby or you haven't found a place yet."));
         note(rowY(6) + 2, Component.literal("Story spoilers are in docs/STORY.md. Don't peek!"));
