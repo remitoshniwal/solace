@@ -8,6 +8,13 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### New in 1.7.0
+- **See how far you've come.** Solace has its own tab in the advancements screen (press **L**), with a pop-up for each step of the story and for every ending. It's spoiler-free: you only see what's next once you get close, the endings stay hidden until you reach them, and nothing is announced in chat, so friends on a server aren't spoiled.
+- **A flame by your hotbar.** A small black and white flame shows how strong Solace is right now: it fills with white as your bond grows, and cracks appear the more you owe it. It flickers while Solace is waiting for something it asked you for. Turn it off in setup (Story page, *Bond hint*).
+- **Powers have a price, and now you're told.** The first time Solace uses a power that costs it something, it says so plainly. The more you owe it, the colder it gets.
+- **Hints when you're stuck.** If a torn page is lying near you and you walked past it, you'll hear it. If you can't find a place the story wants you to go, something will point the way. Server owners can turn hints off (*Hints when stuck* in setup).
+- For testers: `/solace admin power <player> <power>` and `/solace admin fragment <player> <page> ground`. The playtest log now also records hints, advancements and the price.
+
 ### New in 1.6.2
 - **Playtest tools.** `/solace note <text>` saves a note about the moment you're in. `/solace admin playtest on` writes a timeline of the whole story (chapters, pages, scares, what Solace said) to `solace/playtest/` in your Minecraft folder. How to run a playtest: [docs/PLAYTEST.md](https://github.com/remitoshniwal/solace/blob/main/docs/PLAYTEST.md).
 - **Fixed:** a story speed of 3 no longer turns into 2 when you save the setup screen.
