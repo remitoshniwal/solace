@@ -11,13 +11,16 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
-/** Looks up vanilla sounds by name (like "ambient.cave") so we don't depend on how Minecraft stores each one. */
+/**
+ * Looks up sounds by name so we don't depend on how Minecraft stores each one: vanilla ones like "ambient.cave",
+ * or Solace's own with their full name, like "solace:hum" (see ModSounds).
+ */
 public final class Sounds {
     private Sounds() {
     }
 
     public static SoundEvent get(String id) {
-        ResourceLocation rl = ResourceLocation.withDefaultNamespace(id);
+        ResourceLocation rl = id.contains(":") ? ResourceLocation.parse(id) : ResourceLocation.withDefaultNamespace(id);
         SoundEvent event = BuiltInRegistries.SOUND_EVENT.get(rl);
         return event != null ? event : SoundEvent.createVariableRangeEvent(rl);
     }

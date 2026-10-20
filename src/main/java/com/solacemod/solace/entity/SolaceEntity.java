@@ -287,8 +287,7 @@ public class SolaceEntity extends PathfinderMob {
         if (isHollow() || isLanternForm()) return;
         if (!isNegative()) {
             entityData.set(DATA_NEGATIVE, true);
-            Sounds.playAt(this, "block.beacon.power_select", 0.6F, 0.5F);
-            Sounds.playAt(this, "block.respawn_anchor.charge", 0.4F, 0.6F);
+            Sounds.play(level(), position(), "solace:negative_surge", SoundSource.HOSTILE, 1.0F, 1.0F);
         }
         negativeTicks = Math.max(negativeTicks, ticks);
     }
@@ -400,7 +399,7 @@ public class SolaceEntity extends PathfinderMob {
         if (agitatedTicks > 0 && --agitatedTicks == 0) entityData.set(DATA_AGITATED, false);
         if (negativeTicks > 0 && --negativeTicks == 0) {
             entityData.set(DATA_NEGATIVE, false);
-            Sounds.playAt(this, "block.beacon.deactivate", 0.4F, 0.6F);
+            Sounds.play(level(), position(), "solace:negative_fade", SoundSource.HOSTILE, 0.8F, 1.0F);
         }
         if (lanternTicks > 0 && --lanternTicks == 0) endLantern();
         // A stale copy (e.g. one left in an unloaded chunk after Solace was re-summoned) removes itself.

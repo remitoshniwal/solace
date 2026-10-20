@@ -530,7 +530,7 @@ public final class StoryDirector {
     private static void pocket(ServerPlayer player, int index) {
         Fragments.giveTo(player, index);
         player.sendSystemMessage(Component.literal("Something was slipped into your pocket.").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
-        Sounds.playFor(player, player.position(), Sounds.get("item.book.page_turn"), 1.0F, 0.7F);
+        Sounds.playFor(player, player.position(), Sounds.get("solace:page_rustle"), 1.0F, 0.9F);
     }
 
     /** If a page was dropped somewhere and never picked up, it eventually finds its way into the player's pocket. */

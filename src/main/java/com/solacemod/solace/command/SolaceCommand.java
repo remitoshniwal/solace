@@ -19,6 +19,8 @@ import com.solacemod.solace.story.SolaceManager;
 import com.solacemod.solace.story.StoryData;
 import com.solacemod.solace.story.StoryDirector;
 import com.solacemod.solace.story.StoryText;
+import com.solacemod.solace.util.ModSounds;
+import com.solacemod.solace.util.Sounds;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -185,6 +187,20 @@ public final class SolaceCommand {
                             solace.goNegative(20 * 10);
                             return msg(ctx, "Solace shows his negative side for 10 seconds.");
                         })))
+                        .then(Commands.literal("sound").then(Commands.argument("player", EntityArgument.player())
+                                .then(Commands.argument("name", StringArgumentType.word())
+                                        .suggests((ctx, b) -> {
+                                            for (String s : ModSounds.NAMES) b.suggest(s);
+                                            return b.buildFuture();
+                                        })
+                                        .executes(ctx -> {
+                                            ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
+                                            String name = StringArgumentType.getString(ctx, "name");
+                                            if (!ModSounds.NAMES.contains(name)) return fail(ctx, "Unknown sound. Options: " + String.join(" ", ModSounds.NAMES));
+                                            // Plays it once, right where the player is, so it can be listened to.
+                                            Sounds.playFor(p, p.position(), Sounds.get("solace:" + name), 1.0F, 1.0F);
+                                            return msg(ctx, "Playing solace:" + name + ".");
+                                        }))))
                         .then(Commands.literal("question").then(Commands.argument("player", EntityArgument.player()).executes(ctx -> {
                             ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
                             PlayerStory s = story(ctx, p);

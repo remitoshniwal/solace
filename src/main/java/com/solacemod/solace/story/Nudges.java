@@ -78,10 +78,10 @@ public final class Nudges {
             int given = GIVEN.getOrDefault(key, 0);
             long seconds = (now - since) / 20;
             if (given == 0 && seconds >= PAGE_FIRST_SECONDS) {
-                rustle(player, story, page, idx, 2.5F, StoryText.NUDGE_PAGE_LINE);
+                rustle(player, story, page, idx, 0.8F, StoryText.NUDGE_PAGE_LINE);
                 GIVEN.put(key, 1);
             } else if (given == 1 && seconds >= PAGE_SECOND_SECONDS) {
-                rustle(player, story, page, idx, 3.5F, StoryText.NUDGE_PAGE_AGAIN_LINE);
+                rustle(player, story, page, idx, 1.0F, StoryText.NUDGE_PAGE_AGAIN_LINE);
                 GIVEN.put(key, 2);
             }
         }
@@ -95,9 +95,9 @@ public final class Nudges {
         return null;
     }
 
-    /** A page-turn sound from where the page is lying, so the player can hear which way to go. */
+    /** A paper rustle from where the page is lying, so the player can hear which way to go. */
     private static void rustle(ServerPlayer player, PlayerStory story, ItemEntity page, int idx, float volume, String line) {
-        Sounds.playFor(player, page.position(), Sounds.get("item.book.page_turn"), volume, 0.8F);
+        Sounds.playFor(player, page.position(), Sounds.get("solace:page_rustle"), volume, 1.0F);
         player.sendSystemMessage(Component.literal(line).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
         PlaytestLog.log(story, player, "NUDGE", "page " + (idx + 1) + " is lying " + Math.round(page.distanceTo(player)) + " blocks away: a rustle");
     }

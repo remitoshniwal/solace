@@ -75,11 +75,19 @@ public final class BondHint {
     }
 
     public static void update(ModNetwork.BondPayload payload) {
+        boolean wasShown = show && shownPercent >= 0;
+        int oldStep = targetPercent / 25;
+        int oldDebt = debtBand;
+        boolean oldRequest = request;
         show = payload.show();
         targetPercent = Math.max(0, Math.min(100, payload.tetherPercent()));
         debtBand = Math.max(0, Math.min(3, payload.debtBand()));
         request = payload.request();
         if (shownPercent < 0) shownPercent = targetPercent;
+        // A tiny flutter when the flame changes a step: a quarter fuller or emptier, more debt, or a new request.
+        if (wasShown && show && (targetPercent / 25 != oldStep || debtBand != oldDebt || (request && !oldRequest))) {
+            SolaceSounds.bondShift();
+        }
     }
 
     /** Leaving a world or server: forget everything, so the next world starts hidden. */

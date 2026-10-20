@@ -82,3 +82,34 @@ tasks.named('processResources', ProcessResources).configure {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
+
+// Checks Solace's own sounds before building: every sound in sounds.json needs its .ogg files and a subtitle,
+// and every sound registered in ModSounds.java needs an entry in sounds.json.
+tasks.register('checkSounds') {
+    group = 'verification'
+    description = 'Checks that every Solace sound has its files, a subtitle and a sounds.json entry.'
+    def assets = file('src/main/resources/assets/solace')
+    def modSounds = file('src/main/java/com/solacemod/solace/util/ModSounds.java')
+    inputs.dir(assets)
+    inputs.file(modSounds)
+    doLast {
+        def sounds = new groovy.json.JsonSlurper().parse(new File(assets, 'sounds.json'))
+        def lang = new groovy.json.JsonSlurper().parse(new File(assets, 'lang/en_us.json'))
+        def problems = []
+        sounds.each { name, entry ->
+            if (!lang.containsKey(entry.subtitle)) problems << "${name}: no subtitle '${entry.subtitle}' in en_us.json"
+            entry.sounds.each { s ->
+                def path = (s instanceof Map ? s.name : s).replace('solace:', '')
+                if (!new File(assets, "sounds/${path}.ogg").exists()) problems << "${name}: missing sounds/${path}.ogg"
+            }
+        }
+        (modSounds.text =~ /register\("([a-z_]+)"/).each { match ->
+            if (!sounds.containsKey(match[1])) problems << "${match[1]}: registered in ModSounds.java but not in sounds.json"
+        }
+        if (problems) throw new GradleException("Sound problems:\n  " + problems.join("\n  "))
+    }
+}
+
+tasks.named('check') {
+    dependsOn 'checkSounds'
+}

@@ -12,6 +12,7 @@ import com.solacemod.solace.config.SolaceConfig;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
@@ -97,6 +98,9 @@ public final class SolaceSetupScreen extends Screen {
     private boolean crashComfort;
     private boolean bondHint;
     private boolean nudges;
+    /** Solace's own sounds, in percent. */
+    private int solaceSounds;
+    private boolean hum;
 
     private boolean mining;
     private boolean building;
@@ -164,6 +168,8 @@ public final class SolaceSetupScreen extends Screen {
         glitchComfort = ClientConfig.GLITCH_EFFECTS.get();
         crashComfort = ClientConfig.FAKE_CRASH_SCREENS.get();
         bondHint = ClientConfig.BOND_HINT.get();
+        solaceSounds = ClientConfig.SOLACE_SOUNDS.get();
+        hum = ClientConfig.HUM_NEAR_SOLACE.get();
         nudges = SolaceConfig.STORY_NUDGES.get();
 
         mining = SolaceConfig.ALLOW_MINING.get();
@@ -221,6 +227,8 @@ public final class SolaceSetupScreen extends Screen {
         ClientConfig.GLITCH_EFFECTS.set(glitchComfort);
         ClientConfig.FAKE_CRASH_SCREENS.set(crashComfort);
         ClientConfig.BOND_HINT.set(bondHint);
+        ClientConfig.SOLACE_SOUNDS.set(solaceSounds);
+        ClientConfig.HUM_NEAR_SOLACE.set(hum);
         ClientConfig.SPEC.save();
     }
 
@@ -541,7 +549,13 @@ public final class SolaceSetupScreen extends Screen {
                 "A small flame next to your hotbar: how strong Solace is, and how much you owe it. Just for you."));
         addRenderableWidget(toggle(controlX() + half + 3, rowY(5), half, "Hints when stuck", nudges, v -> nudges = v,
                 "Small hints when a page is lying nearby or you haven't found a place yet."));
-        note(rowY(6) + 2, Component.literal("Story spoilers are in docs/STORY.md. Don't peek!"));
+        label(6, "Solace sounds");
+        AbstractSliderButton volume = soundSlider(controlX(), rowY(6), half);
+        volume.setTooltip(Tooltip.create(Component.literal("How loud Solace's own sounds are: its hum, the Lantern, flickers. Just for you.")));
+        addRenderableWidget(volume);
+        addRenderableWidget(toggle(controlX() + half + 3, rowY(6), half, "Hum", hum, v -> hum = v,
+                "The low hum you hear when you're close to Solace."));
+        note(rowY(7) + 2, Component.literal("Story spoilers are in docs/STORY.md. Don't peek!"));
     }
 
     private void initAbilitiesPage() {
@@ -602,6 +616,26 @@ public final class SolaceSetupScreen extends Screen {
     private CycleButton<Boolean> toggle(int x, int y, int w, String name, boolean value, Consumer<Boolean> onChange, String tooltip) {
         return CycleButton.onOffBuilder(value).withTooltip(v -> Tooltip.create(Component.literal(tooltip)))
                 .create(x, y, w, 20, Component.literal(name), (b, v) -> onChange.accept(v));
+    }
+
+    /** A slider for Solace's own sounds, in steps of 5%. */
+    private AbstractSliderButton soundSlider(int x, int y, int w) {
+        return new AbstractSliderButton(x, y, w, 20, Component.empty(), solaceSounds / 100.0) {
+            {
+                updateMessage();
+            }
+
+            @Override
+            protected void updateMessage() {
+                int percent = (int) Math.round(value * 20) * 5;
+                setMessage(Component.literal(percent == 0 ? "Volume: Off" : "Volume: " + percent + "%"));
+            }
+
+            @Override
+            protected void applyValue() {
+                solaceSounds = (int) Math.round(value * 20) * 5;
+            }
+        };
     }
 
     private static Double nearest(List<Double> options, double value) {

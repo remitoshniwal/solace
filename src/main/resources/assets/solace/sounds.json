@@ -1,0 +1,100 @@
+{
+  "hum": {
+    "subtitle": "subtitles.solace.hum",
+    "sounds": [
+      {
+        "name": "solace:hum",
+        "attenuation_distance": 12
+      }
+    ]
+  },
+  "hum_uneasy": {
+    "subtitle": "subtitles.solace.hum_uneasy",
+    "sounds": [
+      {
+        "name": "solace:hum_uneasy",
+        "attenuation_distance": 12
+      }
+    ]
+  },
+  "lantern_drone": {
+    "subtitle": "subtitles.solace.lantern_drone",
+    "sounds": [
+      {
+        "name": "solace:lantern_drone",
+        "attenuation_distance": 24
+      }
+    ]
+  },
+  "flicker": {
+    "subtitle": "subtitles.solace.flicker",
+    "sounds": [
+      {
+        "name": "solace:flicker_1",
+        "attenuation_distance": 12
+      },
+      {
+        "name": "solace:flicker_2",
+        "attenuation_distance": 12
+      },
+      {
+        "name": "solace:flicker_3",
+        "attenuation_distance": 12
+      }
+    ]
+  },
+  "negative_surge": {
+    "subtitle": "subtitles.solace.negative_surge",
+    "sounds": [
+      {
+        "name": "solace:negative_surge",
+        "attenuation_distance": 24
+      }
+    ]
+  },
+  "negative_fade": {
+    "subtitle": "subtitles.solace.negative_fade",
+    "sounds": [
+      {
+        "name": "solace:negative_fade",
+        "attenuation_distance": 16
+      }
+    ]
+  },
+  "watcher_near": {
+    "subtitle": "subtitles.solace.watcher_near",
+    "sounds": [
+      {
+        "name": "solace:watcher_near",
+        "attenuation_distance": 16
+      }
+    ]
+  },
+  "watcher_vanish": {
+    "subtitle": "subtitles.solace.watcher_vanish",
+    "sounds": [
+      {
+        "name": "solace:watcher_vanish",
+        "attenuation_distance": 48
+      }
+    ]
+  },
+  "bond_shift": {
+    "subtitle": "subtitles.solace.bond_shift",
+    "sounds": [
+      {
+        "name": "solace:bond_shift",
+        "attenuation_distance": 16
+      }
+    ]
+  },
+  "page_rustle": {
+    "subtitle": "subtitles.solace.page_rustle",
+    "sounds": [
+      {
+        "name": "solace:page_rustle",
+        "attenuation_distance": 48
+      }
+    ]
+  }
+}

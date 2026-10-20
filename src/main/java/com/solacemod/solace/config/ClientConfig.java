@@ -27,6 +27,8 @@ public final class ClientConfig {
     public static final ModConfigSpec.BooleanValue GLITCH_EFFECTS;
     public static final ModConfigSpec.BooleanValue FAKE_CRASH_SCREENS;
     public static final ModConfigSpec.BooleanValue BOND_HINT;
+    public static final ModConfigSpec.IntValue SOLACE_SOUNDS;
+    public static final ModConfigSpec.BooleanValue HUM_NEAR_SOLACE;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -63,6 +65,12 @@ public final class ClientConfig {
         b.comment("Comfort settings. Turn these off if flashing or sudden effects bother you.").push("comfort");
         GLITCH_EFFECTS = b.comment("Screen static / glitch overlays.").define("glitchEffects", true);
         FAKE_CRASH_SCREENS = b.comment("The fake crash screen scare.").define("fakeCrashScreens", true);
+        b.pop();
+
+        b.comment("Solace's own sounds (the hum, the Lantern's drone, flickers...). Minecraft's sound sliders still apply too.").push("sounds");
+        SOLACE_SOUNDS = b.comment("How loud Solace's own sounds are, in percent. 0 = silent.")
+                .defineInRange("solaceSounds", 100, 0, 100);
+        HUM_NEAR_SOLACE = b.comment("The low hum you hear when you're close to Solace.").define("humNearSolace", true);
         b.pop();
 
         b.comment("What Solace shows on your screen.").push("display");

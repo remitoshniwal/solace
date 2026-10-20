@@ -113,6 +113,7 @@ The mod ends up in `build/libs/`. Other useful commands:
 - `./gradlew runClient` starts Minecraft with the mod for testing
 - `./gradlew aiTest` runs the AI self-tests (no Minecraft, no API key, no cost)
 - `python3 tools/shade_textures.py` repaints Solace's textures; `python3 tools/make_textures.py` the Watcher's and the logo
+- `python3 tools/make_sounds.py` makes Solace's own sounds (needs numpy and soundfile). Every sound is built from code, so none are recorded or borrowed
 - Solace's model is `src/main/resources/assets/solace/models/entity/solace.bbmodel` (open it in Blockbench)
 
 Pushing to GitHub builds and tests the mod automatically (see `.github/workflows/build.yml`). To publish a new version: change `mod_version` in `gradle.properties`, and push to `main`. After the tests pass, a new Release (like `v1.0.1`) with the jar appears on the Releases page automatically.

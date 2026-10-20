@@ -5,6 +5,7 @@ import com.solacemod.solace.config.ClientConfig;
 import com.solacemod.solace.config.SolaceConfig;
 import com.solacemod.solace.entity.ModEntities;
 import com.solacemod.solace.network.ModNetwork;
+import com.solacemod.solace.util.ModSounds;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -20,6 +21,7 @@ public final class Solace {
 
     public Solace(IEventBus modBus, ModContainer container) {
         ModEntities.ENTITIES.register(modBus);
+        ModSounds.SOUNDS.register(modBus);
         modBus.addListener(ModEntities::onAttributes);
         modBus.addListener(ModNetwork::register);
 

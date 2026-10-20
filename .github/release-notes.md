@@ -8,6 +8,14 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### New in 1.8.0
+- **Solace has a sound of its own.** Stand close and you'll hear a low hum, which slowly goes out of tune as the story goes on. The Lantern has a deep, shimmering drone. When its negative side flickers, you hear it flicker, even behind your back. When it turns fully negative, something heavy lands, then winds down when it's over.
+- **The Watcher, heard.** A faint ringing in your ears when it appears somewhere out there, and a soft scatter when it vanishes.
+- **Quieter things.** A tiny flutter when the bond flame by your hotbar changes, and paper rustling when a torn page is nearby.
+- **Your own volume.** *Solace sounds* (a volume slider) and *Hum* (on or off) are on the Story page in setup, just for you. Minecraft's own sound sliders still work too. Every sound has a subtitle.
+- Every sound is made from code by the mod itself: nothing is recorded or borrowed.
+- For testers: `/solace admin sound <player> <name>` plays any of them.
+
 ### New in 1.7.0
 - **See how far you've come.** Solace has its own tab in the advancements screen (press **L**), with a pop-up for each step of the story and for every ending. It's spoiler-free: you only see what's next once you get close, the endings stay hidden until you reach them, and nothing is announced in chat, so friends on a server aren't spoiled.
 - **A flame by your hotbar.** A small black and white flame shows how strong Solace is right now: it fills with white as your bond grows, and cracks appear the more you owe it. It flickers while Solace is waiting for something it asked you for. Turn it off in setup (Story page, *Bond hint*).

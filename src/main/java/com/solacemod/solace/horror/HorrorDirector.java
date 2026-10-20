@@ -284,6 +284,8 @@ public final class HorrorDirector {
             watcher.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
             watcher.configure(player, lifeTicks, vanishDistance, fragmentIndex, null);
             level.addFreshEntity(watcher);
+            // A faint ringing in your ears, only for you, as it appears somewhere out there.
+            Sounds.playFor(player, player.position(), Sounds.get("solace:watcher_near"), 0.6F, 1.0F);
             return watcher;
         }
         return null;

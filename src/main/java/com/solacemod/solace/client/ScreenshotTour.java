@@ -27,12 +27,17 @@ import java.util.List;
  * it makes a flat creative world, waits for Solace to appear, poses it, takes pictures, and quits.
  * With -Dsolace.tour=playtest it runs the playtest commands instead (/solace note, the playtest log, advancements, the price, a page hint)
  * and takes one picture at the end. With -Dsolace.tour=phase2 it takes pictures of the bond hint, the toasts and the advancements tab.
+ * With -Dsolace.tour=sounds it plays each of Solace's own sounds with subtitles on, takes a picture of each subtitle,
+ * and writes every solace: sound that played to solace/sounds-tour.txt (pictures can't show how a sound sounds, only that it played).
  */
 @EventBusSubscriber(modid = Solace.MODID, value = Dist.CLIENT)
 public final class ScreenshotTour {
     private static final boolean PLAYTEST = "playtest".equals(System.getProperty("solace.tour"));
     private static final boolean PHASE2 = "phase2".equals(System.getProperty("solace.tour"));
-    private static final boolean ENABLED = Boolean.getBoolean("solace.screenshots") || PLAYTEST || PHASE2;
+    private static final boolean SOUNDS = "sounds".equals(System.getProperty("solace.tour"));
+    private static final boolean ENABLED = Boolean.getBoolean("solace.screenshots") || PLAYTEST || PHASE2 || SOUNDS;
+    /** For the sounds tour: every solace: sound that played, in order. */
+    private static final List<String> HEARD = new ArrayList<>();
     private static boolean worldRequested;
     private static int ticks;
     private static int step;
@@ -60,14 +65,14 @@ public final class ScreenshotTour {
         }
         MinecraftServer server = mc.getSingleplayerServer();
         if (server == null) return;
-        mc.options.hideGui = !PLAYTEST && !PHASE2;
+        mc.options.hideGui = !PLAYTEST && !PHASE2 && !SOUNDS;
         mc.options.pauseOnLostFocus = false; // clicking another window must not pause the tour's world
         ticks++;
         // Solace appears 30 seconds after the player joins.
         if (ticks < 20 * 36) return;
         if (stops == null) {
             String me = mc.player.getGameProfile().getName();
-            stops = PLAYTEST ? playtestPlan(me) : PHASE2 ? phase2Plan(me) : plan(me);
+            stops = PLAYTEST ? playtestPlan(me) : PHASE2 ? phase2Plan(me) : SOUNDS ? soundsPlan(me) : plan(me);
         }
         if (wait > 0) {
             wait--;
@@ -75,6 +80,7 @@ public final class ScreenshotTour {
         }
         if (step >= stops.size()) {
             Solace.LOGGER.info("[screenshots] tour finished");
+            if (SOUNDS) writeHeard(mc);
             mc.stop();
             return;
         }
@@ -154,6 +160,51 @@ public final class ScreenshotTour {
         return list;
     }
 
+    /** Every one of Solace's own sounds, one after the other, each with a picture of its subtitle. The GUI stays on. */
+    private static List<Stop> soundsPlan(String me) {
+        String solace = "@e[type=solace:solace,limit=1]";
+        List<Stop> list = new ArrayList<>();
+        list.add(new Stop(List.of("#quiet", "#subtitles", "gamerule logAdminCommands false", "gamerule sendCommandFeedback false",
+                "gamerule doDaylightCycle false", "gamerule doWeatherCycle false", "weather clear", "time set noon",
+                "tp " + me + " 0.5 -60 0.5 0 8", "data merge entity " + solace + " {NoAI:1b}",
+                "tp " + solace + " 0.5 -60 4.0 180 0", "solace admin chapter " + me + " 1"), 100, "snd_1_hum.png"));
+        list.add(new Stop(List.of("solace admin chapter " + me + " 7"), 120, "snd_2_hum_uneasy.png"));
+        list.add(new Stop(List.of("solace admin presence " + me + " flicker"), 50, "snd_3_flicker.png"));
+        list.add(new Stop(List.of("solace admin negative " + me), 25, "snd_4_negative_surge.png"));
+        // A stop needs a command, or its picture is taken straight away. "time set noon" changes nothing here.
+        list.add(new Stop(List.of("time set noon"), 20 * 10 + 20, "snd_5_negative_fade.png")); // the negative wears off after 10 seconds
+        list.add(new Stop(List.of("solace admin lantern " + me), 60, "snd_6_lantern_drone.png"));
+        list.add(new Stop(List.of("time set noon"), 20 * 10, null)); // the Lantern ends
+        list.add(new Stop(List.of("solace admin horror " + me + " watcher"), 30, "snd_7_watcher_near.png"));
+        list.add(new Stop(List.of("solace admin sound " + me + " watcher_vanish"), 20, "snd_8_watcher_vanish.png"));
+        list.add(new Stop(List.of("solace admin bond " + me + " 4 0"), 80, null));
+        list.add(new Stop(List.of("solace admin bond " + me + " 1000 0"), 30, "snd_9_bond_shift.png"));
+        list.add(new Stop(List.of("solace admin sound " + me + " page_rustle"), 20, "snd_10_page_rustle.png"));
+        return list;
+    }
+
+    /** Sounds tour: notes every solace: sound the game starts playing. */
+    @SubscribeEvent
+    public static void onSound(net.neoforged.neoforge.client.event.sound.PlaySoundEvent event) {
+        if (!SOUNDS || event.getSound() == null) return;
+        String id = event.getSound().getLocation().toString();
+        if (!id.startsWith(Solace.MODID + ":")) return;
+        String line = "tick " + ticks + "  " + id + "  step " + step;
+        HEARD.add(line);
+        Solace.LOGGER.info("[sounds] {}", line);
+    }
+
+    private static void writeHeard(Minecraft mc) {
+        try {
+            java.nio.file.Path file = mc.gameDirectory.toPath().resolve("solace/sounds-tour.txt");
+            java.nio.file.Files.createDirectories(file.getParent());
+            java.nio.file.Files.write(file, HEARD);
+            Solace.LOGGER.info("[sounds] wrote {} sounds to {}", HEARD.size(), file);
+        } catch (java.io.IOException e) {
+            Solace.LOGGER.error("[sounds] could not write the sounds list", e);
+        }
+    }
+
     private static void clientAction(Minecraft mc, String action) {
         if (mc.player == null) return;
         switch (action) {
@@ -164,6 +215,7 @@ public final class ScreenshotTour {
                 if (root != null) adv.setSelectedTab(root, true);
             }
             case "#close" -> mc.setScreen(null);
+            case "#subtitles" -> mc.options.showSubtitles().set(true);
             case "#quiet" -> {
                 mc.getTutorial().setStep(net.minecraft.client.tutorial.TutorialSteps.NONE);
                 mc.getToasts().clear();

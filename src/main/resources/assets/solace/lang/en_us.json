@@ -74,6 +74,9 @@
   "solace.configuration.display": "Display",
   "solace.configuration.bondHint": "Bond Hint",
   "solace.configuration.nudges": "Hints When Stuck",
+  "solace.configuration.sounds": "Sounds",
+  "solace.configuration.solaceSounds": "Solace Sounds Volume",
+  "solace.configuration.humNearSolace": "Hum Near Solace",
 
   "advancement.solace.story.root.title": "Solace",
   "advancement.solace.story.root.description": "Someone to talk to.",
@@ -106,5 +109,16 @@
   "advancement.solace.story.end_collected.title": "Home",
   "advancement.solace.story.end_collected.description": "Pay what you owe.",
   "advancement.solace.story.every_ending.title": "Every way out",
-  "advancement.solace.story.every_ending.description": "Find all five endings."
+  "advancement.solace.story.every_ending.description": "Find all five endings.",
+
+  "subtitles.solace.hum": "Something hums nearby",
+  "subtitles.solace.hum_uneasy": "Something hums, out of tune",
+  "subtitles.solace.lantern_drone": "A deep drone",
+  "subtitles.solace.flicker": "Something flickers",
+  "subtitles.solace.negative_surge": "Something heavy lands",
+  "subtitles.solace.negative_fade": "Something winds down",
+  "subtitles.solace.watcher_near": "A faint ringing",
+  "subtitles.solace.watcher_vanish": "Something scatters",
+  "subtitles.solace.bond_shift": "A flame flickers",
+  "subtitles.solace.page_rustle": "Paper rustles"
 }

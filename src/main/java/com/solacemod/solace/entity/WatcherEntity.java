@@ -102,7 +102,7 @@ public class WatcherEntity extends PathfinderMob {
         if (isRemoved()) return;
         ServerLevel level = (ServerLevel) level();
         level.sendParticles(ParticleTypes.ASH, getX(), getY() + 1, getZ(), 40, 0.3, 0.8, 0.3, 0.02);
-        Sounds.play(level, position(), "particle.soul_escape", SoundSource.AMBIENT, 1.0F, 0.5F);
+        Sounds.play(level, position(), "solace:watcher_vanish", SoundSource.AMBIENT, 1.0F, 1.0F);
         if (fragmentToLeave >= 0) Fragments.dropAt(level, position(), fragmentToLeave);
         if (onVanish != null) onVanish.accept(this);
         discard();
