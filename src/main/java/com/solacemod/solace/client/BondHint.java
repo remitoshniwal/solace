@@ -58,8 +58,8 @@ public final class BondHint {
     private static final int CRACK = 0xFF000000;
     /** Cracks in the black (empty) part are drawn grey so they still show. */
     private static final int CRACK_ON_EMPTY = 0xFF6A6A6A;
-    /** Each pixel of the drawing is this many GUI pixels (2 = twice the size of a heart icon). */
-    private static final int SCALE = 2;
+    /** Each pixel of the drawing is this many GUI pixels (1.5 = one and a half times a heart icon). */
+    private static final float SCALE = 1.5F;
     /** Gap between the flame and the hotbar (or the off-hand slot), in GUI pixels. */
     private static final int GAP = 4;
 
@@ -110,9 +110,9 @@ public final class BondHint {
         // Just left of the hotbar, sitting on the bottom of the screen. Moves over if the off-hand slot is on that side.
         boolean offhandLeft = !mc.player.getOffhandItem().isEmpty()
                 && mc.player.getMainArm().getOpposite() == net.minecraft.world.entity.HumanoidArm.LEFT;
-        int width = SHAPE[0].length() * SCALE;
+        int width = Math.round(SHAPE[0].length() * SCALE);
         int left = g.guiWidth() / 2 - 91 - (offhandLeft ? 29 : 0) - GAP - width;
-        int top = g.guiHeight() - SHAPE.length * SCALE;
+        int top = g.guiHeight() - Math.round(SHAPE.length * SCALE);
         g.pose().pushPose();
         g.pose().translate(left, top, 0);
         g.pose().scale(SCALE, SCALE, 1);
