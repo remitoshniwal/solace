@@ -18,6 +18,10 @@ public final class ClientHooks {
         GlitchOverlay.start(payload.kind(), payload.durationTicks(), payload.message());
     }
 
+    public static void onBond(ModNetwork.BondPayload payload) {
+        BondHint.update(payload);
+    }
+
     public static void onOpenSetup(ModNetwork.OpenSetupPayload payload) {
         Minecraft mc = Minecraft.getInstance();
         var container = net.neoforged.fml.ModList.get().getModContainerById(com.solacemod.solace.Solace.MODID).orElse(null);

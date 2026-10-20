@@ -90,6 +90,7 @@ public final class StoryDirector {
         story.lastAmbientTick = server.getTickCount();
         story.playerName = player.getGameProfile().getName();
         PlaytestLog.log(story, player, "JOIN", "logged in");
+        Bond.resendHint(player.getUUID());
         if (story.bossActive) {
             // The game was closed during the boss fight. Ask again later.
             story.bossActive = false;
@@ -148,6 +149,7 @@ public final class StoryDirector {
         MinecraftServer server = player.getServer();
         if (server == null) return;
         long now = server.getTickCount();
+        Bond.sendHint(player, story); // the flame in the corner (hidden until they meet)
         if (!story.wantsSolace()) return; // opt-in server, and this player hasn't joined
         if (!story.met) {
             long since = ONLINE_SINCE.computeIfAbsent(player.getUUID(), k -> now);

@@ -25,12 +25,14 @@ import java.util.List;
  * Test-only "photo tour", used by the automatic build to take real screenshots of Solace's forms.
  * Only runs when the game is started with -Dsolace.screenshots=true (players never see it):
  * it makes a flat creative world, waits for Solace to appear, poses it, takes pictures, and quits.
- * With -Dsolace.tour=playtest it runs the playtest commands instead (/solace note, the playtest log) and takes one picture at the end.
+ * With -Dsolace.tour=playtest it runs the playtest commands instead (/solace note, the playtest log, advancements, the price, a page hint)
+ * and takes one picture at the end. With -Dsolace.tour=phase2 it takes pictures of the bond hint, the toasts and the advancements tab.
  */
 @EventBusSubscriber(modid = Solace.MODID, value = Dist.CLIENT)
 public final class ScreenshotTour {
     private static final boolean PLAYTEST = "playtest".equals(System.getProperty("solace.tour"));
-    private static final boolean ENABLED = Boolean.getBoolean("solace.screenshots") || PLAYTEST;
+    private static final boolean PHASE2 = "phase2".equals(System.getProperty("solace.tour"));
+    private static final boolean ENABLED = Boolean.getBoolean("solace.screenshots") || PLAYTEST || PHASE2;
     private static boolean worldRequested;
     private static int ticks;
     private static int step;
@@ -58,11 +60,15 @@ public final class ScreenshotTour {
         }
         MinecraftServer server = mc.getSingleplayerServer();
         if (server == null) return;
-        mc.options.hideGui = !PLAYTEST;
+        mc.options.hideGui = !PLAYTEST && !PHASE2;
+        mc.options.pauseOnLostFocus = false; // clicking another window must not pause the tour's world
         ticks++;
         // Solace appears 30 seconds after the player joins.
         if (ticks < 20 * 36) return;
-        if (stops == null) stops = PLAYTEST ? playtestPlan(mc.player.getGameProfile().getName()) : plan(mc.player.getGameProfile().getName());
+        if (stops == null) {
+            String me = mc.player.getGameProfile().getName();
+            stops = PLAYTEST ? playtestPlan(me) : PHASE2 ? phase2Plan(me) : plan(me);
+        }
         if (wait > 0) {
             wait--;
             return;
@@ -79,7 +85,8 @@ public final class ScreenshotTour {
             return;
         }
         for (String command : stop.commands()) {
-            server.execute(() -> server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), command));
+            if (command.startsWith("#")) clientAction(mc, command); // things only the game window can do
+            else server.execute(() -> server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), command));
         }
         wait = stop.waitTicks();
         // Turn "commands, then picture" into two stops: the picture is taken after the wait.
@@ -116,9 +123,51 @@ public final class ScreenshotTour {
         list.add(new Stop(List.of(asMe + "solace say hello, can you hear me?"), 60, null));
         list.add(new Stop(List.of("solace admin fragment " + me + " 2"), 20 * 40, null)); // time for chapter 3's first scenes
         list.add(new Stop(List.of(asMe + "solace note found page two, testing"), 20, null));
+        // Phase 2: the price (expect PRICE and ADVANCEMENT first_favour), debt 30 (ADVANCEMENT owed), a page left on the ground (NUDGE after 60 s).
+        list.add(new Stop(List.of("solace admin bond " + me + " 1000 0", "solace admin power " + me + " heal"), 20 * 5, null));
+        list.add(new Stop(List.of("solace admin bond " + me + " 30 35"), 40, null));
+        list.add(new Stop(List.of("solace admin fragment " + me + " 5 ground"), 20 * 70, null));
         list.add(new Stop(List.of("solace admin playtest off"), 20, null));
         list.add(new Stop(List.of("solace admin horror " + me + " footsteps", asMe + "solace note a note after the log is off"), 30, "playtest_end.png"));
         return list;
+    }
+
+    /** Pictures for Phase 2 (1.7.0): the bond hint in the corner, the toasts, the advancements tab. The GUI stays on. */
+    private static List<Stop> phase2Plan(String me) {
+        String solace = "@e[type=solace:solace,limit=1]";
+        List<Stop> list = new ArrayList<>();
+        // No "[Server: ...]" lines or tutorial pop-up in the pictures, so only Solace's own messages and toasts show.
+        list.add(new Stop(List.of("#quiet", "gamerule logAdminCommands false", "gamerule sendCommandFeedback false",
+                "gamerule doDaylightCycle false", "gamerule doWeatherCycle false", "weather clear", "time set noon",
+                "tp " + me + " 0.5 -60 0.5 0 8", "data merge entity " + solace + " {NoAI:1b}",
+                "tp " + solace + " 0.5 -60 4.0 180 0", "solace admin bond " + me + " 4 0"), 160, "p2_1_hint_low.png"));
+        list.add(new Stop(List.of("solace admin bond " + me + " 1000 0"), 160, "p2_2_hint_full.png"));
+        list.add(new Stop(List.of("solace admin power " + me + " heal"), 30, "p2_3_price_toast.png"));
+        list.add(new Stop(List.of("solace admin bond " + me + " 1000 65"), 40, "p2_4_owed_toast.png"));
+        list.add(new Stop(List.of("time set midnight"), 160, "p2_5_hint_debt_night.png"));
+        list.add(new Stop(List.of("solace admin bond " + me + " 1000 0", "time set noon",
+                "advancement grant " + me + " only solace:story/knew_my_name", "advancement grant " + me + " only solace:story/first_page"), 30, "p2_6_page_toast.png"));
+        list.add(new Stop(List.of("#advancements"), 40, "p2_7_advancements.png"));
+        list.add(new Stop(List.of("#close"), 10, null));
+        return list;
+    }
+
+    private static void clientAction(Minecraft mc, String action) {
+        if (mc.player == null) return;
+        switch (action) {
+            case "#advancements" -> {
+                net.minecraft.client.multiplayer.ClientAdvancements adv = mc.player.connection.getAdvancements();
+                mc.setScreen(new net.minecraft.client.gui.screens.advancements.AdvancementsScreen(adv));
+                net.minecraft.advancements.AdvancementHolder root = adv.get(Solace.id("story/root"));
+                if (root != null) adv.setSelectedTab(root, true);
+            }
+            case "#close" -> mc.setScreen(null);
+            case "#quiet" -> {
+                mc.getTutorial().setStep(net.minecraft.client.tutorial.TutorialSteps.NONE);
+                mc.getToasts().clear();
+            }
+            default -> Solace.LOGGER.warn("[screenshots] unknown tour action {}", action);
+        }
     }
 
     private static void createWorld(Minecraft mc) {

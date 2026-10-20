@@ -26,6 +26,7 @@ public final class ClientConfig {
 
     public static final ModConfigSpec.BooleanValue GLITCH_EFFECTS;
     public static final ModConfigSpec.BooleanValue FAKE_CRASH_SCREENS;
+    public static final ModConfigSpec.BooleanValue BOND_HINT;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -62,6 +63,11 @@ public final class ClientConfig {
         b.comment("Comfort settings. Turn these off if flashing or sudden effects bother you.").push("comfort");
         GLITCH_EFFECTS = b.comment("Screen static / glitch overlays.").define("glitchEffects", true);
         FAKE_CRASH_SCREENS = b.comment("The fake crash screen scare.").define("fakeCrashScreens", true);
+        b.pop();
+
+        b.comment("What Solace shows on your screen.").push("display");
+        BOND_HINT = b.comment("A small flame in the top left corner: how strong Solace is right now, and how much you owe it. No numbers.")
+                .define("bondHint", true);
         b.pop();
 
         SPEC = b.build();

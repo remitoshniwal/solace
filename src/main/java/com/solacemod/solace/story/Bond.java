@@ -30,6 +30,9 @@ public final class Bond {
     public static final Set<String> REQUEST_KINDS = Set.of("bring", "stay_until_morning", "go_to", "spend_time", "dont_leave");
     /** Requests expire after 30 minutes of game time. */
     private static final long REQUEST_LIFETIME = 20L * 60 * 30;
+    /** What each player's corner flame was last told (packed), and when. */
+    private static final java.util.Map<java.util.UUID, Integer> HINT_SENT = new java.util.HashMap<>();
+    private static final java.util.Map<java.util.UUID, Long> HINT_SENT_AT = new java.util.HashMap<>();
 
     private Bond() {
     }
@@ -119,6 +122,35 @@ public final class Bond {
             addDebt(story, 10);
             story.addEvent("the player left even though you asked them not to");
         }
+    }
+
+    // ---------- The flame in the corner (client/BondHint) ----------
+
+    /** Tells the player's game about the bond: at most every 5 seconds, and only when something changed. */
+    static void sendHint(ServerPlayer player, PlayerStory story) {
+        MinecraftServer server = player.getServer();
+        if (server == null) return;
+        long now = server.getTickCount();
+        java.util.UUID id = player.getUUID();
+        Long last = HINT_SENT_AT.get(id);
+        if (last != null && now - last < 20 * 5) return;
+        boolean show = story.solaceShouldExist();
+        // Rounded to steps of 5 so tiny changes don't send anything.
+        int percent = (int) Math.round(Math.max(0, Math.min(1, story.tether / Math.max(1, maxTether(story)))) * 20) * 5;
+        int band = story.debt >= 100 ? 3 : story.debt >= 60 ? 2 : story.debt >= 30 ? 1 : 0;
+        boolean request = story.request != null;
+        int packed = (show ? 1 << 20 : 0) | (request ? 1 << 19 : 0) | band << 16 | percent;
+        if (HINT_SENT.containsKey(id) && HINT_SENT.get(id) == packed) return;
+        HINT_SENT.put(id, packed);
+        HINT_SENT_AT.put(id, now);
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+                new com.solacemod.solace.network.ModNetwork.BondPayload(percent, band, request, show));
+    }
+
+    /** Makes the next tick send the flame again (after logging in, or a reset). */
+    public static void resendHint(java.util.UUID id) {
+        HINT_SENT.remove(id);
+        HINT_SENT_AT.remove(id);
     }
 
     // ---------- Teaching the price ----------

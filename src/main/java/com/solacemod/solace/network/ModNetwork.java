@@ -70,6 +70,25 @@ public final class ModNetwork {
         }
     }
 
+    /**
+     * Server -> client: the bond, for the little flame in the corner (client/BondHint).
+     * tetherPercent = Solace's strength compared with this chapter's maximum (0 to 100). debtBand: 0 = under 30, 1 = 30+, 2 = 60+, 3 = 100+.
+     */
+    public record BondPayload(int tetherPercent, int debtBand, boolean request, boolean show) implements CustomPacketPayload {
+        public static final Type<BondPayload> TYPE = new Type<>(Solace.id("bond"));
+        public static final StreamCodec<ByteBuf, BondPayload> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, BondPayload::tetherPercent,
+                ByteBufCodecs.VAR_INT, BondPayload::debtBand,
+                ByteBufCodecs.BOOL, BondPayload::request,
+                ByteBufCodecs.BOOL, BondPayload::show,
+                BondPayload::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
     /** Client -> server: what the player said out loud (already turned into text on their computer). */
     public record VoiceTextPayload(String text) implements CustomPacketPayload {
         public static final Type<VoiceTextPayload> TYPE = new Type<>(Solace.id("voice_text"));
@@ -91,6 +110,8 @@ public final class ModNetwork {
                 (payload, ctx) -> ctx.enqueueWork(() -> com.solacemod.solace.client.ClientHooks.onFakeCrash(payload)));
         registrar.playToClient(OpenSetupPayload.TYPE, OpenSetupPayload.CODEC,
                 (payload, ctx) -> ctx.enqueueWork(() -> com.solacemod.solace.client.ClientHooks.onOpenSetup(payload)));
+        registrar.playToClient(BondPayload.TYPE, BondPayload.CODEC,
+                (payload, ctx) -> ctx.enqueueWork(() -> com.solacemod.solace.client.ClientHooks.onBond(payload)));
         registrar.playToServer(VoiceTextPayload.TYPE, VoiceTextPayload.CODEC,
                 (payload, ctx) -> ctx.enqueueWork(() -> {
                     if (ctx.player() instanceof ServerPlayer player) {

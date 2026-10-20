@@ -33,6 +33,7 @@ public final class ClientModEvents {
 
     @SubscribeEvent
     public static void onGuiLayers(RegisterGuiLayersEvent event) {
+        event.registerAboveAll(Solace.id("bond_hint"), BondHint::render);
         event.registerAboveAll(Solace.id("glitch"), GlitchOverlay::render);
     }
 }

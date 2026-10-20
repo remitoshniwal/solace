@@ -118,6 +118,20 @@ jobs:
             echo "::notice title=Screenshots::${n} screenshots taken"
           fi
 
+      - name: Screenshots (bond hint, toasts, advancements tab)
+        continue-on-error: true
+        run: |
+          export LIBGL_ALWAYS_SOFTWARE=1
+          rm -rf run/saves/solace_tour
+          SOLACE_TOUR=phase2 timeout 600 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runClient > shots2.log 2>&1 || true
+          n=$(ls run/screenshots/p2_*.png 2>/dev/null | wc -l)
+          if [ "$n" -eq 0 ]; then
+            msg=$(grep -i "screenshots\|exception\|error\|caused by\|at com.solacemod" shots2.log | grep -v -i "narrator\|flite" | tail -40 | cut -c 1-300 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')
+            echo "::warning title=No phase 2 screenshots::${msg}"
+          else
+            echo "::notice title=Phase 2 screenshots::${n} screenshots taken"
+          fi
+
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4

@@ -95,6 +95,8 @@ public final class SolaceSetupScreen extends Screen {
     private boolean screenEffects;
     private boolean glitchComfort;
     private boolean crashComfort;
+    private boolean bondHint;
+    private boolean nudges;
 
     private boolean mining;
     private boolean building;
@@ -161,6 +163,8 @@ public final class SolaceSetupScreen extends Screen {
         screenEffects = SolaceConfig.ALLOW_SCREEN_EFFECTS.get();
         glitchComfort = ClientConfig.GLITCH_EFFECTS.get();
         crashComfort = ClientConfig.FAKE_CRASH_SCREENS.get();
+        bondHint = ClientConfig.BOND_HINT.get();
+        nudges = SolaceConfig.STORY_NUDGES.get();
 
         mining = SolaceConfig.ALLOW_MINING.get();
         building = SolaceConfig.ALLOW_BUILDING.get();
@@ -194,6 +198,7 @@ public final class SolaceSetupScreen extends Screen {
         SolaceConfig.ALLOW_FAKE_MESSAGES.set(fakeMessages);
         SolaceConfig.ALLOW_FAKE_CRASH.set(fakeCrash);
         SolaceConfig.ALLOW_SCREEN_EFFECTS.set(screenEffects);
+        SolaceConfig.STORY_NUDGES.set(nudges);
         SolaceConfig.ALLOW_MINING.set(mining);
         SolaceConfig.ALLOW_BUILDING.set(building);
         SolaceConfig.ALLOW_COMBAT.set(combat);
@@ -215,6 +220,7 @@ public final class SolaceSetupScreen extends Screen {
         ClientConfig.TTS_MODEL.set(ttsModel.trim());
         ClientConfig.GLITCH_EFFECTS.set(glitchComfort);
         ClientConfig.FAKE_CRASH_SCREENS.set(crashComfort);
+        ClientConfig.BOND_HINT.set(bondHint);
         ClientConfig.SPEC.save();
     }
 
@@ -530,7 +536,12 @@ public final class SolaceSetupScreen extends Screen {
             fakeCrash = v;
             crashComfort = v;
         }, "A harmless fake crash screen. Closes by itself or with Esc."));
-        note(rowY(5) + 2, Component.literal("Story spoilers are in docs/STORY.md. Don't peek!"));
+        label(5, "Help");
+        addRenderableWidget(toggle(controlX(), rowY(5), half, "Bond hint", bondHint, v -> bondHint = v,
+                "A small flame in the corner: how strong Solace is, and how much you owe it. Just for you."));
+        addRenderableWidget(toggle(controlX() + half + 3, rowY(5), half, "Hints when stuck", nudges, v -> nudges = v,
+                "Small hints when a page is lying nearby or you haven't found a place yet."));
+        note(rowY(6) + 2, Component.literal("Story spoilers are in docs/STORY.md. Don't peek!"));
     }
 
     private void initAbilitiesPage() {

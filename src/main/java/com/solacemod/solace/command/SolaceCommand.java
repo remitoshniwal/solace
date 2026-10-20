@@ -120,7 +120,29 @@ public final class SolaceCommand {
                                 .then(Commands.argument("page", IntegerArgumentType.integer(1, StoryText.FRAGMENT_COUNT)).executes(ctx -> {
                                     Fragments.giveTo(EntityArgument.getPlayer(ctx, "player"), IntegerArgumentType.getInteger(ctx, "page") - 1);
                                     return msg(ctx, "Page given.");
-                                }))))
+                                })
+                                        // "ground": dropped behind the player like the story does, so the page hints can be tested.
+                                        .then(Commands.literal("ground").executes(ctx -> {
+                                            ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
+                                            StoryDirector.deliverFragment(p, story(ctx, p), IntegerArgumentType.getInteger(ctx, "page") - 1, StoryDirector.Delivery.GROUND);
+                                            return msg(ctx, "Page dropped behind them.");
+                                        })))))
+                        .then(Commands.literal("power").then(Commands.argument("player", EntityArgument.player())
+                                .then(Commands.argument("power", StringArgumentType.word())
+                                        .suggests((ctx, b) -> {
+                                            for (String s : com.solacemod.solace.story.Powers.COSTS.keySet()) b.suggest(s);
+                                            return b.buildFuture();
+                                        })
+                                        .executes(ctx -> {
+                                            // Uses a power as if Solace chose to (it costs Tether and adds debt), for testing the price.
+                                            ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
+                                            String power = StringArgumentType.getString(ctx, "power");
+                                            if (!com.solacemod.solace.story.Powers.isPower(power)) return fail(ctx, "Unknown power. Try: heal, feed, weather, smite, find...");
+                                            PlayerStory s = story(ctx, p);
+                                            SolaceEntity solace = SolaceManager.find(ctx.getSource().getServer(), s);
+                                            String result = com.solacemod.solace.story.Powers.use(p, solace, s, new com.google.gson.JsonObject(), power);
+                                            return msg(ctx, result == null ? "Done." : result);
+                                        }))))
                         .then(Commands.literal("horror").then(Commands.argument("player", EntityArgument.player())
                                 .then(Commands.argument("event", StringArgumentType.word())
                                         .suggests((ctx, b) -> {

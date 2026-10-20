@@ -71,6 +71,8 @@
   "solace.configuration.volume": "Volume",
   "solace.configuration.glitchEffects": "Glitch Effects",
   "solace.configuration.fakeCrashScreens": "Fake Crash Screens",
+  "solace.configuration.display": "Display",
+  "solace.configuration.bondHint": "Bond Hint",
   "solace.configuration.nudges": "Hints When Stuck",
 
   "advancement.solace.story.root.title": "Solace",
