@@ -53,6 +53,7 @@ public final class SolaceConfig {
     public static final ModConfigSpec.DoubleValue STORY_SPEED;
     public static final ModConfigSpec.ConfigValue<String> WHO_GETS_SOLACE;
     public static final ModConfigSpec.BooleanValue PLAYTEST_LOG;
+    public static final ModConfigSpec.BooleanValue STORY_NUDGES;
 
     // Horror
     public static final ModConfigSpec.DoubleValue HORROR_INTENSITY;
@@ -157,6 +158,9 @@ public final class SolaceConfig {
         PLAYTEST_LOG = b.comment("Playtesting: write a timeline of everything that happens (chapters, pages, scares, what Solace said)",
                         "to <game folder>/solace/playtest/. Notes from /solace note are always saved. See docs/PLAYTEST.md.")
                 .define("playtestLog", false);
+        STORY_NUDGES = b.comment("Small hints when a player seems stuck: a rustle where a page is lying, Solace warning them away from the house.",
+                        "The timings are guesses until the story has been playtested (story/Nudges.java).")
+                .define("nudges", true);
         b.pop();
 
         b.push("horror");

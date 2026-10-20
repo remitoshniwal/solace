@@ -161,6 +161,7 @@ public final class StoryDirector {
         redeliverLostPages(player, story, server);
         tickEpilogue(player, story, server, now);
         if (story.ending != Ending.NONE || story.bossActive) return;
+        if (story.chapter < 8) Nudges.tick(player, story, PAGES_TO_LEAVE[story.chapter], timeToLeave(story));
 
         // Move on to the next chapter?
         if (story.chapter < 8 && canLeave(story)) {
@@ -201,10 +202,13 @@ public final class StoryDirector {
     }
 
     private static boolean canLeave(PlayerStory story) {
+        return story.fragmentsFound.size() >= PAGES_TO_LEAVE[story.chapter] && timeToLeave(story);
+    }
+
+    /** Everything a chapter needs before it can end, except the pages. */
+    private static boolean timeToLeave(PlayerStory story) {
         int ch = story.chapter;
         double m = inChapter(story);
-        int pages = story.fragmentsFound.size();
-        if (pages < PAGES_TO_LEAVE[ch]) return false;
         return switch (ch) {
             // The house: visit it, or let the time run out.
             case 5 -> story.beatsDone.contains("house_visited") ? m >= 8 : m >= MIN_LENGTH[5];
@@ -834,10 +838,12 @@ public final class StoryDirector {
         LAST_BEAT.clear();
         LAST_GUIDE.clear();
         SLEEP_REMINDED.clear();
+        Nudges.reset();
     }
 
     public static void forgetSession(UUID id) {
         ONLINE_SINCE.remove(id);
         LAST_BEAT.remove(id);
+        Nudges.forget(id);
     }
 }

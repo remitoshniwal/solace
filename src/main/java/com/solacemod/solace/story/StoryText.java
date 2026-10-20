@@ -157,6 +157,15 @@ public final class StoryText {
     public static final String DEBT_TONE_60 = "high: you are cold now. Nothing is free any more: you call your favours what they owe you, "
             + "you stop saying please, you're possessive";
 
+    // Hints when stuck (story/Nudges.java). The *_LINE ones are shown word for word as grey text.
+    public static final String NUDGE_PAGE_LINE = "Paper rustles somewhere close.";
+    public static final String NUDGE_PAGE_AGAIN_LINE = "The rustling again. Something is lying out there, waiting to be picked up.";
+    /** %1$s = a direction like "north-east", %2$d = roughly how many blocks. */
+    public static final String NUDGE_HOUSE = "You can feel the little house out there, to the %1$s, about %2$d blocks away. The player hasn't found it yet. "
+            + "Warn them, nervously, NOT to go %1$s. Say the direction. There's nothing there. Nothing at all.";
+    /** %1$s = a direction like "north-east". */
+    public static final String NUDGE_HOUSE_LINE = "The wind smells of old wood, from the %1$s.";
+
     public static final String FORCED_HOLLOW = "The player has treated you badly for a long time. You've decided they were never going to stay. "
             + "You're becoming the Hollow. Say something cold and final.";
     public static final String BOSS_PLAYER_DIED = "You (the Hollow) just killed the player in your fight. Tell them they can't leave either.";
