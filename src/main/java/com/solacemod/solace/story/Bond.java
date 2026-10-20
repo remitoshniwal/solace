@@ -2,8 +2,10 @@ package com.solacemod.solace.story;
 
 import com.solacemod.solace.entity.SolaceEntity;
 import com.solacemod.solace.horror.Phenomena;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -69,6 +71,7 @@ public final class Bond {
             addTether(story, -1.0 / 120.0); // -1 every 2 minutes apart
         }
         tickRequest(player, story, near);
+        tickDebtMilestones(player, story);
         MinecraftServer server = player.getServer();
         if (server != null && story.debt >= 100 && solace != null && !story.bossActive) {
             long now = server.getTickCount();
@@ -115,6 +118,33 @@ public final class Bond {
             story.changeTrust(-6);
             addDebt(story, 10);
             story.addEvent("the player left even though you asked them not to");
+        }
+    }
+
+    // ---------- Teaching the price ----------
+
+    /** The first time a power costs Tether, the player is told plainly. The grey line works even when no AI is working. */
+    static void teachPrice(ServerPlayer player, PlayerStory story) {
+        if (!story.beatsDone.add("price_taught")) return;
+        player.sendSystemMessage(Component.literal(StoryText.PRICE_LINE).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+        StoryAdvancements.grant(player, "first_favour");
+        PlaytestLog.log(story, player, "PRICE", "the first power that cost something (Tether " + (int) story.tether + ", debt " + (int) story.debt + ")");
+        // A few seconds later, so it doesn't talk over its own reply.
+        Scheduler.later(60, () -> {
+            if (!player.isRemoved()) SolaceBrain.event(player, StoryText.FIRST_PRICE, true);
+        });
+    }
+
+    /** The first time debt passes 30 and 60, one quiet line says so. */
+    private static void tickDebtMilestones(ServerPlayer player, PlayerStory story) {
+        if (story.debt >= 30 && story.beatsDone.add("debt_30")) {
+            player.sendSystemMessage(Component.literal(StoryText.DEBT_30_LINE).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+            StoryAdvancements.grant(player, "owed");
+            PlaytestLog.log(story, player, "PRICE", "debt passed 30");
+        }
+        if (story.debt >= 60 && story.beatsDone.add("debt_60")) {
+            player.sendSystemMessage(Component.literal(StoryText.DEBT_60_LINE).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+            PlaytestLog.log(story, player, "PRICE", "debt passed 60");
         }
     }
 
@@ -270,8 +300,8 @@ public final class Bond {
                 .append(" (it grows while you're together; powers spend it)");
         sb.append(". The player's debt to you: ").append((int) story.debt);
         if (story.debt >= 100) sb.append(" (huge: they owe you; you may take something)");
-        else if (story.debt >= 60) sb.append(" (high: you feel owed; you're possessive)");
-        else if (story.debt >= 30) sb.append(" (you feel you deserve something back: you may ask for something with a request action)");
+        else if (story.debt >= 60) sb.append(" (").append(StoryText.DEBT_TONE_60).append(')');
+        else if (story.debt >= 30) sb.append(" (").append(StoryText.DEBT_TONE_30).append(')');
         PlayerStory.BondRequest r = story.request;
         if (r != null) sb.append(". You asked them: \"").append(r.text).append("\" (not done yet)");
         return sb.toString();

@@ -27,6 +27,7 @@ final class AmbientChatter {
         else if (time >= 12500 && time < 13500) situation = "The sun is setting and night is coming.";
         else if (player.getBlockY() < 30 && !level.canSeeSky(player.blockPosition())) situation = "The player is deep underground in the dark.";
         else if (level.isThundering()) situation = "There's a thunderstorm.";
+        else if (story.debt >= 60 && player.getRandom().nextFloat() < 0.5F) situation = com.solacemod.solace.story.StoryText.DEBT_AMBIENT;
         else if (player.getRandom().nextFloat() < 0.5F) situation = "It's been quiet for a while. Say something on your own: a thought, a question for the player, or something you notice.";
         else {
             story.lastAmbientTick = now - gap / 2; // try again a bit later

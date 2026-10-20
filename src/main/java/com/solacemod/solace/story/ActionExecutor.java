@@ -228,6 +228,7 @@ public final class ActionExecutor {
         String made = Powers.conjure(owner, story, item, make);
         if (!made.startsWith("can't")) {
             story.addEvent("you " + made);
+            Bond.teachPrice(owner, story);
             return null;
         }
         String name = new ItemStack(item).getHoverName().getString();

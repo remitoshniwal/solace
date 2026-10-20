@@ -61,7 +61,9 @@ public final class Presence {
             case 4 -> 1.4;
             default -> 1.8;
         };
-        creep += rate * SolaceConfig.HORROR_INTENSITY.get() * (0.5 + solace.getRandom().nextDouble());
+        // The more the player owes it, the more often it moves wrong.
+        double debtFactor = 1.0 + Math.min(1.5, story.debt / 100.0);
+        creep += rate * debtFactor * SolaceConfig.HORROR_INTENSITY.get() * (0.5 + solace.getRandom().nextDouble());
         if (creep < threshold) return;
         creep = solace.getRandom().nextDouble() * 30;
         threshold = 60 + solace.getRandom().nextDouble() * 60;

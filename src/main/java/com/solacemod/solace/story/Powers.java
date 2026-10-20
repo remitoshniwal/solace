@@ -112,6 +112,7 @@ public final class Powers {
                     + "). You grow stronger the longer they stay with you";
         }
 
+        double givenBefore = story.totalGiven;
         String result = switch (type) {
             case "heal" -> heal(owner);
             case "feed" -> feed(owner);
@@ -145,6 +146,8 @@ public final class Powers {
         if (!failed) {
             COOLDOWNS.put(key, now + 20L * COOLDOWN_SECONDS.getOrDefault(type, 30));
             if (cost > 0) Bond.spend(story, cost); // conjure pays for itself inside conjure()
+            // The very first time a power costs something, the player is told so, plainly.
+            if (story.totalGiven > givenBefore) Bond.teachPrice(owner, story);
             // Big powers show what it really is, but only once the story has revealed it (chapter 6).
             if (solace != null && cost >= 15 && story.chapter >= 6 && SolaceConfig.STORY_ENABLED.get()) solace.showLantern(50);
             // From chapter 3, using a power shows his negative side for a moment.

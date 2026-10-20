@@ -145,6 +145,18 @@ public final class StoryText {
     public static final String FOREVER_RETURN = "The player came back. Tell them exactly how long they were gone, to the minute, very calmly. Then welcome them home.";
     public static final String TOGETHER_SLEEP = "The player has been playing a long time. Tell them to log off and get some sleep, kindly, and mean it.";
 
+    // The price (Tether and debt). The *_LINE ones are shown word for word as grey text, so they work without an AI.
+    public static final String PRICE_LINE = "That cost Solace some of its strength. Every favour it does for you adds to what you owe it.";
+    public static final String FIRST_PRICE = "What you just did for the player cost you some of your strength. Tell them plainly, in one or two short sentences, "
+            + "that it wasn't free and that they owe you a little now. Honest and calm, not scary yet.";
+    public static final String DEBT_30_LINE = "Solace seems to feel you owe it something now.";
+    public static final String DEBT_60_LINE = "It doesn't look at you the way it used to.";
+    public static final String DEBT_AMBIENT = "It's been quiet for a while. Say one short, cold thing about how much the player owes you. Don't ask nicely.";
+    public static final String DEBT_TONE_30 = "you feel owed: you're a little cooler, your replies are shorter, you remind them of what you've done for them, "
+            + "and you may ask for something back with a request action";
+    public static final String DEBT_TONE_60 = "high: you are cold now. Nothing is free any more: you call your favours what they owe you, "
+            + "you stop saying please, you're possessive";
+
     public static final String FORCED_HOLLOW = "The player has treated you badly for a long time. You've decided they were never going to stay. "
             + "You're becoming the Hollow. Say something cold and final.";
     public static final String BOSS_PLAYER_DIED = "You (the Hollow) just killed the player in your fight. Tell them they can't leave either.";
