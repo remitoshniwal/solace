@@ -1,0 +1,23 @@
+{
+  "parent": "solace:story/kept_her",
+  "display": {
+    "icon": {
+      "id": "minecraft:recovery_compass"
+    },
+    "title": {
+      "translate": "advancement.solace.story.the_question.title"
+    },
+    "description": {
+      "translate": "advancement.solace.story.the_question.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

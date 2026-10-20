@@ -1,0 +1,23 @@
+{
+  "parent": "solace:story/first_favour",
+  "display": {
+    "icon": {
+      "id": "minecraft:poppy"
+    },
+    "title": {
+      "translate": "advancement.solace.story.as_asked.title"
+    },
+    "description": {
+      "translate": "advancement.solace.story.as_asked.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

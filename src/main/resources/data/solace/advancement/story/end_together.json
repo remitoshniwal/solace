@@ -1,0 +1,23 @@
+{
+  "parent": "solace:story/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:torchflower"
+    },
+    "title": {
+      "translate": "advancement.solace.story.end_together.title"
+    },
+    "description": {
+      "translate": "advancement.solace.story.end_together.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

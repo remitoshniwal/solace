@@ -315,6 +315,7 @@ public final class SolaceCommand {
             if (solace.isHollow()) solace.revertFromHollow();
             solace.discard();
         }
+        com.solacemod.solace.story.StoryAdvancements.revokeStory(player);
         data.reset(player.getUUID());
         StoryDirector.forgetSession(player.getUUID());
         StoryDirector.onLogin(player, data.get(player.getUUID()));

@@ -1,0 +1,23 @@
+{
+  "parent": "solace:story/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:nether_star"
+    },
+    "title": {
+      "translate": "advancement.solace.story.every_ending.title"
+    },
+    "description": {
+      "translate": "advancement.solace.story.every_ending.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

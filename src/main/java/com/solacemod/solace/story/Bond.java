@@ -181,6 +181,7 @@ public final class Bond {
         addDebt(story, -25);
         story.changeTrust(3);
         story.addEvent("the player did what you asked: " + r.text);
+        StoryAdvancements.grant(player, "as_asked");
         SolaceBrain.event(player, "The player did what you asked (\"" + r.text + "\"). React to it.", true);
     }
 

@@ -96,6 +96,10 @@ public final class StoryDirector {
             story.choicePending = true;
             story.lastChoicePromptTick = server.getTickCount();
         }
+        // A moment after joining (so the toasts show): any advancements the saved story has earned.
+        Scheduler.later(40, () -> {
+            if (!player.isRemoved()) StoryAdvancements.catchUp(player, story);
+        });
         if (!story.met || !story.solaceShouldExist() || story.lastLogoutMs <= 0) return;
 
         long awayMinutes = (System.currentTimeMillis() - story.lastLogoutMs) / 60_000;
@@ -245,6 +249,7 @@ public final class StoryDirector {
         if (!visited && dist < 3.5 && Math.abs(player.getY() - center.y) < 3) {
             story.beatsDone.add("house_visited");
             story.addEvent("the player went inside Maren's house");
+            StoryAdvancements.grant(player, "house");
             Sounds.playFor(player, player.position(), Sounds.get("block.wooden_door.close"), 0.6F, 0.5F);
             SolaceBrain.event(player, StoryText.C5_INSIDE, true);
             visited = true;
@@ -292,6 +297,7 @@ public final class StoryDirector {
         story.chapterStartMin = minutes(story);
         story.playerName = player.getGameProfile().getName();
         PlaytestLog.log(story, player, "MEET", "Solace appeared");
+        StoryAdvancements.grant(player, "root");
         GlobalMemory.Entry g = GlobalMemory.get(player.getUUID());
         g.worldsMet++;
         g.name = story.playerName;
@@ -320,6 +326,7 @@ public final class StoryDirector {
         if (solace != null) SolaceManager.updateForm(solace, story);
         switch (chapter) {
             case 3 -> { // PART TWO begins: the first crack
+                StoryAdvancements.grant(player, "knew_my_name");
                 HorrorDirector.glitchScreen(player, 0, 25, "");
                 SolaceBrain.event(player, "For a second the whole world flickered. You feel like you've been here before. Mention it, then insist you're fine.", true);
             }
@@ -474,6 +481,7 @@ public final class StoryDirector {
         boolean frozen = com.solacemod.solace.horror.WorldFreeze.freeze(server);
         if (!frozen) PlaytestLog.log(story, player, "SCENE", "the world freeze was skipped (more than one player online, or the game was already frozen)");
         story.addEvent("you showed the player your true shape and confessed that you kept Maren" + (frozen ? " (the whole world stood still)" : ""));
+        StoryAdvancements.grant(player, "kept_her");
         Sounds.playFor(player, player.position(), Sounds.get("block.beacon.ambient"), 1.0F, 0.5F);
         for (int i = 0; i < 4; i++) Scheduler.later(30 + i * 40, () -> Sounds.playFor(player, player.position(), Sounds.get("entity.warden.heartbeat"), 1.0F, 0.6F));
         SolaceBrain.event(player, StoryText.C6_CONFESS, true);
@@ -543,6 +551,8 @@ public final class StoryDirector {
             if (idx < 0 || idx >= StoryText.FRAGMENT_COUNT || story.fragmentsFound.contains(idx)) continue;
             story.fragmentsFound.add(idx);
             story.addEvent("the player found torn page " + (idx + 1) + " of Maren's journal");
+            StoryAdvancements.grant(player, "first_page");
+            if (story.fragmentsFound.size() >= StoryText.FRAGMENT_COUNT) StoryAdvancements.grant(player, "all_pages");
             String excerpt = StoryText.FRAGMENTS.get(idx).replace('\n', ' ');
             if (excerpt.length() > 160) excerpt = excerpt.substring(0, 160) + "...";
             if (storyOn()) {
@@ -560,6 +570,7 @@ public final class StoryDirector {
         if (server == null) return;
         boolean again = story.choicePending;
         PlaytestLog.log(story, player, "QUESTION", again ? "asked again (no answer yet)" : "Solace asks its question");
+        StoryAdvancements.grant(player, "the_question");
         story.choicePending = true;
         story.lastChoicePromptTick = server.getTickCount();
         SolaceEntity solace = SolaceManager.find(server, story);
@@ -788,6 +799,8 @@ public final class StoryDirector {
         PlaytestLog.log(story, player, "ENDING", ending.name());
         GlobalMemory.recordEnding(player.getUUID(), ending);
         long found = GlobalMemory.distinctEndings(player.getUUID());
+        StoryAdvancements.grantEnding(player, ending);
+        if (found >= 5) StoryAdvancements.grant(player, "every_ending");
         Titles.show(player, Component.literal("ENDING: " + ending.name()).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD),
                 Component.literal(found + " of 5 endings discovered").withStyle(ChatFormatting.GRAY), 20, 100, 40);
         player.sendSystemMessage(Component.literal("---- ENDING: " + ending.name() + " ----").withStyle(ChatFormatting.GOLD));

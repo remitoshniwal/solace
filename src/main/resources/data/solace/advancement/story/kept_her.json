@@ -1,0 +1,23 @@
+{
+  "parent": "solace:story/house",
+  "display": {
+    "icon": {
+      "id": "minecraft:soul_lantern"
+    },
+    "title": {
+      "translate": "advancement.solace.story.kept_her.title"
+    },
+    "description": {
+      "translate": "advancement.solace.story.kept_her.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}
