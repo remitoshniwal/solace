@@ -11,14 +11,14 @@ Solace shows up about 30 seconds after you join a world. It's a tall, headless f
 - **Talks like a real person.** Chat normally near Solace, or start a message with "Solace". Every word comes from an AI (almost any AI service works, see below). Nothing is pre-written.
 - **Not a player. Something else.** Solace can't be hurt (not even by `/kill` or the void; only its boss form can be beaten), hovers, moves silently and blinks in and out of existence. It sees everything: where you are, what you carry, what's buried in the stone around you, how many times you've died, even what time it is in the real world.
 - **Has powers.** It can heal you, bless you with effects, change the weather and time, strike monsters with lightning or banish them, make hidden creatures glow, find any ore or structure, conjure items out of nothing, and carry you home.
-- **Power comes at a price.** Its strength (**Tether**) grows while you're together and gets spent on powers. Nothing is off limits, not even netherite, but big things cost a lot. Every gift adds to your **Debt**. Owe it enough and it starts asking for things. Owe it too much and it collects.
+- **Power comes at a price.** Its strength (**Tether**) grows while you're together and gets spent on powers. Nothing is off limits, not even netherite, but big things cost a lot. Every gift adds to your **Debt**. Owe it enough and it starts asking for things. Owe it too much and it collects. A small flame in the corner of your screen shows how strong it is and how much you owe (you can turn it off in setup).
 - **Moves wrong.** Most of the time it walks like a player. Sometimes it glides without moving its legs, stutters forward like lag, flickers, turns its head too far, stands somewhere it shouldn't be at the edge of your vision, or copies your every move.
 - **Does things on its own.** Leaves gifts on your bed. Watches you sleep. Builds things while you're logged off. Rearranges your chests. Once in a while, for a third of a second, you're in the sky, falling... and then you're back, like nothing happened.
 - **Three forms, made in Blockbench.** Every day it's a tall, headless, eyeless shadow in dark grey armour, with spiked shoulders, a laced collar round an empty hollow, long arms and claws, outlined in white. Sometimes it flickers into its negative: a white armoured wraith with shoulder flames and sword blades for hands, outlined in black. Its true form, the Lantern, is a crackling 3D ball of blue plasma with a white-hot middle. No extra mods needed.
 - **Does what you ask.** "follow me", "stay here", "guard me", "mine 10 iron", "chop some wood", "pick up the items", "build a shelter", "craft a stone pickaxe", "light this place up", "give me your cobblestone", "remember this place as home", "take me home", "where's the nearest village?", "make it day", "heal me"
 - **Remembers you.** Your name, what you like, what you did, how you treated it. It even remembers you **across different worlds**.
 - **Voice chat (optional).** Hold **G** to talk with your mic, and hear Solace speak.
-- **A real story.** 8 chapters, 7 journal pages, the Watcher, Maren's house, a boss fight, and **5 endings** (two are secret).
+- **A real story.** 8 chapters, 7 journal pages, the Watcher, Maren's house, a boss fight, and **5 endings** (two are secret). Its own spoiler-free tab in the advancements screen (L) shows how far you've come.
 - **Horror that respects you.** Footsteps, torches going out, fake chat messages, signs, a fake crash screen... Every effect can be turned off, and nothing ever destroys your builds.
 
 ## Install (for players)
@@ -88,7 +88,7 @@ Open setup and go to the **Voice** page:
 | `/solace note <text>` | Playtesting: save a note about this moment (see [docs/PLAYTEST.md](docs/PLAYTEST.md)) |
 | `/solace forget confirm` | Wipe Solace's memory of you (all worlds) |
 | `/solace reset confirm` | Restart the story in this world |
-| `/solace admin ...` | Server operators, for testing: `chapter`, `trust`, `bond`, `fragment`, `horror`, `presence`, `lantern`, `question`, `playtest on/off` (see [docs/STORY.md](docs/STORY.md)) |
+| `/solace admin ...` | Server operators, for testing: `chapter`, `trust`, `bond`, `fragment`, `power`, `horror`, `presence`, `lantern`, `question`, `playtest on/off` (see [docs/STORY.md](docs/STORY.md)) |
 
 **Tip:** give Solace items by right-clicking it while holding them, or just throw them to it (Q). It doesn't need tools to mine (a pickaxe only makes it faster). Ask it for something it doesn't have and it makes it with its power, if it's strong enough. It needs blocks to build and coal + sticks to make torches.
 
