@@ -13,7 +13,7 @@ import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import org.lwjgl.glfw.GLFW;
 
 /** Registers how Solace looks, the push-to-talk key, and the screen-glitch overlay. */
-@EventBusSubscriber(modid = Solace.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Solace.MODID, value = Dist.CLIENT) // NeoForge sends these registration events to the mod bus by itself
 public final class ClientModEvents {
     public static final KeyMapping TALK_KEY = new KeyMapping("key.solace.talk", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, "key.categories.solace");
 

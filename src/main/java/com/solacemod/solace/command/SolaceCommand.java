@@ -322,7 +322,7 @@ public final class SolaceCommand {
         return 1;
     }
 
-    /** /solace admin together: tries one multiplayer moment now (with a stand-in when nobody else is online). */
+    /** /solace admin memory: shows, fakes or clears the endings Solace remembers across worlds. */
     private static int memory(CommandContext<CommandSourceStack> ctx, String detail) throws CommandSyntaxException {
         ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
         try {
@@ -332,6 +332,7 @@ public final class SolaceCommand {
         }
     }
 
+    /** /solace admin together: tries one multiplayer moment now (with a stand-in when nobody else is online). */
     private static int together(CommandContext<CommandSourceStack> ctx, String detail) throws CommandSyntaxException {
         ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
         try {

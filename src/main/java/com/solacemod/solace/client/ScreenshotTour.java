@@ -50,7 +50,12 @@ public final class ScreenshotTour {
     private static boolean worldRequested;
     private static int ticks;
     private static int step;
+    /** Server ticks left before the next stop. Counted on the server's clock: it can run at half speed during a tour. */
     private static int wait;
+    /** The server's tick count when this window last looked, to see how far the server got since. */
+    private static int lastServerTick = -1;
+    /** Client ticks since Solace first showed up (the tour starts a little after). */
+    private static int sinceSolace = -1;
 
     /** One stop on the tour: commands to run, how long to wait, then the picture to take (null = none). */
     private record Stop(List<String> commands, int waitTicks, String shot) {
@@ -77,16 +82,28 @@ public final class ScreenshotTour {
         mc.options.hideGui = !PLAYTEST && !PHASE2 && !SOUNDS && !TOGETHER && !AFTERWARD;
         mc.options.pauseOnLostFocus = false; // clicking another window must not pause the tour's world
         ticks++;
-        // Solace appears 30 seconds after the player joins.
-        if (ticks < 20 * 36) return;
+        // Solace appears 30 seconds (of server time) after the player joins. Start once it's really here, plus 3 seconds to settle.
+        if (sinceSolace < 0) {
+            boolean here = false;
+            for (net.minecraft.world.entity.Entity e : mc.level.entitiesForRendering()) if (e instanceof com.solacemod.solace.entity.SolaceEntity) here = true;
+            if (here) sinceSolace = 0;
+            else if (ticks == 20 * 180) Solace.LOGGER.warn("[screenshots] Solace hasn't shown up after 3 minutes; starting anyway");
+            if (!here && ticks < 20 * 180) return;
+            if (!here) sinceSolace = 0;
+        }
+        if (sinceSolace++ < 60) return;
+        // How far the server got since the last look. When the game is paused (a menu that pauses), the server stops, so count this window's ticks instead.
+        int serverTick = server.getTickCount();
+        int passed = lastServerTick < 0 || mc.isPaused() ? 1 : Math.max(0, serverTick - lastServerTick);
+        lastServerTick = serverTick;
         if (stops == null) {
             String me = mc.player.getGameProfile().getName();
             stops = PLAYTEST ? playtestPlan(me) : PHASE2 ? phase2Plan(me) : SOUNDS ? soundsPlan(me) : TOGETHER ? togetherPlan(me)
                     : AFTERWARD ? afterwardPlan(me) : plan(me);
         }
         if (wait > 0) {
-            wait--;
-            return;
+            wait -= passed;
+            if (wait > 0) return;
         }
         if (step >= stops.size()) {
             Solace.LOGGER.info("[screenshots] tour finished");
@@ -207,11 +224,6 @@ public final class ScreenshotTour {
         return list;
     }
 
-    /**
-     * Phase 4 (1.9.0): every multiplayer moment, alone. The other player is a stand-in ("Friend", or a Solace that belongs to nobody).
-     * AI comments are switched off for the tour, so the written lines show (there's no AI key in the automatic build anyway).
-     * The timeline goes to solace/playtest/.
-     */
     /** What comes after an ending, with faked memories (no AI: the written lines show). Timeline in run/solace/playtest/. */
     private static List<Stop> afterwardPlan(String me) {
         String solace = "@e[type=solace:solace,limit=1]";
@@ -266,6 +278,11 @@ public final class ScreenshotTour {
         return list;
     }
 
+    /**
+     * Phase 4 (1.9.0): every multiplayer moment, alone. The other player is a stand-in ("Friend", or a Solace that belongs to nobody).
+     * AI comments are switched off for the tour, so the written lines show (there's no AI key in the automatic build anyway).
+     * The timeline goes to solace/playtest/.
+     */
     private static List<Stop> togetherPlan(String me) {
         String solace = "@e[type=solace:solace,limit=1]";
         String together = "solace admin together " + me + " ";

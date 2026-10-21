@@ -26,7 +26,7 @@ jobs:
           java-version: 21
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Build the mod
         run: |
@@ -171,7 +171,7 @@ jobs:
 
       - name: Upload screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: screenshots
           path: run/screenshots/*.png
@@ -196,7 +196,7 @@ jobs:
           echo "Total error lines: $(grep -c 'error:' build.log || true)"
 
       - name: Upload the mod jar
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: solace-mod
           path: build/libs/*.jar
