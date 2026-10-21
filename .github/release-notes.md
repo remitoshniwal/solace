@@ -58,7 +58,7 @@ An AI companion that remembers you, and a psychological horror story about the l
 - **A whole new look, made in Blockbench.** Solace is now headless and eyeless: a laced collar stands round an empty hollow where its head should be.
   - **Normal form:** a gaunt shadow in dark grey armour, with black spikes on its shoulders, a short ragged robe, long arms and clawed hands, and a thin white outline. Its spikes grow as the story goes on.
   - **Negative form:** the same shape at full strength, in white: three-plate shoulder guards, an armoured skirt, sleeves and shin guards, a katana at its hip, a long black robe, white flames off its shoulders and sword blades for hands, with a black outline.
-- **A new Lantern.** A floating 3D ball of blue plasma with a white-hot middle, glowing blue layers, lightning arcs and a soft crackling glow. The Hollow is the same in red.
+- **A new Lantern.** A floating 3D ball of blue plasma with a white-hot middle, glowing blue layers, lightning arcs and a soft crackling glow.
 - **Hitboxes that fit.** The Lantern's hitbox now wraps the ball. Solace's body is a little wider (to match its shoulders) but still fits through doors.
 - **New setting: Who gets one.** On a busy server, set it to *Only players who type /solace join* (Abilities & Chat page). `/solace leave confirm` sends yours away.
 
@@ -77,7 +77,7 @@ An AI companion that remembers you, and a psychological horror story about the l
 ### New in 1.5.0
 - **His negative side shines.** Black skin with glowing white neon veins, burning eyes, light along his suit's seams, energy flowing over him, sparks crackling at his hands and dark smoke curling off him. It glows even in total darkness. (With a shader pack, the glow gets real bloom too.)
 - **Full transformations.** When he one-taps a mob, uses a power or loses his temper (later in the story), he turns fully negative for a few seconds, with a low electric hum.
-- **Truly invincible.** Not even `/kill` or falling into the void works on Solace: he scatters into ash and reappears behind you. Only the Hollow, his boss form, can be beaten.
+- **Truly invincible.** Not even `/kill` or falling into the void works on Solace: he scatters into ash and reappears behind you. Only its boss form can be beaten.
 
 ### New in 1.4.0
 - **A new look for Solace.** His own model and texture: a calm man in a dark tailored suit, with a jacket hem that swings when he walks. The lumps are gone.
@@ -97,7 +97,7 @@ An AI companion that remembers you, and a psychological horror story about the l
 - **Fewer tokens.** Background requests and brains low on tokens get a shorter prompt.
 
 ### New in 1.2.0
-- **The whole story, rewritten:** 8 chapters, Maren's house, the confession, Day 1000, and a fifth ending (COLLECTED).
+- **The whole story, rewritten:** 8 chapters, Maren's house, and a fifth ending (a secret one).
 - **Two forms:** the Mimic and the Lantern, its true form.
 - **Tether and Debt:** Solace's power grows the longer you're together. Nothing is off limits, but everything has a price.
 - **It moves wrong:** gliding, stuttering, flickering, standing where it shouldn't, copying you.

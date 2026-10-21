@@ -99,7 +99,7 @@ Open setup and go to the **Voice** page:
 On the **Story** page:
 - **Scares: Off** turns all scares off. **Story: OFF** makes Solace just a friendly companion.
 - Each scare type has its own switch: torches/doors/signs, fake messages, screen glitches, fake crash. Glitches are soft, with no bright strobing.
-- Nothing Solace does on its own ever hurts you, and none of it happens while you're in a real fight or low on health. In multiplayer, the chapter 6 "frozen world" only stops the whole world when you're the only player online. With others online it freezes only your own screen, and nothing can hurt you while it lasts (turn that off with **Own freeze** on the Together page).
+- Nothing Solace does on its own ever hurts you, and none of it happens while you're in a real fight or low on health. In multiplayer, a late story moment that stops the whole world only does that when you're the only player online. With others online it freezes only your own screen, and nothing can hurt you while it lasts (turn that off with **Own freeze** on the Together page).
 - Solace is told to keep things teen-appropriate, and to drop the act and be kind if a player seems genuinely upset in real life.
 
 ## Building it yourself (for developers)

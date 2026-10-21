@@ -67,7 +67,7 @@ public final class ClientConfig {
         FAKE_CRASH_SCREENS = b.comment("The fake crash screen scare.").define("fakeCrashScreens", true);
         b.pop();
 
-        b.comment("Solace's own sounds (the hum, the Lantern's drone, flickers...). Minecraft's sound sliders still apply too.").push("sounds");
+        b.comment("Solace's own sounds (the hum, drones, flickers...). Minecraft's sound sliders still apply too.").push("sounds");
         SOLACE_SOUNDS = b.comment("How loud Solace's own sounds are, in percent. 0 = silent.")
                 .defineInRange("solaceSounds", 100, 0, 100);
         HUM_NEAR_SOLACE = b.comment("The low hum you hear when you're close to Solace.").define("humNearSolace", true);

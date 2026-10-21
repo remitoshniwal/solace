@@ -53,10 +53,16 @@ public final class SolaceCommand {
                 .then(Commands.literal("come").executes(SolaceCommand::come))
                 .then(Commands.literal("status").executes(SolaceCommand::status))
                 .then(Commands.literal("pockets").executes(SolaceCommand::pockets))
-                .then(Commands.literal("test").executes(SolaceCommand::test))
+                // Operators and the single player owner only: each test is a real request on the server owner's key, outside the daily limit.
+                .then(Commands.literal("test").requires(SolaceCommand::ownerOrOperator).executes(SolaceCommand::test))
                 .then(Commands.literal("choose").then(Commands.argument("option", StringArgumentType.word())
                         .suggests((ctx, b) -> {
-                            for (String s : List.of("stay", "release", "erase", "together")) b.suggest(s);
+                            // Only what's on offer right now: Tab must never list an ending the player hasn't been shown.
+                            if (ctx.getSource().getEntity() instanceof ServerPlayer p) {
+                                PlayerStory s = StoryData.get(ctx.getSource().getServer()).get(p.getUUID());
+                                for (String o : StoryDirector.choicesNow(s)) b.suggest(o);
+                                for (String o : com.solacemod.solace.story.Afterward.choicesNow(s)) b.suggest(o);
+                            }
                             return b.buildFuture();
                         })
                         .executes(ctx -> {
@@ -260,6 +266,13 @@ public final class SolaceCommand {
                             for (int i = 0; i < StoryText.FRAGMENT_COUNT; i++) s.fragmentsFound.add(i);
                             return msg(ctx, "Solace will ask its question in about a minute.");
                         })))));
+    }
+
+    /** Server operators, the console, or whoever owns this single player world (not friends joining it over LAN). */
+    private static boolean ownerOrOperator(CommandSourceStack src) {
+        if (src.hasPermission(2)) return true;
+        ServerPlayer p = src.getPlayer();
+        return p != null && src.getServer().isSingleplayerOwner(p.getGameProfile());
     }
 
     private static PlayerStory story(CommandContext<CommandSourceStack> ctx, ServerPlayer p) {

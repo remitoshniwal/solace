@@ -595,7 +595,7 @@ public final class SolaceSetupScreen extends Screen {
                 "Small hints when a page is lying nearby or you haven't found a place yet."));
         label(6, "Solace sounds");
         AbstractSliderButton volume = soundSlider(controlX(), rowY(6), half);
-        volume.setTooltip(Tooltip.create(Component.literal("How loud Solace's own sounds are: its hum, the Lantern, flickers. Just for you.")));
+        volume.setTooltip(Tooltip.create(Component.literal("How loud Solace's own sounds are: its hum, drones, flickers. Just for you.")));
         addRenderableWidget(volume);
         addRenderableWidget(toggle(controlX() + half + 3, rowY(6), half, "Hum", hum, v -> hum = v,
                 "The low hum you hear when you're close to Solace."));
@@ -653,7 +653,7 @@ public final class SolaceSetupScreen extends Screen {
                 .create(controlX(), rowY(1), controlWidth(), 20, Component.literal("Each player's share"), (b, v) -> playerLimit = v));
         label(2, "Solace notices");
         addRenderableWidget(toggle(controlX(), rowY(2), half, "Jealousy", jealousy, v -> jealousy = v,
-                "Solace notices who you spend time with, and gets jealous (from chapter 3)."));
+                "Solace notices who you spend time with, and gets jealous (later in the story)."));
         addRenderableWidget(toggle(controlX() + half + 3, rowY(2), half, "Witnesses", witnesses, v -> witnesses = v,
                 "Other players can see your Solace doing strange things you missed, and get told about it."));
         label(3, "Between Solaces");
@@ -663,9 +663,9 @@ public final class SolaceSetupScreen extends Screen {
                 "When one player finishes the story, the other players' Solaces feel it. No spoilers early on."));
         label(4, "Big moments");
         addRenderableWidget(toggle(controlX(), rowY(4), half, "Boss with friends", hollowFriends, v -> hollowFriends = v,
-                "Friends can join the final fight: it gets stronger for each friend who fights, and it fights them too."));
+                "Friends can join a boss fight: it gets stronger for each friend who fights, and it fights them too."));
         addRenderableWidget(toggle(controlX() + half + 3, rowY(4), half, "Own freeze", personalFreeze, v -> personalFreeze = v,
-                "Chapter 6 with others online: freeze only that player's screen, instead of skipping the frozen world."));
+                "With others online, one strange moment happens only on that player's screen instead of being skipped."));
         label(5, "Talks about them");
         addRenderableWidget(CycleButton.onOffBuilder(togetherAi)
                 .withTooltip(v -> Tooltip.create(Component.literal("Solace talks about these moments using the AI. "
@@ -673,7 +673,7 @@ public final class SolaceSetupScreen extends Screen {
                 .create(controlX(), rowY(5), controlWidth(), 20, Component.literal("Talks about them"), (b, v) -> togetherAi = v));
         label(6, "Chat");
         addRenderableWidget(toggle(controlX(), rowY(6), half, "Replies to all", repliesToAll, v -> repliesToAll = v,
-                "Show Solace's replies to everyone instead of only its owner."));
+                "Everyone sees Solace's answers when its owner talks to it. Story moments always stay private."));
         addRenderableWidget(toggle(controlX() + half + 3, rowY(6), half, "Fights players", defendVsPlayers, v -> defendVsPlayers = v,
                 "Solace attacks other players who hurt its owner."));
         note(rowY(7) + 2, Component.literal("Single player: none of this does anything."));

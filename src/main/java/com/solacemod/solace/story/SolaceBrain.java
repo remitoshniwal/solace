@@ -243,7 +243,9 @@ public final class SolaceBrain {
                 if (writtenLine != null) written(live, liveStory, writtenLine);
             } else {
                 SolaceReply reply = ReplyParser.parse(text);
-                apply(live, liveStory, userContent, reply, writtenLine != null);
+                // With replies visible to all, only answers to what the player said (and their jobs) are public.
+                // Story moments, scenes and comments stay with the owner: they could spoil someone else's story.
+                apply(live, liveStory, userContent, reply, writtenLine != null || kind != com.solacemod.solace.ai.BrainPool.Kind.CHAT);
                 if (writtenLine != null && reply.say().isEmpty()) written(live, liveStory, writtenLine);
             }
             List<String> queued = PENDING.remove(id);
@@ -392,7 +394,7 @@ public final class SolaceBrain {
         display(owner, solace, story, text, emotion, false);
     }
 
-    /** @param privately only the owner sees it, even with replies visible to all (story moments that would give away an ending) */
+    /** @param privately only the owner sees it, even with replies visible to all (story moments that could spoil someone else's story) */
     public static void display(ServerPlayer owner, @Nullable SolaceEntity solace, PlayerStory story, String text, String emotion, boolean privately) {
         Component message = format(story, solace, text, emotion);
         PlaytestLog.log(story, owner, "SOLACE", "\"" + text + "\"" + (emotion == null || emotion.isBlank() ? "" : " (" + emotion + ")"));

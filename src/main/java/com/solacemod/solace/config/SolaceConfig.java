@@ -156,7 +156,7 @@ public final class SolaceConfig {
                 .defineInList("listenMode", "nearby", java.util.Arrays.asList("nearby", "prefix", "always"));
         HEARING_RANGE = b.comment("Blocks away Solace can hear you in 'nearby' mode.")
                 .defineInRange("hearingRange", 24, 4, 128);
-        REPLIES_VISIBLE_TO_ALL = b.comment("Multiplayer: show Solace's replies to everyone instead of only its owner.")
+        REPLIES_VISIBLE_TO_ALL = b.comment("Multiplayer: everyone sees Solace's answers when its owner talks to it. Story moments always stay private.")
                 .define("repliesVisibleToAll", false);
         AMBIENT_CHATTER = b.comment("Solace sometimes talks on its own (night falling, low health, caves...). Uses AI requests.")
                 .define("ambientChatter", true);
@@ -194,7 +194,7 @@ public final class SolaceConfig {
         b.pop();
 
         b.comment("Multiplayer: what happens when several players have a Solace. None of this does anything in single player.").push("multiplayer");
-        JEALOUSY = b.comment("Solace notices who you spend time with, and gets jealous (from chapter 3).")
+        JEALOUSY = b.comment("Solace notices who you spend time with, and gets jealous (later in the story).")
                 .define("jealousy", true);
         WITNESSES = b.comment("Other players can see your Solace doing strange things you missed, and get told about it.")
                 .define("witnesses", true);
@@ -202,9 +202,9 @@ public final class SolaceConfig {
                 .define("solacesMeet", true);
         ENDINGS_RIPPLE = b.comment("When one player finishes the story, other players' Solaces feel it.")
                 .define("endingsRipple", true);
-        HOLLOW_WITH_FRIENDS = b.comment("Friends can join the final boss fight: they see the boss bar, it gets stronger for each friend who fights, and it fights back.")
+        HOLLOW_WITH_FRIENDS = b.comment("Friends can join a boss fight: they see the boss bar, it gets stronger for each friend who fights, and it fights back.")
                 .define("hollowWithFriends", true);
-        PERSONAL_FREEZE = b.comment("Chapter 6 with other players online: freeze only that player's screen instead of skipping the frozen world.")
+        PERSONAL_FREEZE = b.comment("With other players online, one strange moment happens only on that player's screen instead of being skipped.")
                 .define("personalFreeze", true);
         MULTIPLAYER_AI_COMMENTS = b.comment("Solace talks about these moments using the AI (jealous remarks, what you witnessed, endings it felt).",
                         "Uses AI requests, paid from the server owner's key. Off = short written lines instead, no extra requests.")

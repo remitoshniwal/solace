@@ -665,6 +665,12 @@ public final class StoryDirector {
                 .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(hover))));
     }
 
+    /** The choices on offer right now, for Tab in /solace choose. Never names a choice the player hasn't been shown. */
+    public static List<String> choicesNow(PlayerStory story) {
+        if (!story.choicePending) return List.of();
+        return canTogether(story) ? List.of("stay", "release", "erase", "together") : List.of("stay", "release", "erase");
+    }
+
     /** Called by /solace choose. Returns an error message, or null on success. */
     @Nullable
     public static String choose(ServerPlayer player, String option) {
@@ -672,6 +678,8 @@ public final class StoryDirector {
         if (server == null) return "No server.";
         PlayerStory story = StoryData.get(server).get(player.getUUID());
         if (!story.choicePending) return "There's nothing to choose right now.";
+        // A choice that wasn't offered (like the secret one without enough trust) is just unknown, so it doesn't give itself away.
+        if (!choicesNow(story).contains(option)) return "Unknown choice. Click one of the choices in chat, or use: " + String.join(", ", choicesNow(story)) + ".";
         SolaceEntity solace = SolaceManager.find(server, story);
         if (solace == null) solace = SolaceManager.summon(player, story);
         if (solace == null) return "Solace isn't here.";
@@ -699,10 +707,6 @@ public final class StoryDirector {
                 });
             }
             case "together" -> {
-                if (!canTogether(story)) {
-                    story.choicePending = true;
-                    return "Solace doesn't trust you enough for that.";
-                }
                 story.ending = Ending.TOGETHER;
                 SolaceBrain.event(player, StoryText.END_TOGETHER, true);
                 SolaceManager.updateForm(s, story);
@@ -719,7 +723,7 @@ public final class StoryDirector {
             }
             default -> {
                 story.choicePending = true;
-                return "Unknown choice. Use stay, release, erase or together.";
+                return "Unknown choice.";
             }
         }
         return null;

@@ -208,6 +208,11 @@ public final class Afterward {
                 .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(hover))));
     }
 
+    /** The all-five choices on offer right now, for Tab in /solace choose. */
+    public static List<String> choicesNow(PlayerStory story) {
+        return story.beatsDone.contains(CHOICE_PENDING) ? List.of("again", "just_stay") : List.of();
+    }
+
     /** True for the options of the all-five choice (the rest belong to the question). */
     public static boolean isChoice(String option) {
         return option.equals("again") || option.equals("just_stay");
