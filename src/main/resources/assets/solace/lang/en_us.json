@@ -12,7 +12,7 @@
 
   "solace.configuration.ai": "AI Brain",
   "solace.configuration.provider": "Provider",
-  "solace.configuration.provider.tooltip": "groq, openai, anthropic, gemini, openrouter, deepseek, mistral, xai, together, cerebras, ollama, lmstudio, custom, scripted",
+  "solace.configuration.provider.tooltip": "groq, openai, anthropic, gemini, openrouter, deepseek, mistral, xai, together, cerebras, ollama, lmstudio, custom",
   "solace.configuration.apiKey": "API Key",
   "solace.configuration.apiKey.tooltip": "Paste your key here. Never share your config file!",
   "solace.configuration.model": "Model (blank = default)",

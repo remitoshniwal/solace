@@ -84,8 +84,8 @@ Open setup and go to the **Voice** page:
 | `/solace say <message>` | Talk to Solace from anywhere |
 | `/solace come` | Call Solace to you |
 | `/solace pockets` | Open Solace's inventory (or right-click it with an empty hand) |
-| `/solace status` | Story progress, trust, and how each AI brain is doing |
-| `/solace test` | Test each AI brain |
+| `/solace status` | Your story so far, trust, and the AI (each brain's state for the owner and operators) |
+| `/solace test` | Test each AI brain (server operators, or the single player world's owner) |
 | `/solace note <text>` | Playtesting: save a note about this moment (see [docs/PLAYTEST.md](docs/PLAYTEST.md)) |
 | `/solace forget confirm` | Wipe Solace's memory of you (all worlds) |
 | `/solace reset confirm` | Restart the story in this world |

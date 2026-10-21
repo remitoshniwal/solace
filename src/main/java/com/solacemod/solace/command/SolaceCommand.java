@@ -39,6 +39,7 @@ public final class SolaceCommand {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("solace")
                 .executes(SolaceCommand::help)
+                .then(Commands.literal("help").executes(SolaceCommand::help))
                 .then(Commands.literal("say").then(Commands.argument("message", StringArgumentType.greedyString())
                         .executes(ctx -> {
                             SolaceBrain.talk(ctx.getSource().getPlayerOrException(), StringArgumentType.getString(ctx, "message"));
@@ -404,7 +405,7 @@ public final class SolaceCommand {
         else if (!com.solacemod.solace.config.SolaceConfig.STORY_ENABLED.get()) line(ctx, "The story is off on this server: Solace is just a companion.", ChatFormatting.WHITE);
         else {
             if (over) line(ctx, StoryText.STATUS_OVER, ChatFormatting.WHITE);
-            line(ctx, "Chapter " + s.chapter + " of 8, " + Math.round(s.playMinutes()) + " minutes together, pages found " + s.fragmentsFound.size() + "/" + StoryText.FRAGMENT_COUNT
+            line(ctx, "Chapter " + s.chapter + " of 8, " + minutes(Math.round(s.playMinutes())) + " together, pages found " + s.fragmentsFound.size() + "/" + StoryText.FRAGMENT_COUNT
                     + (s.ending == com.solacemod.solace.story.Ending.NONE ? "" : ". Ending: " + StoryText.endingTitle(s.ending)), ChatFormatting.WHITE);
         }
         if (s.met && !over && !s.companion) {
@@ -417,10 +418,20 @@ public final class SolaceCommand {
         int share = AiService.perPlayerLimit(server);
         String today = StoryData.today();
         int limit = com.solacemod.solace.config.SolaceConfig.DAILY_REQUEST_LIMIT.get();
+        boolean owner = ownerOrOperator(ctx.getSource());
+        if (!AiService.configured()) {
+            // The long "how to get a key" text is for whoever can set it up.
+            line(ctx, owner ? "AI: not set up yet, so Solace can't talk. Open /solace setup to give it a brain." : "AI: not set up on this server, so Solace can't talk.", ChatFormatting.GRAY);
+            return 1;
+        }
         line(ctx, "AI: " + AiService.describe() + ". Requests today: " + data.budget.totalToday(today) + (limit > 0 ? " of " + limit : " (no daily limit)")
-                + (share > 0 ? " (yours: " + data.budget.usedToday(player.getUUID().toString(), today) + " of " + share + ")" : ""), ChatFormatting.DARK_GRAY);
-        if (ownerOrOperator(ctx.getSource())) for (String l : AiService.brainStatus()) line(ctx, "  " + l, ChatFormatting.DARK_GRAY);
+                + (share > 0 ? " (yours: " + data.budget.usedToday(player.getUUID().toString(), today) + " of " + share + ")" : ""), ChatFormatting.GRAY);
+        if (owner) for (String l : AiService.brainStatus()) line(ctx, "  " + l, ChatFormatting.DARK_GRAY);
         return 1;
+    }
+
+    private static String minutes(long n) {
+        return n + (n == 1 ? " minute" : " minutes");
     }
 
     private static void line(CommandContext<CommandSourceStack> ctx, String text, ChatFormatting color) {

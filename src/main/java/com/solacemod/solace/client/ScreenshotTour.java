@@ -102,7 +102,8 @@ public final class ScreenshotTour {
             return;
         }
         for (String command : stop.commands()) {
-            if (command.startsWith("#")) clientAction(mc, command); // things only the game window can do
+            if (command.startsWith("#suggest ")) logSuggestions(server, mc.player.getUUID(), command.substring(9));
+            else if (command.startsWith("#")) clientAction(mc, command); // things only the game window can do
             else if (command.startsWith("/")) mc.player.connection.sendCommand(command.substring(1)); // typed by the player, so the answer shows in chat
             else server.execute(() -> server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), command));
         }
@@ -169,6 +170,16 @@ public final class ScreenshotTour {
         list.add(new Stop(List.of("solace admin bond " + me + " 1000 0", "time set noon",
                 "advancement grant " + me + " only solace:story/knew_my_name", "advancement grant " + me + " only solace:story/first_page"), 30, "p2_6_page_toast.png"));
         list.add(new Stop(List.of("#advancements"), 40, "p2_7_advancements.png"));
+        list.add(new Stop(List.of("#close"), 10, null));
+        // 1.10.1: Tab after /solace choose lists only what's on offer (nothing, then the three, then the secret one only with trust).
+        list.add(new Stop(List.of("#suggest /solace choose ", "solace admin trust " + me + " 0", "solace admin question " + me), 20 * 80, null));
+        list.add(new Stop(List.of("#suggest /solace choose "), 20, "p2_8_question.png"));
+        list.add(new Stop(List.of("#clear_chat", "/solace choose together"), 20, "p2_9_choose_hidden.png")); // answers like any unknown word
+        list.add(new Stop(List.of("solace admin trust " + me + " 100", "#suggest /solace choose "), 20, null));
+        // 1.10.2: the help, the status and the Story page.
+        list.add(new Stop(List.of("gamerule sendCommandFeedback true", "#clear_chat", "/solace help"), 20, "p2_10_help.png"));
+        list.add(new Stop(List.of("#clear_chat", "/solace status"), 20, "p2_11_status.png"));
+        list.add(new Stop(List.of("#clear_chat", "#setup_story", "#mouse_corner"), 30, "p2_12_setup_story.png"));
         list.add(new Stop(List.of("#close"), 10, null));
         return list;
     }
@@ -306,6 +317,18 @@ public final class ScreenshotTour {
         Solace.LOGGER.info("[freeze] {} frozen={} tick={} block{}", shot, mc.level.tickRateManager().isFrozen(), ticks, blocks.length() == 0 ? " none" : blocks);
     }
 
+    /** Writes to the log what Tab would suggest for this half-typed command, asked of the server as this player. */
+    private static void logSuggestions(MinecraftServer server, java.util.UUID id, String typed) {
+        server.execute(() -> {
+            net.minecraft.server.level.ServerPlayer p = server.getPlayerList().getPlayer(id);
+            if (p == null) return;
+            var dispatcher = server.getCommands().getDispatcher();
+            var parse = dispatcher.parse(typed.substring(1), p.createCommandSourceStack());
+            dispatcher.getCompletionSuggestions(parse).thenAccept(sug -> Solace.LOGGER.info("[suggest] {} -> {}", typed,
+                    sug.getList().stream().map(com.mojang.brigadier.suggestion.Suggestion::getText).toList()));
+        });
+    }
+
     /** Sounds tour: notes every solace: sound the game starts playing. */
     @SubscribeEvent
     public static void onSound(net.neoforged.neoforge.client.event.sound.PlaySoundEvent event) {
@@ -341,6 +364,7 @@ public final class ScreenshotTour {
             case "#open_chat" -> mc.setScreen(new net.minecraft.client.gui.screens.ChatScreen(""));
             case "#subtitles" -> mc.options.showSubtitles().set(true);
             case "#setup_together" -> mc.setScreen(SolaceSetupScreen.openOnTogether(null));
+            case "#setup_story" -> mc.setScreen(SolaceSetupScreen.openOnStory(null));
             case "#clear_chat" -> mc.gui.getChat().clearMessages(false);
             case "#mouse_corner" -> {
                 // Park the mouse in the top left corner, so no button shows its tooltip in the picture.

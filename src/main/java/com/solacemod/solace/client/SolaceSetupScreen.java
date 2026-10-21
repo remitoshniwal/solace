@@ -143,6 +143,13 @@ public final class SolaceSetupScreen extends Screen {
         return screen;
     }
 
+    /** Opens the setup screen on the Story tab. */
+    public static SolaceSetupScreen openOnStory(@Nullable Screen parent) {
+        SolaceSetupScreen screen = new SolaceSetupScreen(parent, null);
+        screen.page = Page.STORY;
+        return screen;
+    }
+
     private void load() {
         providers[0] = SolaceConfig.PROVIDER.get();
         if (!PROVIDER_NOTES.containsKey(providers[0])) providers[0] = "groq";
@@ -599,9 +606,9 @@ public final class SolaceSetupScreen extends Screen {
         addRenderableWidget(volume);
         addRenderableWidget(toggle(controlX() + half + 3, rowY(6), half, "Hum", hum, v -> hum = v,
                 "The low hum you hear when you're close to Solace."));
-        note(rowY(7) + 2, Component.literal(isRemoteServer()
-                ? "On this server the owner's story and scare settings apply. Glitches, Fake crash, Bond hint and sounds are still yours."
-                : "Scares never hurt you or break your builds, and each one can be turned off here.").withStyle(isRemoteServer() ? ChatFormatting.YELLOW : ChatFormatting.GRAY));
+        // One line only: a second line would run into the buttons on small screens.
+        note(rowY(7) + 2, isRemoteServer() ? Component.literal("On a server, the owner sets most of these.").withStyle(ChatFormatting.YELLOW)
+                : Component.literal("Scares never hurt you or break your builds."));
     }
 
     private void initAbilitiesPage() {
@@ -751,8 +758,8 @@ public final class SolaceSetupScreen extends Screen {
         });
     }
 
-    /** On someone else's server, the owner's settings apply: what you change here only counts in your own worlds. */
-    private static final Component ON_SERVER = Component.literal("On this server the owner's settings apply. These only change your own worlds.")
+    /** On someone else's server, the owner's settings apply: what you change here only counts in your own worlds. One line, like every note. */
+    private static final Component ON_SERVER = Component.literal("On a server, the owner's settings apply instead.")
             .withStyle(ChatFormatting.YELLOW);
 
     private static boolean isRemoteServer() {
