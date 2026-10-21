@@ -34,15 +34,18 @@ neoForge {
         // Two players on one computer, for testing multiplayer (see docs/PLAYTEST.md):
         // ./gradlew runServer, then ./gradlew runPlayerA and ./gradlew runPlayerB, and join "localhost" from both.
         // Each has its own folder, so their settings and logs don't mix. They don't need an AI key (the server has it).
+        // SOLACE_JOIN=localhost makes them join that server straight away.
         playerA {
             client()
             gameDirectory = project.file('run/playerA')
             programArguments.addAll '--username', 'Remi'
+            if (System.getenv('SOLACE_JOIN') != null) programArguments.addAll '--quickPlayMultiplayer', System.getenv('SOLACE_JOIN')
         }
         playerB {
             client()
             gameDirectory = project.file('run/playerB')
             programArguments.addAll '--username', 'Friend'
+            if (System.getenv('SOLACE_JOIN') != null) programArguments.addAll '--quickPlayMultiplayer', System.getenv('SOLACE_JOIN')
         }
         configureEach {
             logLevel = org.slf4j.event.Level.INFO

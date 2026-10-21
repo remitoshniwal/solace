@@ -66,8 +66,10 @@ public final class Together {
         return SolaceConfig.STORY_ENABLED.get() && story.met && story.solaceShouldExist();
     }
 
+    /** Use the AI for these moments? Only if it's switched on and a brain has room. Otherwise the written lines show, never silence. */
     static boolean aiComments() {
-        return SolaceConfig.MULTIPLAYER_AI_COMMENTS.get();
+        return SolaceConfig.MULTIPLAYER_AI_COMMENTS.get() && AiService.configured()
+                && AiService.hasRoomFor(com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND);
     }
 
     /** A short line, word for word, in grey italics, for one player only. */
