@@ -8,6 +8,9 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### New in 1.9.1
+- **A stiller frozen world.** When one moment late in the story freezes only your screen (on a server with others online), dropped items, arrows and falling blocks now freeze too, not just mobs and rain.
+
 ### New in 1.9.0: players together
 - **The Solaces notice each other.** On a server, your Solace notices who you spend your time with, and later in the story it doesn't like it.
 - **Witnesses.** Your friends might see your Solace doing things behind your back. You might see theirs.

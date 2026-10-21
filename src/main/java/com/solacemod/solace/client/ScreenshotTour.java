@@ -225,6 +225,10 @@ public final class ScreenshotTour {
         list.add(new Stop(List.of("kill @e[type=minecraft:falling_block]", "kill @e[type=minecraft:cow]", together + "freeze", slider, cow), 60, "t_8c_frozen.png"));
         list.add(new Stop(List.of("time set noon"), 30, "t_8d_frozen_later.png"));
         list.add(new Stop(List.of("weather clear"), 20 * 14, "t_8e_after_freeze.png"));
+        // Vanilla /tick freeze and /tick step must still work (FreezeHold lets things move while stepping).
+        list.add(new Stop(List.of("kill @e[type=minecraft:falling_block]", "tick freeze", slider), 40, "t_8f_tick_freeze.png"));
+        list.add(new Stop(List.of("tick step 20"), 40, "t_8g_tick_step.png"));
+        list.add(new Stop(List.of("tick unfreeze"), 10, null));
         list.add(new Stop(List.of("kill @e[type=minecraft:falling_block]", "kill @e[type=minecraft:cow]", "data merge entity " + solace + " {NoAI:0b}"), 5, null));
         list.add(new Stop(List.of("#clear_chat", together + "hollow 2"), 60, "t_9_hollow_bar.png"));
         list.add(new Stop(List.of("gamerule sendCommandFeedback true", "#clear_chat", "/solace admin usage"), 20, "t_10_usage.png"));
