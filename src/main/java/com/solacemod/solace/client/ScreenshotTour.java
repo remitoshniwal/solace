@@ -91,6 +91,7 @@ public final class ScreenshotTour {
         }
         Stop stop = stops.get(step);
         if (stop.shot() != null && stop.commands().isEmpty()) {
+            if (TOGETHER && stop.shot().startsWith("t_8")) logFreeze(mc, stop.shot());
             Screenshot.grab(mc.gameDirectory, stop.shot(), mc.getMainRenderTarget(), msg -> Solace.LOGGER.info("[screenshots] {}", msg.getString()));
             step++;
             return;
@@ -213,12 +214,33 @@ public final class ScreenshotTour {
         list.add(new Stop(List.of("solace admin chapter " + me + " 5", "#clear_chat", together + "ripple together"), 30, "t_5_ripple_later.png"));
         list.add(new Stop(List.of("#clear_chat", together + "witness flicker"), 20, "t_6_witness.png"));
         list.add(new Stop(List.of("#clear_chat", together + "jealousy"), 20, "t_7_jealousy.png"));
-        list.add(new Stop(List.of("#clear_chat", "weather rain", "summon minecraft:cow 3.5 -60 7.5", together + "freeze"), 60, "t_8_personal_freeze.png"));
-        list.add(new Stop(List.of("weather clear"), 20 * 16, null)); // the freeze ends by itself
+        // The personal freeze, checked with a red block sliding sideways (no gravity) and the rain. Solace stands aside so it
+        // can't hide the block. Without the freeze the block moves about 3 blocks a second; with it, it stays put on this
+        // screen (and the rain hangs still) while the server moves it on. When the freeze ends it jumps to where it really is.
+        String cow = "summon minecraft:cow -4.5 -60 7.5 {Motion:[0.5d,0.2d,0.0d]}";
+        String slider = "summon minecraft:falling_block -6.5 -58 10.5 {BlockState:{Name:\"minecraft:red_wool\"},NoGravity:1b,Time:1,Motion:[0.15d,0.0d,0.0d]}";
+        list.add(new Stop(List.of("#clear_chat", "data merge entity " + solace + " {NoAI:1b}", "tp " + solace + " 5.5 -60 6.0 180 0",
+                "weather rain", "kill @e[type=minecraft:cow]", slider, cow), 60, "t_8a_moving.png"));
+        list.add(new Stop(List.of("time set noon"), 30, "t_8b_moving_later.png"));
+        list.add(new Stop(List.of("kill @e[type=minecraft:falling_block]", "kill @e[type=minecraft:cow]", together + "freeze", slider, cow), 60, "t_8c_frozen.png"));
+        list.add(new Stop(List.of("time set noon"), 30, "t_8d_frozen_later.png"));
+        list.add(new Stop(List.of("weather clear"), 20 * 14, "t_8e_after_freeze.png"));
+        list.add(new Stop(List.of("kill @e[type=minecraft:falling_block]", "kill @e[type=minecraft:cow]", "data merge entity " + solace + " {NoAI:0b}"), 5, null));
         list.add(new Stop(List.of("#clear_chat", together + "hollow 2"), 60, "t_9_hollow_bar.png"));
         list.add(new Stop(List.of("gamerule sendCommandFeedback true", "#clear_chat", "/solace admin usage"), 20, "t_10_usage.png"));
         list.add(new Stop(List.of("execute as " + me + " run solace reset confirm", "solace admin playtest off", "#ai_comments_back"), 20, null));
         return list;
+    }
+
+    /** Together tour: what this game window thinks at each freeze picture (is it frozen, where is the red block). */
+    private static void logFreeze(Minecraft mc, String shot) {
+        if (mc.level == null) return;
+        StringBuilder blocks = new StringBuilder();
+        for (net.minecraft.world.entity.Entity e : mc.level.entitiesForRendering()) {
+            if (e instanceof net.minecraft.world.entity.item.FallingBlockEntity) blocks.append(String.format(java.util.Locale.ROOT, " x=%.2f", e.getX()));
+            if (e instanceof net.minecraft.world.entity.animal.Cow) blocks.append(String.format(java.util.Locale.ROOT, " cow x=%.2f", e.getX()));
+        }
+        Solace.LOGGER.info("[freeze] {} frozen={} tick={} block{}", shot, mc.level.tickRateManager().isFrozen(), ticks, blocks.length() == 0 ? " none" : blocks);
     }
 
     /** Sounds tour: notes every solace: sound the game starts playing. */
