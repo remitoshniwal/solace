@@ -27,6 +27,7 @@ import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LightningBolt;
@@ -96,6 +97,8 @@ public class SolaceEntity extends PathfinderMob {
     @Nullable
     private SolaceTask task;
     private int stareTicks;
+    @Nullable
+    private Entity stareTarget;
     private int lanternTicks;
     private int formBeforeLantern = FORM_NORMAL;
     private int agitatedTicks;
@@ -107,6 +110,10 @@ public class SolaceEntity extends PathfinderMob {
     private int abilityCooldown = 100;
     private boolean phaseTwo;
     private int ownerMissingTicks;
+    /** Friends of the owner who have hit the Hollow. Only they (and the owner) feel its attacks. */
+    private final java.util.Set<UUID> fighters = new java.util.LinkedHashSet<>();
+    /** Above 0 for a test stand-in (another "player's" Solace for /solace admin together): ticks until it leaves. Not saved. */
+    public int standInTicks;
 
     public SolaceEntity(EntityType<? extends SolaceEntity> type, Level level) {
         super(type, level);
@@ -230,11 +237,26 @@ public class SolaceEntity extends PathfinderMob {
 
     public void setStareTicks(int ticks) {
         this.stareTicks = ticks;
+        this.stareTarget = null;
         if (ticks > 0) getNavigation().stop();
+    }
+
+    /** Stands still and stares at someone else (another player, another Solace, the Hollow) instead of its owner. */
+    public void stareAt(Entity target, int ticks) {
+        setStareTicks(ticks);
+        this.stareTarget = target;
+    }
+
+    /** Who it's staring at: someone set with {@link #stareAt}, or its owner. */
+    @Nullable
+    public Entity stareTarget() {
+        if (stareTarget != null && stareTarget.isAlive() && stareTarget.level() == level()) return stareTarget;
+        return getOwner();
     }
 
     public void tickStare() {
         if (stareTicks > 0) stareTicks--;
+        if (stareTicks == 0) stareTarget = null;
     }
 
     // ---------- Form ----------
@@ -336,7 +358,8 @@ public class SolaceEntity extends PathfinderMob {
         setGuard(false);
         this.mode = Mode.FOLLOW;
         setForm(FORM_HOLLOW);
-        getAttribute(Attributes.MAX_HEALTH).setBaseValue(300.0);
+        fighters.clear();
+        getAttribute(Attributes.MAX_HEALTH).setBaseValue(HOLLOW_HEALTH);
         getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(9.0);
         getAttribute(Attributes.ARMOR).setBaseValue(10.0);
         getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.34);
@@ -357,6 +380,7 @@ public class SolaceEntity extends PathfinderMob {
     /** Back to normal after the player loses the boss fight. */
     public void revertFromHollow() {
         setTarget(null);
+        fighters.clear();
         setForm(FORM_UNEASY);
         resetAttributes();
         setHealth(getMaxHealth());
@@ -402,6 +426,11 @@ public class SolaceEntity extends PathfinderMob {
             Sounds.play(level(), position(), "solace:negative_fade", SoundSource.HOSTILE, 0.8F, 1.0F);
         }
         if (lanternTicks > 0 && --lanternTicks == 0) endLantern();
+        // A test stand-in (/solace admin together) belongs to nobody and leaves on its own.
+        if (standInTicks > 0) {
+            if (--standInTicks == 0) discard();
+            return;
+        }
         // A stale copy (e.g. one left in an unloaded chunk after Solace was re-summoned) removes itself.
         if ((tickCount == 1 || tickCount % 100 == 0) && !SolaceManager.isCurrent(this)) {
             if (bossEvent != null) bossEvent.removeAllPlayers();
@@ -425,6 +454,42 @@ public class SolaceEntity extends PathfinderMob {
         }
     }
 
+    private static final double HOLLOW_HEALTH = 300.0;
+
+    /** A friend of the owner hit the Hollow: now it fights them too, and it gets stronger (up to a few friends). */
+    private void onFriendHit(ServerPlayer friend) {
+        if (!com.solacemod.solace.config.SolaceConfig.HOLLOW_WITH_FRIENDS.get() || !fighters.add(friend.getUUID())) return;
+        if (fighters.size() <= com.solacemod.solace.story.Together.HOLLOW_MAX_FRIENDS) {
+            float fraction = getHealth() / getMaxHealth();
+            getAttribute(Attributes.MAX_HEALTH).setBaseValue(HOLLOW_HEALTH + com.solacemod.solace.story.Together.HOLLOW_HEALTH_PER_FRIEND * fighters.size());
+            setHealth(fraction * getMaxHealth());
+        }
+        com.solacemod.solace.story.Together.onHollowFriend(this, getServerOwner(), friend, fighters.size());
+    }
+
+    /** Testing: the boss's health as if this many friends had joined (/solace admin together). */
+    public void pretendFriends(int friends) {
+        int n = Math.max(0, Math.min(com.solacemod.solace.story.Together.HOLLOW_MAX_FRIENDS, friends));
+        getAttribute(Attributes.MAX_HEALTH).setBaseValue(HOLLOW_HEALTH + com.solacemod.solace.story.Together.HOLLOW_HEALTH_PER_FRIEND * n);
+        setHealth(getMaxHealth());
+    }
+
+    /** The friends who have fought the Hollow and are still close by. */
+    public java.util.List<ServerPlayer> fightersNearby() {
+        java.util.List<ServerPlayer> list = new java.util.ArrayList<>();
+        if (getServer() == null) return list;
+        for (UUID id : fighters) {
+            ServerPlayer p = getServer().getPlayerList().getPlayer(id);
+            if (p != null && p.isAlive() && !p.isSpectator() && p.level() == level() && p.distanceTo(this) <= 48) list.add(p);
+        }
+        return list;
+    }
+
+    /** Everyone who fought the Hollow (online or not), for the ending. */
+    public java.util.Set<UUID> fighters() {
+        return java.util.Set.copyOf(fighters);
+    }
+
     private void tickBoss() {
         if (bossEvent != null) bossEvent.setProgress(getHealth() / getMaxHealth());
         ServerPlayer owner = getServerOwner();
@@ -445,7 +510,9 @@ public class SolaceEntity extends PathfinderMob {
         if (--abilityCooldown > 0) return;
         abilityCooldown = phaseTwo ? 70 : 120;
 
-        switch (random.nextInt(phaseTwo ? 5 : 4)) {
+        java.util.List<ServerPlayer> friends = fightersNearby();
+        // With friends fighting, phase two has one more move: it turns on them, because it wants you alone.
+        switch (random.nextInt(phaseTwo ? (friends.isEmpty() ? 5 : 6) : 4)) {
             case 0 -> { // teleport behind the player
                 Vec3 look = owner.getLookAngle().multiply(1, 0, 1).normalize();
                 Vec3 behind = owner.position().subtract(look.scale(3));
@@ -459,20 +526,31 @@ public class SolaceEntity extends PathfinderMob {
                 owner.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 120, 0, false, false));
                 Sounds.play(level, owner.position(), "entity.warden.heartbeat", SoundSource.HOSTILE, 1.5F, 0.6F);
             }
-            case 2 -> summonEchoes(level, owner);
-            case 3 -> { // shockwave
+            case 2 -> summonEchoes(level, owner, friends);
+            case 3 -> { // shockwave: only the owner and friends who chose to fight feel it
                 level.sendParticles(ParticleTypes.SONIC_BOOM, getX(), getY() + 1, getZ(), 1, 0, 0, 0, 0);
                 Sounds.playAt(this, "entity.warden.sonic_boom", 1.0F, 1.4F);
-                if (owner.distanceTo(this) < 6) {
-                    owner.hurt(damageSources().mobAttack(this), 5.0F);
-                    owner.knockback(1.5, getX() - owner.getX(), getZ() - owner.getZ());
+                java.util.List<ServerPlayer> hit = new java.util.ArrayList<>(friends);
+                hit.add(owner);
+                for (ServerPlayer p : hit) {
+                    if (p.distanceTo(this) < 6) {
+                        p.hurt(damageSources().mobAttack(this), 5.0F);
+                        p.knockback(1.5, getX() - p.getX(), getZ() - p.getZ());
+                    }
                 }
+            }
+            case 5 -> { // "Not them. You.": blinds and slows only the friends
+                for (ServerPlayer f : friends) {
+                    f.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 80, 0, false, false));
+                    f.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 1, false, false));
+                }
+                com.solacemod.solace.story.Together.hollowNotThem(this, owner, friends);
             }
             default -> spawnVisualLightning(level, owner.blockPosition().offset(random.nextInt(7) - 3, 0, random.nextInt(7) - 3));
         }
     }
 
-    private void summonEchoes(ServerLevel level, ServerPlayer owner) {
+    private void summonEchoes(ServerLevel level, ServerPlayer owner, java.util.List<ServerPlayer> friends) {
         int alive = level.getEntitiesOfClass(Vex.class, getBoundingBox().inflate(32), v -> v.getOwner() == this).size();
         if (alive >= 4) return;
         for (int i = 0; i < 2; i++) {
@@ -484,7 +562,7 @@ public class SolaceEntity extends PathfinderMob {
             vex.setLimitedLife(20 * 25);
             vex.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
             vex.setCustomName(Component.literal("Echo"));
-            vex.setTarget(owner);
+            vex.setTarget(friends.isEmpty() || random.nextBoolean() ? owner : friends.get(random.nextInt(friends.size())));
             level.addFreshEntity(vex);
         }
         Sounds.playAt(this, "entity.evoker.prepare_summon", 1.0F, 0.6F);
@@ -508,7 +586,10 @@ public class SolaceEntity extends PathfinderMob {
      */
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        if (isHollow()) return super.hurt(source, amount);
+        if (isHollow()) {
+            if (!level().isClientSide && source.getEntity() instanceof ServerPlayer p && !isOwner(p)) onFriendHit(p);
+            return super.hurt(source, amount);
+        }
         if (level().isClientSide) return false;
         if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
             // Not even /kill or the void: it scatters into ash and is back beside you, as if nothing happened.
@@ -596,6 +677,8 @@ public class SolaceEntity extends PathfinderMob {
     /** Vanishes and reappears just behind the target, where they aren't looking. */
     public void blinkBehind(LivingEntity target) {
         ServerLevel level = (ServerLevel) level();
+        UUID owner = getOwnerUUID();
+        if (owner != null && target.getUUID().equals(owner)) com.solacemod.solace.story.Together.showWitnesses(this, owner, "blink", 40);
         Vec3 back = target.getLookAngle().multiply(-1, 0, -1);
         if (back.lengthSqr() < 1.0E-4) back = new Vec3(0, 0, 1);
         back = back.normalize();

@@ -49,9 +49,9 @@ No files to edit. Everything is in game:
 
 **Using free keys? Add a second brain.** Click **+** next to *Brain* and add another free provider (Gemini, Cerebras...). Solace switches between them on its own, before one runs out, so the free limits last much longer. Details: [docs/PROVIDERS.md](docs/PROVIDERS.md#more-than-one-brain-recommended-for-free-keys)
 
-The other pages set up **Voice**, **Story & Horror** (turn scares down or off) and **Abilities & Chat**. **Advanced...** shows every setting.
+The other pages set up **Voice**, **Story** (turn scares down or off), **Abilities** and **Together** (multiplayer). **Advanced...** shows every setting.
 
-On a multiplayer server, **every player needs the mod installed**, but only the **server owner** needs an AI key: Solace's AI runs on the server, and the owner pays for everyone's requests. Each player gets their own Solace and their own story. On a busy server, set **Who gets one** (Abilities & Chat page) to *Only players who type /solace join*. The server owner sets Solace's AI (in the server's `config/solace-common.toml`). Each player's voice and comfort settings are their own.
+On a multiplayer server, **every player needs the mod installed**, but only the **server owner** needs an AI key: Solace's AI runs on the server, and the owner pays for everyone's requests. Each player gets their own Solace and their own story, and the Solaces notice each other (see the **Together** page to turn any of that off). Each player also has a daily share of the owner's AI requests (**Each player's share** on the Together page, 150 by default), so one chatty player can't use up everyone's. On a busy server, set **Who gets one** (Together page) to *Only players who type /solace join*. The server owner sets Solace's AI (in the server's `config/solace-common.toml`). Each player's voice and comfort settings are their own.
 
 More detail, including recommended models and costs: [docs/PROVIDERS.md](docs/PROVIDERS.md)
 
@@ -63,8 +63,9 @@ More detail, including recommended models and costs: [docs/PROVIDERS.md](docs/PR
 - **Paid providers charge per message.** Each Solace reply is one request. Built-in limits stop surprise bills:
   - **Daily limit** on the AI Brain page (default 400 replies a day for all brains together; after that Solace goes quiet until tomorrow)
   - At most 12 requests a minute (change in **Advanced...**)
-  - **Talks on its own** (Abilities & Chat page) also uses requests. Turn it off to save more.
-- Check `/solace status` to see how many requests were used today.
+  - **Talks on its own** (Abilities page) also uses requests. Turn it off to save more.
+  - In multiplayer: each player's daily share (Together page), and **Talks about them** (Together page), which lets Solace comment on the other players using a few extra requests. Turn it off to save more.
+- Check `/solace status` to see how many requests were used today (operators: `/solace admin usage` lists each player).
 
 ## Voice chat (optional)
 
@@ -88,16 +89,17 @@ Open setup and go to the **Voice** page:
 | `/solace note <text>` | Playtesting: save a note about this moment (see [docs/PLAYTEST.md](docs/PLAYTEST.md)) |
 | `/solace forget confirm` | Wipe Solace's memory of you (all worlds) |
 | `/solace reset confirm` | Restart the story in this world |
-| `/solace admin ...` | Server operators, for testing: `chapter`, `trust`, `bond`, `fragment`, `power`, `horror`, `presence`, `lantern`, `question`, `playtest on/off` (see [docs/STORY.md](docs/STORY.md)) |
+| `/solace admin usage` | Server operators: how many AI requests each player used today |
+| `/solace admin ...` | Server operators, for testing: `chapter`, `trust`, `bond`, `fragment`, `power`, `horror`, `presence`, `lantern`, `question`, `together`, `playtest on/off` (see [docs/STORY.md](docs/STORY.md)) |
 
 **Tip:** give Solace items by right-clicking it while holding them, or just throw them to it (Q). It doesn't need tools to mine (a pickaxe only makes it faster). Ask it for something it doesn't have and it makes it with its power, if it's strong enough. It needs blocks to build and coal + sticks to make torches.
 
 ## Comfort and safety settings
 
-On the **Story & Horror** page:
+On the **Story** page:
 - **Scares: Off** turns all scares off. **Story: OFF** makes Solace just a friendly companion.
 - Each scare type has its own switch: torches/doors/signs, fake messages, screen glitches, fake crash. Glitches are soft, with no bright strobing.
-- Nothing Solace does on its own ever hurts you, and none of it happens while you're in a real fight or low on health. In multiplayer, the chapter 6 "frozen world" only happens when you're the only player online.
+- Nothing Solace does on its own ever hurts you, and none of it happens while you're in a real fight or low on health. In multiplayer, the chapter 6 "frozen world" only stops the whole world when you're the only player online. With others online it freezes only your own screen, and nothing can hurt you while it lasts (turn that off with **Own freeze** on the Together page).
 - Solace is told to keep things teen-appropriate, and to drop the act and be kind if a player seems genuinely upset in real life.
 
 ## Building it yourself (for developers)

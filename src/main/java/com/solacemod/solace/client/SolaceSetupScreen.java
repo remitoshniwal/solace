@@ -36,7 +36,7 @@ import java.util.function.Consumer;
  * Players never need to open a config file. Changes are saved when you press Done.
  */
 public final class SolaceSetupScreen extends Screen {
-    private enum Page { AI, VOICE, STORY, ABILITIES }
+    private enum Page { AI, VOICE, STORY, ABILITIES, TOGETHER }
 
     /** Providers in the order shown, with a short note for beginners. */
     private static final Map<String, String> PROVIDER_NOTES = new java.util.LinkedHashMap<>();
@@ -60,6 +60,7 @@ public final class SolaceSetupScreen extends Screen {
     private static final List<Double> SPEEDS = List.of(0.5, 1.0, 2.0, 3.0, 5.0, 10.0);
     private static final List<Double> INTENSITIES = List.of(0.0, 0.5, 1.0, 2.0, 3.0);
     private static final List<Integer> DAILY_LIMITS = List.of(50, 100, 200, 400, 1000, 3000, 0);
+    private static final List<Integer> PLAYER_LIMITS = List.of(50, 100, 150, 250, 500, 0);
 
     @Nullable
     private final Screen parent;
@@ -113,6 +114,17 @@ public final class SolaceSetupScreen extends Screen {
     private boolean crossWorld;
     private String whoGets;
 
+    private int playerLimit;
+    private boolean jealousy;
+    private boolean witnesses;
+    private boolean solacesMeet;
+    private boolean endingsRipple;
+    private boolean hollowFriends;
+    private boolean personalFreeze;
+    private boolean togetherAi;
+    private boolean repliesToAll;
+    private boolean defendVsPlayers;
+
     private Component status = Component.empty();
     private boolean testing;
 
@@ -121,6 +133,13 @@ public final class SolaceSetupScreen extends Screen {
         this.parent = parent;
         this.container = container;
         load();
+    }
+
+    /** Opens the setup screen on the Together (multiplayer) tab. */
+    public static SolaceSetupScreen openOnTogether(@Nullable Screen parent) {
+        SolaceSetupScreen screen = new SolaceSetupScreen(parent, null);
+        screen.page = Page.TOGETHER;
+        return screen;
     }
 
     private void load() {
@@ -182,6 +201,17 @@ public final class SolaceSetupScreen extends Screen {
         ambient = SolaceConfig.AMBIENT_CHATTER.get();
         crossWorld = SolaceConfig.CROSS_WORLD_MEMORY.get();
         whoGets = SolaceConfig.WHO_GETS_SOLACE.get();
+
+        playerLimit = SolaceConfig.DAILY_REQUESTS_PER_PLAYER.get();
+        jealousy = SolaceConfig.JEALOUSY.get();
+        witnesses = SolaceConfig.WITNESSES.get();
+        solacesMeet = SolaceConfig.SOLACES_MEET.get();
+        endingsRipple = SolaceConfig.ENDINGS_RIPPLE.get();
+        hollowFriends = SolaceConfig.HOLLOW_WITH_FRIENDS.get();
+        personalFreeze = SolaceConfig.PERSONAL_FREEZE.get();
+        togetherAi = SolaceConfig.MULTIPLAYER_AI_COMMENTS.get();
+        repliesToAll = SolaceConfig.REPLIES_VISIBLE_TO_ALL.get();
+        defendVsPlayers = SolaceConfig.DEFEND_AGAINST_PLAYERS.get();
     }
 
     private void save() {
@@ -215,6 +245,16 @@ public final class SolaceSetupScreen extends Screen {
         SolaceConfig.AMBIENT_CHATTER.set(ambient);
         SolaceConfig.CROSS_WORLD_MEMORY.set(crossWorld);
         SolaceConfig.WHO_GETS_SOLACE.set(whoGets);
+        SolaceConfig.DAILY_REQUESTS_PER_PLAYER.set(playerLimit);
+        SolaceConfig.JEALOUSY.set(jealousy);
+        SolaceConfig.WITNESSES.set(witnesses);
+        SolaceConfig.SOLACES_MEET.set(solacesMeet);
+        SolaceConfig.ENDINGS_RIPPLE.set(endingsRipple);
+        SolaceConfig.HOLLOW_WITH_FRIENDS.set(hollowFriends);
+        SolaceConfig.PERSONAL_FREEZE.set(personalFreeze);
+        SolaceConfig.MULTIPLAYER_AI_COMMENTS.set(togetherAi);
+        SolaceConfig.REPLIES_VISIBLE_TO_ALL.set(repliesToAll);
+        SolaceConfig.DEFEND_AGAINST_PLAYERS.set(defendVsPlayers);
         SolaceConfig.SPEC.save();
 
         ClientConfig.VOICE_INPUT.set(voiceIn);
@@ -277,8 +317,8 @@ public final class SolaceSetupScreen extends Screen {
         int w = panelWidth();
         // Page tabs
         Page[] pages = Page.values();
-        String[] names = {"AI Brain", "Voice", "Story & Horror", "Abilities & Chat"};
-        int tabW = (w - 3 * 3) / 4;
+        String[] names = {"AI Brain", "Voice", "Story", "Abilities", "Together"};
+        int tabW = (w - 3 * (pages.length - 1)) / pages.length;
         for (int i = 0; i < pages.length; i++) {
             Page p = pages[i];
             Button tab = Button.builder(Component.literal(names[i]), b -> {
@@ -294,6 +334,7 @@ public final class SolaceSetupScreen extends Screen {
             case VOICE -> initVoicePage();
             case STORY -> initStoryPage();
             case ABILITIES -> initAbilitiesPage();
+            case TOGETHER -> initTogetherPage();
         }
 
         // Bottom buttons
@@ -585,13 +626,50 @@ public final class SolaceSetupScreen extends Screen {
         addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "Across all worlds" : "Only in this world"))
                 .withValues(List.of(true, false)).withInitialValue(crossWorld).displayOnlyValue()
                 .create(controlX(), rowY(5), controlWidth(), 20, Component.literal("Memory"), (b, v) -> crossWorld = v));
-        label(6, "Who gets one");
+        note(rowY(6) + 2, Component.literal("Give Solace items by right-clicking it while holding them."));
+    }
+
+    /** Multiplayer: who gets a Solace, each player's share of AI requests, and what happens between players. */
+    private void initTogetherPage() {
+        int half = (controlWidth() - 3) / 2;
+        label(0, "Who gets one");
         addRenderableWidget(CycleButton.<String>builder(v -> Component.literal(v.equals("opt_in") ? "Only players who type /solace join" : "Every player"))
                 .withValues(List.of("everyone", "opt_in")).withInitialValue(whoGets).displayOnlyValue()
-                .withTooltip(v -> Tooltip.create(Component.literal("Multiplayer: each player gets their own Solace. On a busy server, "
+                .withTooltip(v -> Tooltip.create(Component.literal("Each player gets their own Solace. On a busy server, "
                         + "letting players opt in saves AI requests (the server owner pays for all of them).")))
-                .create(controlX(), rowY(6), controlWidth(), 20, Component.literal("Who gets one"), (b, v) -> whoGets = v));
-        note(rowY(7) + 2, Component.literal("Give Solace items by right-clicking it while holding them."));
+                .create(controlX(), rowY(0), controlWidth(), 20, Component.literal("Who gets one"), (b, v) -> whoGets = v));
+        label(1, "Each player's share");
+        addRenderableWidget(CycleButton.<Integer>builder(v -> Component.literal(v == 0 ? "No limit" : v + " AI requests a day"))
+                .withValues(PLAYER_LIMITS).withInitialValue(PLAYER_LIMITS.contains(playerLimit) ? playerLimit : 150).displayOnlyValue()
+                .withTooltip(v -> Tooltip.create(Component.literal("Most AI requests one player can use per day, so one chatty player "
+                        + "can't use up everyone's. Not used in single player.")))
+                .create(controlX(), rowY(1), controlWidth(), 20, Component.literal("Each player's share"), (b, v) -> playerLimit = v));
+        label(2, "Solace notices");
+        addRenderableWidget(toggle(controlX(), rowY(2), half, "Jealousy", jealousy, v -> jealousy = v,
+                "Solace notices who you spend time with, and gets jealous (from chapter 3)."));
+        addRenderableWidget(toggle(controlX() + half + 3, rowY(2), half, "Witnesses", witnesses, v -> witnesses = v,
+                "Other players can see your Solace doing strange things you missed, and get told about it."));
+        label(3, "Between Solaces");
+        addRenderableWidget(toggle(controlX(), rowY(3), half, "They meet", solacesMeet, v -> solacesMeet = v,
+                "When two players' Solaces get close, they stop and look at each other."));
+        addRenderableWidget(toggle(controlX() + half + 3, rowY(3), half, "Endings ripple", endingsRipple, v -> endingsRipple = v,
+                "When one player finishes the story, the other players' Solaces feel it. No spoilers early on."));
+        label(4, "Big moments");
+        addRenderableWidget(toggle(controlX(), rowY(4), half, "Boss with friends", hollowFriends, v -> hollowFriends = v,
+                "Friends can join the final fight: it gets stronger for each friend who fights, and it fights them too."));
+        addRenderableWidget(toggle(controlX() + half + 3, rowY(4), half, "Own freeze", personalFreeze, v -> personalFreeze = v,
+                "Chapter 6 with others online: freeze only that player's screen, instead of skipping the frozen world."));
+        label(5, "Talks about them");
+        addRenderableWidget(CycleButton.onOffBuilder(togetherAi)
+                .withTooltip(v -> Tooltip.create(Component.literal("Solace talks about these moments using the AI. "
+                        + "Uses AI requests, paid from the server owner's key. Off = short written lines instead.")))
+                .create(controlX(), rowY(5), controlWidth(), 20, Component.literal("Talks about them"), (b, v) -> togetherAi = v));
+        label(6, "Chat");
+        addRenderableWidget(toggle(controlX(), rowY(6), half, "Replies to all", repliesToAll, v -> repliesToAll = v,
+                "Show Solace's replies to everyone instead of only its owner."));
+        addRenderableWidget(toggle(controlX() + half + 3, rowY(6), half, "Fights players", defendVsPlayers, v -> defendVsPlayers = v,
+                "Solace attacks other players who hurt its owner."));
+        note(rowY(7) + 2, Component.literal("Single player: none of this does anything."));
     }
 
     // ---------- Widgets ----------

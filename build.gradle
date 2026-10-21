@@ -31,6 +31,19 @@ neoForge {
             server()
             programArgument '--nogui'
         }
+        // Two players on one computer, for testing multiplayer (see docs/PLAYTEST.md):
+        // ./gradlew runServer, then ./gradlew runPlayerA and ./gradlew runPlayerB, and join "localhost" from both.
+        // Each has its own folder, so their settings and logs don't mix. They don't need an AI key (the server has it).
+        playerA {
+            client()
+            gameDirectory = project.file('run/playerA')
+            programArguments.addAll '--username', 'Remi'
+        }
+        playerB {
+            client()
+            gameDirectory = project.file('run/playerB')
+            programArguments.addAll '--username', 'Friend'
+        }
         configureEach {
             logLevel = org.slf4j.event.Level.INFO
         }

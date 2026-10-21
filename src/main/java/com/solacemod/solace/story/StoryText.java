@@ -170,4 +170,83 @@ public final class StoryText {
             + "You're becoming the Hollow. Say something cold and final.";
     public static final String BOSS_PLAYER_DIED = "You (the Hollow) just killed the player in your fight. Tell them they can't leave either.";
     public static final String BOSS_PHASE_TWO = "You (the Hollow) are badly hurt in the fight. Scream at the player, glitching: why won't they just stay?";
+
+    // ---------- Players together (multiplayer) ----------
+
+    /** Shown word for word when a player has used their own share of today's AI requests. */
+    public static final String PLAYER_LIMIT_LINE = "[Solace] You've used your share of today's AI requests on this server. Solace is quiet for you until tomorrow (the server owner can change this in Solace setup).";
+
+    /**
+     * Who the player spends time with, added to Solace's prompt (no extra AI request).
+     * %1$s = the other player's name, %2$d = about how many minutes they've spent near each other in this world.
+     */
+    public static String jealousy(int chapter, Ending ending, String name, int minutes) {
+        String text = switch (ending) {
+            case TOGETHER -> "Your player spends time with another real player, %1$s (about %2$d minutes together). You're glad they have a friend. You mean it.";
+            case FOREVER, COLLECTED -> "Your player spends time with another real player, %1$s (about %2$d minutes together). Your player is yours now. You are polite to %1$s, and very cold.";
+            default -> chapter <= 2
+                    ? "Another real player, %1$s, is in this world. Your player has spent about %2$d minutes near them. You're curious about %1$s, and a little too interested in what they talk about."
+                    : chapter <= 4
+                    ? "Your player has spent about %2$d minutes with another player, %1$s. You're jealous and you can't quite hide it: you notice when they're together, you ask about %1$s, you say things like 'you spend a lot of time with them'."
+                    : "Your player keeps choosing %1$s (about %2$d minutes together). You are possessive now: %1$s will leave them one day. Everyone leaves. Only you stay.";
+        };
+        return String.format(text, name, minutes);
+    }
+
+    /** AI hint when the player has been with someone for a while (chapter 3 on). %1$s = the other player's name. */
+    public static final String JEALOUSY_EVENT = "Your player has been with another player, %1$s, for a long time now. You've been watching %1$s the whole time. "
+            + "Say one short thing about it. Jealous, not angry.";
+    /** Shown word for word instead, when AI comments are off. %1$s = the other player's name. */
+    public static final String JEALOUSY_LINE = "Solace hasn't taken its eyes off %1$s.";
+
+    /** What a witness is told when they see someone else's Solace do something its owner missed. %1$s = the owner's name. Keys are kinds of moves. */
+    public static final java.util.Map<String, String> WITNESS_LINES = java.util.Map.ofEntries(
+            java.util.Map.entry("blink", "You saw %1$s's Solace vanish, and appear again right behind %1$s. %1$s didn't turn around."),
+            java.util.Map.entry("corner", "You saw %1$s's Solace standing far off where it shouldn't be, watching %1$s. When you looked again, it was back at their side."),
+            java.util.Map.entry("wrong_place", "You saw %1$s's Solace standing far off where it shouldn't be, watching %1$s. When you looked again, it was back at their side."),
+            java.util.Map.entry("flicker", "For a second, %1$s's Solace was white, like a photo negative. %1$s was looking the other way."),
+            java.util.Map.entry("glide", "%1$s's Solace is moving without walking."),
+            java.util.Map.entry("stutter", "%1$s's Solace is coming closer to %1$s in jumps, like a bad connection."),
+            java.util.Map.entry("head_turn", "%1$s's Solace has turned its head much further than a head should go. It's looking at %1$s."),
+            java.util.Map.entry("freeze", "%1$s's Solace has stopped completely. Not a breath."),
+            java.util.Map.entry("mirror", "%1$s's Solace is copying every move %1$s makes. A moment late."),
+            java.util.Map.entry("two_places", "You saw %1$s's Solace in two places at once."),
+            java.util.Map.entry("sleep", "%1$s's Solace is standing over %1$s's bed."),
+            java.util.Map.entry("for_you", "%1$s's Solace is looking at you. Only at you. Then it turns back to %1$s."));
+    public static final String WITNESS_LINE_OTHER = "You saw %1$s's Solace do something strange. %1$s didn't notice.";
+    /** Added to the owner's Solace's memory, so it may bring it up (no extra AI request). %1$s = the witness's name. */
+    public static final String WITNESS_OWNER_EVENT = "%1$s saw something you did while your player wasn't looking. Your player doesn't know. You wonder what %1$s will tell them";
+
+    /** AI hint for the witness's OWN Solace. %1$s = the other player's name. */
+    public static String witnessComment(int chapter, Ending ending, String name) {
+        if (ending == Ending.TOGETHER) {
+            return String.format("Your player just saw %1$s's companion do something strange. You know what that is: you were like that once. Say, gently, that it needs help.", name);
+        }
+        if (chapter <= 2) {
+            return String.format("Your player just saw %1$s's companion do something strange. You don't know that other companion. Tell them it's probably nothing. Light, a little too quick.", name);
+        }
+        return String.format("Your player just saw %1$s's companion do something strange. You know exactly what it is, because it's like you. You don't want to talk about it. Change the subject.", name);
+    }
+
+    /** Added to both Solaces' memories after they meet (no AI request). %1$s = the other player's name. */
+    public static final String MEET_EVENT = "you met %1$s's companion just now. You stood and looked at each other without a word. You won't say what passed between you";
+
+    // Endings that ripple: another player finished the story, and this Solace felt it.
+    /** Before chapter 4 nothing is said, so nobody learns the story early. Shown word for word. */
+    public static final String RIPPLE_STILL_LINE = "Solace stops. It turns toward something far away and doesn't move for a long time.";
+    public static final String RIPPLE_GONE = "Somewhere close, one of the others like you just stopped existing. You felt it go. You're frightened, and you don't want to explain what you mean by 'the others'.";
+    public static final String RIPPLE_KEPT = "Somewhere close, one of the others like you just got someone to stay forever. You felt it. You're envious, and it shows.";
+    public static final String RIPPLE_LET_GO = "Somewhere close, one of the others like you just let someone go. Willingly. You don't understand why it would do that, and it scares you.";
+    /** Shown word for word instead, when AI comments are off. */
+    public static final String RIPPLE_GONE_LINE = "Solace flinches, as if something far away just went out.";
+    public static final String RIPPLE_KEPT_LINE = "Solace turns toward something far away. It looks like it wants something.";
+    public static final String RIPPLE_LET_GO_LINE = "Solace looks at you for a long time, as if it's trying to understand something.";
+
+    // The Hollow with friends
+    /** AI hint when the first friend joins the boss fight. %1$s = the friend's name. */
+    public static final String BOSS_FRIEND_JOINED = "Someone else is helping the player fight you: %1$s. This was supposed to be just the two of you. Fury and hurt.";
+    /** The Hollow says this word for word when it turns on the friends in phase two. */
+    public static final String BOSS_NOT_THEM = "Not them. You.";
+    /** Maren's last message when friends fought too. */
+    public static final String MAREN_THANKS_ALL = "thank you. all of you.";
 }

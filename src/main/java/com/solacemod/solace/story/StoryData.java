@@ -1,5 +1,6 @@
 package com.solacemod.solace.story;
 
+import com.solacemod.solace.ai.RequestBudget;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
@@ -15,9 +16,8 @@ public final class StoryData extends SavedData {
     private static final String NAME = "solace_story";
     private final Map<UUID, PlayerStory> stories = new HashMap<>();
 
-    // Daily AI request counter, so the cost limit survives restarts.
-    public String requestDay = "";
-    public int requestsToday;
+    /** AI request counts (whole server and each player), so the cost limits survive restarts. */
+    public final RequestBudget budget = new RequestBudget();
 
     public static StoryData get(MinecraftServer server) {
         return server.overworld().getDataStorage().computeIfAbsent(
@@ -41,17 +41,9 @@ public final class StoryData extends SavedData {
         return stories;
     }
 
-    /** Counts one AI request. Returns false if today's limit is already used up. */
-    public boolean tryUseRequest(int dailyLimit) {
-        String today = LocalDate.now().toString();
-        if (!today.equals(requestDay)) {
-            requestDay = today;
-            requestsToday = 0;
-        }
-        if (dailyLimit > 0 && requestsToday >= dailyLimit) return false;
-        requestsToday++;
-        setDirty();
-        return true;
+    /** Today's date as the budget counts it. */
+    public static String today() {
+        return LocalDate.now().toString();
     }
 
     @Override
@@ -59,8 +51,11 @@ public final class StoryData extends SavedData {
         CompoundTag players = new CompoundTag();
         stories.forEach((id, story) -> players.put(id.toString(), story.save()));
         tag.put("Players", players);
-        tag.putString("RequestDay", requestDay);
-        tag.putInt("RequestsToday", requestsToday);
+        tag.putString("RequestDay", budget.day());
+        tag.putInt("RequestsToday", budget.total());
+        CompoundTag perPlayer = new CompoundTag();
+        budget.perPlayer().forEach(perPlayer::putInt);
+        tag.put("RequestsByPlayer", perPlayer);
         return tag;
     }
 
@@ -75,8 +70,10 @@ public final class StoryData extends SavedData {
                 // skip corrupted entries instead of crashing
             }
         }
-        data.requestDay = tag.getString("RequestDay");
-        data.requestsToday = tag.getInt("RequestsToday");
+        Map<String, Integer> perPlayer = new HashMap<>();
+        CompoundTag byPlayer = tag.getCompound("RequestsByPlayer");
+        for (String key : byPlayer.getAllKeys()) perPlayer.put(key, byPlayer.getInt(key));
+        data.budget.restore(tag.getString("RequestDay"), tag.getInt("RequestsToday"), perPlayer);
         return data;
     }
 }

@@ -90,6 +90,7 @@ public final class OnItsOwn {
         WatcherEntity copy = HorrorDirector.spawnWatcher(p, 30, 50, 20 * 15, 15, -1);
         if (copy == null) return false;
         copy.setMimic(true);
+        com.solacemod.solace.story.Together.showWitnesses(copy, p.getUUID(), "two_places", 20 * 15);
         story.addEvent("the player saw you in two places at once");
         return true;
     }

@@ -191,6 +191,8 @@ public final class PromptBuilder {
             sb.append(". Torn pages the player has found: ").append(story.fragmentsFound.size()).append('/').append(StoryText.FRAGMENT_COUNT);
         }
         if (!compact) sb.append(Omniscience.describe(player));
+        String together = Together.jealousyPrompt(player, story);
+        if (together != null) sb.append(". ").append(together.endsWith(".") ? together.substring(0, together.length() - 1) : together);
         sb.append(Bond.describe(story));
         if (story.defiantUntilTick > player.getServer().getTickCount()) {
             sb.append(". RIGHT NOW you are hurt and refuse to do anything the player asks (any actions you include will be ignored)");

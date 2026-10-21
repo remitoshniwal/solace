@@ -17,6 +17,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.ServerChatEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.AdvancementEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
@@ -41,7 +42,9 @@ public final class ServerEvents {
     @SubscribeEvent
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player && player.getServer() != null) {
-            StoryDirector.onLogin(player, StoryData.get(player.getServer()).get(player.getUUID()));
+            PlayerStory story = StoryData.get(player.getServer()).get(player.getUUID());
+            StoryDirector.onLogin(player, story);
+            com.solacemod.solace.story.Together.onLogin(player, story);
         }
     }
 
@@ -49,9 +52,16 @@ public final class ServerEvents {
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player && player.getServer() != null) {
             com.solacemod.solace.horror.Phenomena.restore(player);
+            com.solacemod.solace.horror.PersonalFreeze.forget(player);
             PlayerStory story = StoryData.get(player.getServer()).getIfPresent(player.getUUID());
             if (story != null) StoryDirector.onLogout(player, story);
         }
+    }
+
+    /** While only this player's screen is frozen (chapter 6 with others online), nothing can hurt them: they can't see it coming. */
+    @SubscribeEvent
+    public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player && com.solacemod.solace.horror.PersonalFreeze.isFrozen(player)) event.setCanceled(true);
     }
 
     @SubscribeEvent
@@ -102,10 +112,17 @@ public final class ServerEvents {
                     com.solacemod.solace.horror.OnItsOwn.tickSleep(player, story);
                     com.solacemod.solace.horror.OnItsOwn.tickGifts(player, story);
                     AmbientChatter.tick(player, story);
+                    com.solacemod.solace.story.Together.tick(player, story);
                 }
             } catch (RuntimeException e) {
                 Solace.LOGGER.error("Solace tick failed for {}", player.getGameProfile().getName(), e);
             }
+        }
+        try {
+            com.solacemod.solace.horror.PersonalFreeze.tick(server);
+            com.solacemod.solace.story.Together.tickServer(server);
+        } catch (RuntimeException e) {
+            Solace.LOGGER.error("Solace multiplayer tick failed", e);
         }
         if (tick % (20 * 30) == 0) data.setDirty();
     }
@@ -122,6 +139,8 @@ public final class ServerEvents {
         Scheduler.clear();
         com.solacemod.solace.horror.WorldFreeze.unfreeze(event.getServer());
         com.solacemod.solace.horror.OnItsOwn.reset();
+        com.solacemod.solace.story.Together.reset();
+        com.solacemod.solace.horror.PersonalFreeze.reset();
         SolaceBrain.reset();
         StoryDirector.reset();
     }

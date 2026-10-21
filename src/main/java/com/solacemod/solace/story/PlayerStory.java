@@ -112,6 +112,16 @@ public final class PlayerStory {
     // Saved places: name -> "dimension|x|y|z"
     public final Map<String, String> marks = new LinkedHashMap<>();
 
+    // Players together (multiplayer)
+    /** Seconds spent near each other player in this world. */
+    public final Map<UUID, Integer> secondsNear = new LinkedHashMap<>();
+    /** Another player's ending this Solace hasn't reacted to yet (it was offline), or null. */
+    public Ending pendingRipple;
+    /** Seconds near someone since Solace last said something about it (goes down slowly while apart). */
+    public int nearStreak;
+    public long lastJealousyTick = -1_000_000;
+    public long lastWitnessCommentTick = -1_000_000;
+
     // Timing (not saved; reset each session)
     public long lastInteractionTick;
     public long lastAmbientTick;
@@ -225,6 +235,10 @@ public final class PlayerStory {
         t.putDouble("ChapterStart", chapterStartMin);
         if (houseCorner != null) t.putLong("House", houseCorner.asLong());
         t.putString("MeetDim", meetDim);
+        CompoundTag near = new CompoundTag();
+        secondsNear.forEach((id, sec) -> near.putInt(id.toString(), sec));
+        t.put("Near", near);
+        if (pendingRipple != null) t.putString("PendingRipple", pendingRipple.name());
         return t;
     }
 
@@ -279,6 +293,21 @@ public final class PlayerStory {
         s.chapterStartMin = t.contains("ChapterStart") ? t.getDouble("ChapterStart") : s.playMinutes();
         if (t.contains("House")) s.houseCorner = BlockPos.of(t.getLong("House"));
         s.meetDim = t.contains("MeetDim") ? t.getString("MeetDim") : "minecraft:overworld";
+        CompoundTag near = t.getCompound("Near");
+        for (String k : near.getAllKeys()) {
+            try {
+                s.secondsNear.put(UUID.fromString(k), near.getInt(k));
+            } catch (IllegalArgumentException ignored) {
+                // skip a broken entry
+            }
+        }
+        if (t.contains("PendingRipple")) {
+            try {
+                s.pendingRipple = Ending.valueOf(t.getString("PendingRipple"));
+            } catch (IllegalArgumentException ignored) {
+                // unknown ending name: forget it
+            }
+        }
         return s;
     }
 

@@ -166,7 +166,7 @@ public final class SolaceBrain {
                 && !AiService.hasRoomFor(com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND)) {
             return;
         }
-        AiService.Gate gate = AiService.gate(server);
+        AiService.Gate gate = AiService.gate(server, player.getUUID());
         if (gate != AiService.Gate.OK) {
             if (gate == AiService.Gate.NOT_CONFIGURED && isAdmin(player) && HINTED.add(player.getUUID())) {
                 player.sendSystemMessage(setupMessage(StoryText.SETUP_HINT));
@@ -174,6 +174,9 @@ public final class SolaceBrain {
             if (gate == AiService.Gate.DAILY_LIMIT && HINTED.add(player.getUUID())) {
                 player.sendSystemMessage(Component.literal("[Solace] Daily AI request limit reached (change it in Solace setup). Solace is quiet until tomorrow.")
                         .withStyle(ChatFormatting.GRAY));
+            }
+            if (gate == AiService.Gate.PLAYER_LIMIT && HINTED.add(player.getUUID())) {
+                player.sendSystemMessage(Component.literal(StoryText.PLAYER_LIMIT_LINE).withStyle(ChatFormatting.GRAY));
             }
             if (gate == AiService.Gate.RATE_LIMITED && important) {
                 player.displayClientMessage(Component.literal("Solace is overwhelmed. Try again in a moment.").withStyle(ChatFormatting.DARK_GRAY), true);
@@ -326,7 +329,7 @@ public final class SolaceBrain {
         if (!SolaceConfig.SUMMARIZE_MEMORY.get() || !AiService.configured() || SUMMARIZING.contains(player.getUUID())) return;
         MinecraftServer server = player.getServer();
         if (server == null || !AiService.hasRoomFor(com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND)) return;
-        if (AiService.gate(server) != AiService.Gate.OK) return;
+        if (AiService.gate(server, player.getUUID()) != AiService.Gate.OK) return;
 
         StringBuilder transcript = new StringBuilder();
         for (PlayerStory.Turn t : old) transcript.append(t.role().equals("user") ? "" : "Solace: ").append(t.text()).append('\n');

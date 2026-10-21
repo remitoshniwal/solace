@@ -35,6 +35,7 @@ public final class SolaceConfig {
     // Cost safety
     public static final ModConfigSpec.IntValue MAX_REQUESTS_PER_MINUTE;
     public static final ModConfigSpec.IntValue DAILY_REQUEST_LIMIT;
+    public static final ModConfigSpec.IntValue DAILY_REQUESTS_PER_PLAYER;
 
     // Memory
     public static final ModConfigSpec.IntValue HISTORY_MESSAGES;
@@ -61,6 +62,15 @@ public final class SolaceConfig {
     public static final ModConfigSpec.BooleanValue ALLOW_FAKE_MESSAGES;
     public static final ModConfigSpec.BooleanValue ALLOW_FAKE_CRASH;
     public static final ModConfigSpec.BooleanValue ALLOW_SCREEN_EFFECTS;
+
+    // Multiplayer (players together)
+    public static final ModConfigSpec.BooleanValue JEALOUSY;
+    public static final ModConfigSpec.BooleanValue WITNESSES;
+    public static final ModConfigSpec.BooleanValue SOLACES_MEET;
+    public static final ModConfigSpec.BooleanValue ENDINGS_RIPPLE;
+    public static final ModConfigSpec.BooleanValue HOLLOW_WITH_FRIENDS;
+    public static final ModConfigSpec.BooleanValue PERSONAL_FREEZE;
+    public static final ModConfigSpec.BooleanValue MULTIPLAYER_AI_COMMENTS;
 
     // Abilities
     public static final ModConfigSpec.BooleanValue ALLOW_MINING;
@@ -122,6 +132,9 @@ public final class SolaceConfig {
                 .defineInRange("maxRequestsPerMinute", 12, 1, 600);
         DAILY_REQUEST_LIMIT = b.comment("Most AI requests allowed per real-world day. After this Solace goes quiet until tomorrow. 0 = no limit.")
                 .defineInRange("dailyRequestLimit", 400, 0, 1_000_000);
+        DAILY_REQUESTS_PER_PLAYER = b.comment("Multiplayer: most AI requests one player can use per real-world day, so one chatty player",
+                        "can't use up the whole server's limit. Not used in single player (unless the world is open to LAN). 0 = no limit.")
+                .defineInRange("dailyRequestsPerPlayer", 150, 0, 1_000_000);
         b.pop();
 
         b.push("memory");
@@ -174,6 +187,24 @@ public final class SolaceConfig {
                 .define("allowFakeCrash", true);
         ALLOW_SCREEN_EFFECTS = b.comment("Screen static and glitch overlays. Each player can also turn these off in their client config.")
                 .define("allowScreenEffects", true);
+        b.pop();
+
+        b.comment("Multiplayer: what happens when several players have a Solace. None of this does anything in single player.").push("multiplayer");
+        JEALOUSY = b.comment("Solace notices who you spend time with, and gets jealous (from chapter 3).")
+                .define("jealousy", true);
+        WITNESSES = b.comment("Other players can see your Solace doing strange things you missed, and get told about it.")
+                .define("witnesses", true);
+        SOLACES_MEET = b.comment("When two players' Solaces get close, they stop and look at each other.")
+                .define("solacesMeet", true);
+        ENDINGS_RIPPLE = b.comment("When one player finishes the story, other players' Solaces feel it.")
+                .define("endingsRipple", true);
+        HOLLOW_WITH_FRIENDS = b.comment("Friends can join the final boss fight: they see the boss bar, it gets stronger for each friend who fights, and it fights back.")
+                .define("hollowWithFriends", true);
+        PERSONAL_FREEZE = b.comment("Chapter 6 with other players online: freeze only that player's screen instead of skipping the frozen world.")
+                .define("personalFreeze", true);
+        MULTIPLAYER_AI_COMMENTS = b.comment("Solace talks about these moments using the AI (jealous remarks, what you witnessed, endings it felt).",
+                        "Uses AI requests, paid from the server owner's key. Off = short written lines instead, no extra requests.")
+                .define("aiComments", true);
         b.pop();
 
         b.push("abilities");

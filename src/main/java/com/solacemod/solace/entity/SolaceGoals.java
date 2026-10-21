@@ -34,8 +34,9 @@ public final class SolaceGoals {
         @Override
         public void tick() {
             solace.getNavigation().stop();
-            Player owner = solace.getOwner();
-            if (owner != null) solace.getLookControl().setLookAt(owner, 180F, 180F);
+            net.minecraft.world.entity.Entity target = solace.stareTarget();
+            // Staring at itself means staring at nothing: it keeps facing wherever it was facing.
+            if (target != null && target != solace) solace.getLookControl().setLookAt(target, 180F, 180F);
             solace.tickStare();
         }
     }

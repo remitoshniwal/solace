@@ -7,24 +7,23 @@ import com.solacemod.solace.ai.LlmException;
 import com.solacemod.solace.ai.LlmProvider;
 import com.solacemod.solace.ai.LlmRequest;
 import com.solacemod.solace.ai.ProviderSettings;
+import com.solacemod.solace.ai.RequestBudget;
 import com.solacemod.solace.config.SolaceConfig;
 import net.minecraft.server.MinecraftServer;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
  * Connects the game to Solace's AI brains (up to 5 providers, see {@link BrainPool}), with cost limits on top.
  */
 public final class AiService {
-    public enum Gate { OK, NOT_CONFIGURED, RATE_LIMITED, DAILY_LIMIT }
+    public enum Gate { OK, NOT_CONFIGURED, RATE_LIMITED, DAILY_LIMIT, PLAYER_LIMIT }
 
     private static final BrainPool POOL = new BrainPool();
     private static List<ProviderSettings> poolSettings = List.of();
-    private static final Deque<Long> RECENT = new ArrayDeque<>();
     private static boolean migrated;
 
     private AiService() {
@@ -137,15 +136,28 @@ public final class AiService {
         return pool().hasRoomFor(kind);
     }
 
-    /** Checks the cost limits. Counts the request if allowed. */
-    public static synchronized Gate gate(MinecraftServer server) {
+    /** Checks the cost limits for a request made for this player. Counts the request if allowed. */
+    public static synchronized Gate gate(MinecraftServer server, UUID player) {
         if (!configured()) return Gate.NOT_CONFIGURED;
-        long now = System.currentTimeMillis();
-        while (!RECENT.isEmpty() && now - RECENT.peekFirst() > 60_000) RECENT.pollFirst();
-        if (RECENT.size() >= SolaceConfig.MAX_REQUESTS_PER_MINUTE.get()) return Gate.RATE_LIMITED;
-        if (!StoryData.get(server).tryUseRequest(SolaceConfig.DAILY_REQUEST_LIMIT.get())) return Gate.DAILY_LIMIT;
-        RECENT.addLast(now);
-        return Gate.OK;
+        StoryData data = StoryData.get(server);
+        RequestBudget.Result result = data.budget.tryUse(player.toString(), StoryData.today(), System.currentTimeMillis(),
+                SolaceConfig.MAX_REQUESTS_PER_MINUTE.get(), SolaceConfig.DAILY_REQUEST_LIMIT.get(), perPlayerLimit(server),
+                server.getPlayerCount() > 1);
+        return switch (result) {
+            case OK -> {
+                data.setDirty();
+                yield Gate.OK;
+            }
+            case RATE_LIMITED -> Gate.RATE_LIMITED;
+            case DAILY_LIMIT -> Gate.DAILY_LIMIT;
+            case PLAYER_DAILY_LIMIT -> Gate.PLAYER_LIMIT;
+        };
+    }
+
+    /** Each player's daily share, or 0 (no limit) in a single-player world that isn't open to LAN. */
+    public static int perPlayerLimit(MinecraftServer server) {
+        boolean shared = server.isDedicatedServer() || server.isPublished();
+        return shared ? SolaceConfig.DAILY_REQUESTS_PER_PLAYER.get() : 0;
     }
 
     /** Sends a request, letting the brains decide who answers. Runs in the background. */

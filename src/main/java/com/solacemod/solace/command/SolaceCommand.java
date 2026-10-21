@@ -93,6 +93,7 @@ public final class SolaceCommand {
                         .executes(ctx -> msg(ctx, "This restarts your Solace story in this world from the beginning. Type /solace reset confirm"))
                         .then(Commands.literal("confirm").executes(SolaceCommand::reset)))
                 .then(Commands.literal("admin").requires(src -> src.hasPermission(2))
+                        .then(Commands.literal("usage").executes(SolaceCommand::usage))
                         .then(Commands.literal("playtest")
                                 .then(Commands.literal("on").executes(ctx -> playtest(ctx, true)))
                                 .then(Commands.literal("off").executes(ctx -> playtest(ctx, false))))
@@ -201,6 +202,15 @@ public final class SolaceCommand {
                                             Sounds.playFor(p, p.position(), Sounds.get("solace:" + name), 1.0F, 1.0F);
                                             return msg(ctx, "Playing solace:" + name + ".");
                                         }))))
+                        .then(Commands.literal("together").then(Commands.argument("player", EntityArgument.player())
+                                .then(Commands.argument("moment", StringArgumentType.word())
+                                        .suggests((ctx, b) -> {
+                                            for (String o : com.solacemod.solace.story.Together.ADMIN_OPTIONS) b.suggest(o);
+                                            return b.buildFuture();
+                                        })
+                                        .executes(ctx -> together(ctx, ""))
+                                        .then(Commands.argument("detail", StringArgumentType.word())
+                                                .executes(ctx -> together(ctx, StringArgumentType.getString(ctx, "detail")))))))
                         .then(Commands.literal("question").then(Commands.argument("player", EntityArgument.player()).executes(ctx -> {
                             ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
                             PlayerStory s = story(ctx, p);
@@ -254,6 +264,39 @@ public final class SolaceCommand {
         return 1;
     }
 
+    /** /solace admin together: tries one multiplayer moment now (with a stand-in when nobody else is online). */
+    private static int together(CommandContext<CommandSourceStack> ctx, String detail) throws CommandSyntaxException {
+        ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
+        try {
+            return msg(ctx, com.solacemod.solace.story.Together.admin(p, story(ctx, p), StringArgumentType.getString(ctx, "moment"), detail));
+        } catch (IllegalStateException e) {
+            return fail(ctx, e.getMessage());
+        }
+    }
+
+    /** Who used how many AI requests today (all paid from the server owner's key). */
+    private static int usage(CommandContext<CommandSourceStack> ctx) {
+        MinecraftServer server = ctx.getSource().getServer();
+        StoryData data = StoryData.get(server);
+        String today = StoryData.today();
+        int share = AiService.perPlayerLimit(server);
+        msg(ctx, "AI requests today: " + data.budget.totalToday(today) + " (server limit " + com.solacemod.solace.config.SolaceConfig.DAILY_REQUEST_LIMIT.get()
+                + (share > 0 ? ", each player " + share : ", no per-player limit here") + ")");
+        java.util.Map<String, Integer> players = data.budget.playersToday(today);
+        if (players.isEmpty()) return msg(ctx, "  Nobody has used any yet.");
+        players.forEach((id, used) -> {
+            String name = id;
+            try {
+                PlayerStory s = data.getIfPresent(java.util.UUID.fromString(id));
+                if (s != null && !s.playerName.isEmpty()) name = s.playerName;
+            } catch (IllegalArgumentException ignored) {
+                // not a player id: show it as it is
+            }
+            msg(ctx, "  " + name + ": " + used);
+        });
+        return 1;
+    }
+
     private static int playtest(CommandContext<CommandSourceStack> ctx, boolean on) {
         com.solacemod.solace.config.SolaceConfig.PLAYTEST_LOG.set(on);
         com.solacemod.solace.config.SolaceConfig.SPEC.save();
@@ -289,7 +332,9 @@ public final class SolaceCommand {
         StoryData data = StoryData.get(server);
         msg(ctx, "AI: " + AiService.describe());
         for (String line : AiService.brainStatus()) msg(ctx, "  " + line);
-        msg(ctx, "AI requests today: " + data.requestsToday + " (limit " + com.solacemod.solace.config.SolaceConfig.DAILY_REQUEST_LIMIT.get() + ")");
+        msg(ctx, "AI requests today: " + data.budget.totalToday(StoryData.today()) + " (limit " + com.solacemod.solace.config.SolaceConfig.DAILY_REQUEST_LIMIT.get() + ")");
+        int share = AiService.perPlayerLimit(server);
+        if (share > 0) msg(ctx, "Yours today: " + data.budget.usedToday(player.getUUID().toString(), StoryData.today()) + " of " + share);
         if (!s.met) return msg(ctx, "You haven't met Solace yet.");
         msg(ctx, "Story: chapter " + s.chapter + " of 8, " + Math.round(s.playMinutes()) + " minutes together, pages found " + s.fragmentsFound.size() + "/" + StoryText.FRAGMENT_COUNT
                 + (s.ending.name().equals("NONE") ? "" : ", ending: " + s.ending));

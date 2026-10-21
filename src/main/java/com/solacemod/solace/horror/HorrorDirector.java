@@ -54,7 +54,9 @@ public final class HorrorDirector {
     private enum Kind {
         FOOTSTEPS, CAVE, WHISPER, WATCHER, DOOR, FAKE_CHAT, GLITCH, STARE, MINING, TORCHES, DARKNESS, TITLE, RENAME, SIGN, CORRUPT, FAKE_CRASH,
         // Things Solace does on its own (see OnItsOwn)
-        FALL, TWO_PLACES, GIFT, REARRANGE, ECHO_STEPS, TIME_SLIP, MIRROR
+        FALL, TWO_PLACES, GIFT, REARRANGE, ECHO_STEPS, TIME_SLIP, MIRROR,
+        // Multiplayer: it does something only another player can see (see Together)
+        FOR_SOMEONE_ELSE
     }
 
     private static final List<String> TITLES = List.of("it remembers", "don't promise", "she's still here", "turn around", "you can log off. can't you?", "it was never static");
@@ -97,7 +99,7 @@ public final class HorrorDirector {
             else if (RANDOM.nextFloat() < 0.2F) footsteps(player);
             return;
         }
-        Kind kind = pick(story);
+        Kind kind = pick(player, story);
         if (kind != null) run(player, story, kind);
     }
 
@@ -115,7 +117,7 @@ public final class HorrorDirector {
     }
 
     @Nullable
-    private static Kind pick(PlayerStory story) {
+    private static Kind pick(@Nullable ServerPlayer player, PlayerStory story) {
         List<Kind> bag = new ArrayList<>();
         boolean world = SolaceConfig.ALLOW_WORLD_CHANGES.get();
         boolean chat = SolaceConfig.ALLOW_FAKE_MESSAGES.get();
@@ -128,6 +130,7 @@ public final class HorrorDirector {
             add(bag, Kind.ECHO_STEPS, 2);
         }
         if (chapter >= 4) add(bag, Kind.REARRANGE, 2);
+        if (chapter >= 3 && player != null && com.solacemod.solace.story.Together.someoneElseNear(player, story)) add(bag, Kind.FOR_SOMEONE_ELSE, 2);
         if (chapter >= 5) {
             add(bag, Kind.TIME_SLIP, 1);
             add(bag, Kind.MIRROR, 1);
@@ -236,6 +239,7 @@ public final class HorrorDirector {
                 if (RANDOM.nextFloat() < 0.8F) OnItsOwn.timeSlip(player, story);
             }
             case MIRROR -> OnItsOwn.mirror(player, story);
+            case FOR_SOMEONE_ELSE -> com.solacemod.solace.story.Together.forSomeoneElse(player, story);
         }
         if (player.getServer() != null) StoryData.get(player.getServer()).setDirty();
     }

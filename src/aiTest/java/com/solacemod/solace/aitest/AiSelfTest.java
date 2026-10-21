@@ -10,6 +10,7 @@ import com.solacemod.solace.ai.LlmProvider;
 import com.solacemod.solace.ai.LlmRequest;
 import com.solacemod.solace.ai.ProviderSettings;
 import com.solacemod.solace.ai.ReplyParser;
+import com.solacemod.solace.ai.RequestBudget;
 import com.solacemod.solace.ai.SolaceReply;
 import com.sun.net.httpserver.HttpServer;
 
@@ -266,6 +267,8 @@ public final class AiSelfTest {
         check("parser: rescues reply cut inside the text", cut2.say().equals("I was in the middle of saying"));
         check("parser: never shows raw JSON", !ReplyParser.parse("{\"emotion\":\"calm\",\"actio").say().contains("{"));
 
+        budgetTests();
+
         server.stop(0);
         try {
             poolTests(reply);
@@ -275,6 +278,53 @@ public final class AiSelfTest {
         System.out.println();
         System.out.println(passed + " passed, " + failed + " failed");
         System.exit(failed == 0 ? 0 : 1);
+    }
+
+    // ---------- Cost limits (whole server and each player) ----------
+
+    private static void budgetTests() {
+        RequestBudget b = new RequestBudget();
+        String day = "2026-10-21";
+        long t = 1_000_000;
+        // Alone: the per-minute limit is the whole server's.
+        int ok = 0;
+        for (int i = 0; i < 12; i++) if (b.tryUse("alex", day, t + i, 12, 400, 0, false) == RequestBudget.Result.OK) ok++;
+        check("budget: alone, a player can use the whole minute", ok == 12);
+        check("budget: the minute is full", b.tryUse("alex", day, t + 20, 12, 400, 0, false) == RequestBudget.Result.RATE_LIMITED);
+        check("budget: a minute later there's room again", b.tryUse("alex", day, t + 61_000, 12, 400, 0, false) == RequestBudget.Result.OK);
+
+        // With others online, one player gets half of each minute.
+        RequestBudget fair = new RequestBudget();
+        int mine = 0;
+        for (int i = 0; i < 12; i++) if (fair.tryUse("alex", day, t + i, 12, 400, 0, true) == RequestBudget.Result.OK) mine++;
+        check("budget: with others online, one player gets half the minute", mine == 6);
+        check("budget: the other player still gets in", fair.tryUse("sam", day, t + 20, 12, 400, 0, true) == RequestBudget.Result.OK);
+        check("budget: a tiny per-minute limit still lets each player ask once",
+                new RequestBudget().tryUse("alex", day, t, 1, 400, 0, true) == RequestBudget.Result.OK);
+
+        // Each player's daily share.
+        RequestBudget share = new RequestBudget();
+        for (int i = 0; i < 3; i++) share.tryUse("alex", day, t + i * 61_000L, 12, 400, 3, false);
+        check("budget: a player's daily share runs out", share.tryUse("alex", day, t + 400_000, 12, 400, 3, false) == RequestBudget.Result.PLAYER_DAILY_LIMIT);
+        check("budget: another player still has theirs", share.tryUse("sam", day, t + 400_000, 12, 400, 3, false) == RequestBudget.Result.OK);
+        check("budget: 0 means no per-player limit", share.tryUse("alex", day, t + 500_000, 12, 400, 0, false) == RequestBudget.Result.OK);
+        check("budget: counts per player", share.usedToday("alex", day) == 4 && share.usedToday("sam", day) == 1 && share.totalToday(day) == 5);
+        check("budget: busiest player listed first", share.playersToday(day).keySet().iterator().next().equals("alex"));
+
+        // The whole server's daily limit.
+        RequestBudget server = new RequestBudget();
+        server.tryUse("alex", day, t, 12, 2, 0, false);
+        server.tryUse("sam", day, t + 1, 12, 2, 0, false);
+        check("budget: the server's daily limit stops everyone", server.tryUse("kim", day, t + 2, 12, 2, 0, false) == RequestBudget.Result.DAILY_LIMIT);
+
+        // A new day starts fresh, and saved counts come back.
+        check("budget: a new day starts fresh", share.tryUse("alex", "2026-10-22", t + 600_000, 12, 400, 3, false) == RequestBudget.Result.OK
+                && share.usedToday("alex", "2026-10-22") == 1 && share.totalToday("2026-10-22") == 1);
+        check("budget: yesterday's counts read as 0", share.usedToday("sam", "2026-10-22") == 0 && share.totalToday(day) == 0);
+        RequestBudget loaded = new RequestBudget();
+        loaded.restore(day, 5, java.util.Map.of("alex", 3));
+        check("budget: saved counts come back", loaded.usedToday("alex", day) == 3 && loaded.totalToday(day) == 5
+                && loaded.tryUse("alex", day, t, 12, 400, 3, false) == RequestBudget.Result.PLAYER_DAILY_LIMIT);
     }
 
     // ---------- Several brains working together ----------

@@ -485,6 +485,12 @@ public final class StoryDirector {
         solace.showLantern(20 * 60, true);
         ServerLevel level = player.serverLevel();
         boolean frozen = com.solacemod.solace.horror.WorldFreeze.freeze(server);
+        if (!frozen && SolaceConfig.PERSONAL_FREEZE.get() && server.getPlayerCount() > 1 && !server.tickRateManager().isFrozen()) {
+            // Others are online: freeze only this player's screen.
+            com.solacemod.solace.horror.PersonalFreeze.freeze(player, 20 * 16);
+            frozen = true;
+            PlaytestLog.log(story, player, "SCENE", "personal freeze: only this player's screen stopped (other players online)");
+        }
         if (!frozen) PlaytestLog.log(story, player, "SCENE", "the world freeze was skipped (more than one player online, or the game was already frozen)");
         story.addEvent("you showed the player your true shape and confessed that you kept Maren" + (frozen ? " (the whole world stood still)" : ""));
         StoryAdvancements.grant(player, "kept_her");
@@ -493,6 +499,7 @@ public final class StoryDirector {
         SolaceBrain.event(player, StoryText.C6_CONFESS, true);
         Scheduler.later(20 * 16, () -> {
             com.solacemod.solace.horror.WorldFreeze.unfreeze(server);
+            com.solacemod.solace.horror.PersonalFreeze.unfreeze(player);
             if (!solace.isRemoved()) {
                 solace.endLantern();
                 if (!player.isRemoved() && solace.level() == player.level()) solace.blinkBehind(player);
@@ -758,9 +765,10 @@ public final class StoryDirector {
         ServerPlayer player = server.getPlayerList().getPlayer(ownerId);
         if (player == null) return;
         SolaceBrain.lastWords(player, StoryText.END_RELEASE_WIN);
+        java.util.Set<UUID> fighters = solace.fighters();
         Scheduler.later(100, () -> {
             HorrorDirector.spawnWatcher(player, 10, 14, 20 * 15, 4, -1);
-            Scheduler.later(80, () -> HorrorDirector.fakeChat(player, "Maren", "thank you."));
+            Scheduler.later(80, () -> Together.marenThanks(player, fighters));
         });
         Scheduler.later(260, () -> finishEnding(player, story, Ending.RELEASE, "Maren is free. Solace is gone. You can leave whenever you want."));
     }
@@ -812,6 +820,7 @@ public final class StoryDirector {
         player.sendSystemMessage(Component.literal("---- ENDING: " + ending.name() + " ----").withStyle(ChatFormatting.GOLD));
         player.sendSystemMessage(Component.literal(description).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
         player.sendSystemMessage(Component.literal("Endings discovered: " + found + "/5. Play again with /solace reset confirm").withStyle(ChatFormatting.DARK_GRAY));
+        Together.ripple(player, ending);
         MinecraftServer server = player.getServer();
         if (server != null) StoryData.get(server).setDirty();
     }

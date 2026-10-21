@@ -51,12 +51,15 @@ jobs:
             echo "summon solace:solace 0 100 0" > server_in
             echo "summon solace:watcher 2 100 2" > server_in
             echo "solace" > server_in
+            # Phase 4 (multiplayer): with nobody online these must answer politely, never throw.
+            echo "solace admin usage" > server_in
+            echo "solace admin together nobody meet" > server_in
             sleep 10
             echo "stop" > server_in
             sleep 20
           fi
           pkill -f "sleep 100000" || true
-          grep -q "Done (" server.log && echo "::notice title=Server smoke test::Server started, Solace and Watcher summoned, /solace ran, no Solace errors" || { echo "::error title=Smoke test::Server did not start"; }
+          grep -q "Done (" server.log && echo "::notice title=Server smoke test::Server started, Solace and Watcher summoned, /solace and the admin usage/together commands ran, no Solace errors" || { echo "::error title=Smoke test::Server did not start"; }
           # Report problems mentioning our mod, plus any crash.
           grep -n -i -B2 -A12 "exception\|crash report" server.log | grep -i -A12 -B2 "com\.solacemod\|crash report" | head -c 3800 > problems.txt || true
           # Pull the actual cause out of any crash report.
@@ -131,6 +134,21 @@ jobs:
           else
             echo "::notice title=Phase 2 screenshots::${n} screenshots taken"
           fi
+
+      - name: Screenshots (multiplayer moments, played alone with a stand-in)
+        continue-on-error: true
+        run: |
+          export LIBGL_ALWAYS_SOFTWARE=1
+          rm -rf run/saves/solace_tour
+          SOLACE_TOUR=together timeout 600 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runClient > shots3.log 2>&1 || true
+          n=$(ls run/screenshots/t_*.png 2>/dev/null | wc -l)
+          if [ "$n" -eq 0 ]; then
+            msg=$(grep -i "screenshots\|exception\|error\|caused by\|at com.solacemod" shots3.log | grep -v -i "narrator\|flite" | tail -40 | cut -c 1-300 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')
+            echo "::warning title=No multiplayer screenshots::${msg}"
+          else
+            echo "::notice title=Multiplayer screenshots::${n} screenshots taken"
+          fi
+          grep -h "JEALOUSY\|WITNESS\|MEET\|RIPPLE\|HOLLOW\|personal freeze" run/solace/playtest/*.txt 2>/dev/null | tail -20 || true
 
       - name: Upload screenshots
         if: always()

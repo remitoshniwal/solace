@@ -8,6 +8,18 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### New in 1.9.0: players together
+- **The Solaces notice each other.** On a server, your Solace notices who you spend your time with, and later in the story it doesn't like it.
+- **Witnesses.** Your friends might see your Solace doing things behind your back. You might see theirs.
+- **When two Solaces meet,** they stop and look at each other. Nobody knows what passes between them.
+- **When someone finishes the story,** the other Solaces feel it. No spoilers for anyone who isn't far enough yet.
+- **The final fight, with friends.** Friends can help. It gets harder for every friend who joins, and it fights them too.
+- **No more skipped moments.** One moment late in the story used to be skipped when other players were online. Now it happens just for you.
+- **Fair sharing of the owner's AI key.** Each player gets a daily share (150 by default), so one chatty player can't use up everyone's. `/solace status` shows yours, `/solace admin usage` shows everyone's.
+- **A new Together page** in setup (Esc > Mods > Solace > Config) turns each of these on or off, including **Talks about them**, which lets Solace comment using a few extra AI requests (paid from the server owner's key). Setup pages are now named AI Brain, Voice, Story, Abilities and Together.
+- Single player is unchanged.
+- For testers: `/solace admin together <player> <moment>` tries each one alone, with a stand-in for the other player.
+
 ### New in 1.8.1
 - **It changes as the story goes on.** In the later chapters, thin white cracks spread through Solace's dark armour and glow faintly in the dark, and its white outline turns a dirty grey that keeps cutting out, like a failing bulb.
 - **A cleaner Lantern.** The thin dark lines that showed through the Lantern's glow are gone, and it takes about a third less work to draw, which helps slower computers.

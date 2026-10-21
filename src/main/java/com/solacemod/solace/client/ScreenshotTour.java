@@ -29,13 +29,18 @@ import java.util.List;
  * and takes one picture at the end. With -Dsolace.tour=phase2 it takes pictures of the bond hint, the toasts and the advancements tab.
  * With -Dsolace.tour=sounds it plays each of Solace's own sounds with subtitles on, takes a picture of each subtitle,
  * and writes every solace: sound that played to solace/sounds-tour.txt (pictures can't show how a sound sounds, only that it played).
+ * With -Dsolace.tour=together it tries the multiplayer moments alone (a stand-in plays the other player) with the playtest log on,
+ * and takes pictures of the Together setup tab, two Solaces meeting, the lines players get, the personal freeze and the boss bar.
  */
 @EventBusSubscriber(modid = Solace.MODID, value = Dist.CLIENT)
 public final class ScreenshotTour {
     private static final boolean PLAYTEST = "playtest".equals(System.getProperty("solace.tour"));
     private static final boolean PHASE2 = "phase2".equals(System.getProperty("solace.tour"));
     private static final boolean SOUNDS = "sounds".equals(System.getProperty("solace.tour"));
-    private static final boolean ENABLED = Boolean.getBoolean("solace.screenshots") || PLAYTEST || PHASE2 || SOUNDS;
+    private static final boolean TOGETHER = "together".equals(System.getProperty("solace.tour"));
+    private static final boolean ENABLED = Boolean.getBoolean("solace.screenshots") || PLAYTEST || PHASE2 || SOUNDS || TOGETHER;
+    /** Together tour: the "AI comments" setting before the tour turned it off, put back at the end. */
+    private static Boolean aiCommentsBefore;
     /** For the sounds tour: every solace: sound that played, in order. */
     private static final List<String> HEARD = new ArrayList<>();
     private static boolean worldRequested;
@@ -65,14 +70,14 @@ public final class ScreenshotTour {
         }
         MinecraftServer server = mc.getSingleplayerServer();
         if (server == null) return;
-        mc.options.hideGui = !PLAYTEST && !PHASE2 && !SOUNDS;
+        mc.options.hideGui = !PLAYTEST && !PHASE2 && !SOUNDS && !TOGETHER;
         mc.options.pauseOnLostFocus = false; // clicking another window must not pause the tour's world
         ticks++;
         // Solace appears 30 seconds after the player joins.
         if (ticks < 20 * 36) return;
         if (stops == null) {
             String me = mc.player.getGameProfile().getName();
-            stops = PLAYTEST ? playtestPlan(me) : PHASE2 ? phase2Plan(me) : SOUNDS ? soundsPlan(me) : plan(me);
+            stops = PLAYTEST ? playtestPlan(me) : PHASE2 ? phase2Plan(me) : SOUNDS ? soundsPlan(me) : TOGETHER ? togetherPlan(me) : plan(me);
         }
         if (wait > 0) {
             wait--;
@@ -92,6 +97,7 @@ public final class ScreenshotTour {
         }
         for (String command : stop.commands()) {
             if (command.startsWith("#")) clientAction(mc, command); // things only the game window can do
+            else if (command.startsWith("/")) mc.player.connection.sendCommand(command.substring(1)); // typed by the player, so the answer shows in chat
             else server.execute(() -> server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), command));
         }
         wait = stop.waitTicks();
@@ -184,6 +190,37 @@ public final class ScreenshotTour {
         return list;
     }
 
+    /**
+     * Phase 4 (1.9.0): every multiplayer moment, alone. The other player is a stand-in ("Friend", or a Solace that belongs to nobody).
+     * AI comments are switched off for the tour, so the written lines show (there's no AI key in the automatic build anyway).
+     * The timeline goes to solace/playtest/.
+     */
+    private static List<Stop> togetherPlan(String me) {
+        String solace = "@e[type=solace:solace,limit=1]";
+        String together = "solace admin together " + me + " ";
+        List<Stop> list = new ArrayList<>();
+        list.add(new Stop(List.of("#quiet", "gamerule logAdminCommands false", "gamerule sendCommandFeedback false",
+                "gamerule doDaylightCycle false", "gamerule doWeatherCycle false", "weather clear", "time set noon",
+                "solace admin playtest on", "solace admin chapter " + me + " 4"), 60, null));
+        list.add(new Stop(List.of("#setup_together", "#mouse_corner"), 30, "t_1_setup_tab.png")); // before the tour turns AI comments off
+        list.add(new Stop(List.of("#close", "#no_ai_comments"), 10, null));
+        // Seen from the side: Solace faces north, the stand-in appears 4 blocks in front of it.
+        list.add(new Stop(List.of("tp " + me + " 6.5 -60 2.0 90 10", "tp " + solace + " 0.5 -60 4.0 180 0", "#clear_chat", together + "meet"), 30, "t_2_meet.png"));
+        list.add(new Stop(List.of("time set noon"), 60, "t_3_meet_negative.png")); // halfway: both turn negative at once (chapter 3 on)
+        list.add(new Stop(List.of("time set noon"), 20 * 8, null)); // the stand-in leaves
+        list.add(new Stop(List.of("tp " + me + " 0.5 -60 0.5 0 8", "tp " + solace + " 0.5 -60 4.0 180 0", "solace admin chapter " + me + " 2",
+                "#clear_chat", together + "ripple release"), 30, "t_4_ripple_early.png"));
+        list.add(new Stop(List.of("solace admin chapter " + me + " 5", "#clear_chat", together + "ripple together"), 30, "t_5_ripple_later.png"));
+        list.add(new Stop(List.of("#clear_chat", together + "witness flicker"), 20, "t_6_witness.png"));
+        list.add(new Stop(List.of("#clear_chat", together + "jealousy"), 20, "t_7_jealousy.png"));
+        list.add(new Stop(List.of("#clear_chat", "weather rain", "summon minecraft:cow 3.5 -60 7.5", together + "freeze"), 60, "t_8_personal_freeze.png"));
+        list.add(new Stop(List.of("weather clear"), 20 * 16, null)); // the freeze ends by itself
+        list.add(new Stop(List.of("#clear_chat", together + "hollow 2"), 60, "t_9_hollow_bar.png"));
+        list.add(new Stop(List.of("gamerule sendCommandFeedback true", "#clear_chat", "/solace admin usage"), 20, "t_10_usage.png"));
+        list.add(new Stop(List.of("execute as " + me + " run solace reset confirm", "solace admin playtest off", "#ai_comments_back"), 20, null));
+        return list;
+    }
+
     /** Sounds tour: notes every solace: sound the game starts playing. */
     @SubscribeEvent
     public static void onSound(net.neoforged.neoforge.client.event.sound.PlaySoundEvent event) {
@@ -217,6 +254,27 @@ public final class ScreenshotTour {
             }
             case "#close" -> mc.setScreen(null);
             case "#subtitles" -> mc.options.showSubtitles().set(true);
+            case "#setup_together" -> mc.setScreen(SolaceSetupScreen.openOnTogether(null));
+            case "#clear_chat" -> mc.gui.getChat().clearMessages(false);
+            case "#mouse_corner" -> {
+                // Park the mouse in the top left corner, so no button shows its tooltip in the picture.
+                try {
+                    for (String f : new String[]{"xpos", "ypos"}) {
+                        java.lang.reflect.Field field = net.minecraft.client.MouseHandler.class.getDeclaredField(f);
+                        field.setAccessible(true);
+                        field.setDouble(mc.mouseHandler, 0);
+                    }
+                } catch (ReflectiveOperationException e) {
+                    Solace.LOGGER.warn("[screenshots] could not move the mouse", e);
+                }
+            }
+            case "#no_ai_comments" -> {
+                aiCommentsBefore = com.solacemod.solace.config.SolaceConfig.MULTIPLAYER_AI_COMMENTS.get();
+                com.solacemod.solace.config.SolaceConfig.MULTIPLAYER_AI_COMMENTS.set(false);
+            }
+            case "#ai_comments_back" -> {
+                if (aiCommentsBefore != null) com.solacemod.solace.config.SolaceConfig.MULTIPLAYER_AI_COMMENTS.set(aiCommentsBefore);
+            }
             case "#quiet" -> {
                 mc.getTutorial().setStep(net.minecraft.client.tutorial.TutorialSteps.NONE);
                 mc.getToasts().clear();
