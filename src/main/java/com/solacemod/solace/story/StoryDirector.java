@@ -822,9 +822,9 @@ public final class StoryDirector {
         long found = GlobalMemory.distinctEndings(player.getUUID());
         StoryAdvancements.grantEnding(player, ending);
         if (found >= 5) StoryAdvancements.grant(player, "every_ending");
-        Titles.show(player, Component.literal("ENDING: " + ending.name()).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD),
+        Titles.show(player, Component.literal("ENDING: " + StoryText.endingTitle(ending).toUpperCase(java.util.Locale.ROOT)).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD),
                 Component.literal(found + " of 5 endings discovered").withStyle(ChatFormatting.GRAY), 20, 100, 40);
-        player.sendSystemMessage(Component.literal("---- ENDING: " + ending.name() + " ----").withStyle(ChatFormatting.GOLD));
+        player.sendSystemMessage(Component.literal("---- ENDING: " + StoryText.endingTitle(ending).toUpperCase(java.util.Locale.ROOT) + " ----").withStyle(ChatFormatting.GOLD));
         player.sendSystemMessage(Component.literal(description).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
         player.sendSystemMessage(Component.literal("Endings discovered: " + found + "/5. Play again with /solace reset confirm").withStyle(ChatFormatting.DARK_GRAY));
         Together.ripple(player, ending);

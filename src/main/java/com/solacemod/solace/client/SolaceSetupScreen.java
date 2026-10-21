@@ -599,7 +599,9 @@ public final class SolaceSetupScreen extends Screen {
         addRenderableWidget(volume);
         addRenderableWidget(toggle(controlX() + half + 3, rowY(6), half, "Hum", hum, v -> hum = v,
                 "The low hum you hear when you're close to Solace."));
-        note(rowY(7) + 2, Component.literal("Story spoilers are in docs/STORY.md. Don't peek!"));
+        note(rowY(7) + 2, Component.literal(isRemoteServer()
+                ? "On this server the owner's story and scare settings apply. Glitches, Fake crash, Bond hint and sounds are still yours."
+                : "Scares never hurt you or break your builds, and each one can be turned off here.").withStyle(isRemoteServer() ? ChatFormatting.YELLOW : ChatFormatting.GRAY));
     }
 
     private void initAbilitiesPage() {
@@ -633,7 +635,7 @@ public final class SolaceSetupScreen extends Screen {
                 .create(controlX(), rowY(5), memoryHalf, 20, Component.literal("Memory"), (b, v) -> crossWorld = v));
         addRenderableWidget(toggle(controlX() + memoryHalf + 3, rowY(5), memoryHalf, "Endings", rememberEndings, v -> rememberEndings = v,
                 "Solace remembers how your last story ended, and the next one changes a little. About 1 extra AI request per new story."));
-        note(rowY(6) + 2, Component.literal("Give Solace items by right-clicking it while holding them."));
+        note(rowY(6) + 2, isRemoteServer() ? ON_SERVER : Component.literal("Give Solace items by right-clicking it while holding them."));
     }
 
     /** Multiplayer: who gets a Solace, each player's share of AI requests, and what happens between players. */
@@ -676,7 +678,7 @@ public final class SolaceSetupScreen extends Screen {
                 "Everyone sees Solace's answers when its owner talks to it. Story moments always stay private."));
         addRenderableWidget(toggle(controlX() + half + 3, rowY(6), half, "Fights players", defendVsPlayers, v -> defendVsPlayers = v,
                 "Solace attacks other players who hurt its owner."));
-        note(rowY(7) + 2, Component.literal("Single player: none of this does anything."));
+        note(rowY(7) + 2, isRemoteServer() ? ON_SERVER : Component.literal("Single player: none of this does anything."));
     }
 
     // ---------- Widgets ----------
@@ -748,6 +750,10 @@ public final class SolaceSetupScreen extends Screen {
             default -> id;
         });
     }
+
+    /** On someone else's server, the owner's settings apply: what you change here only counts in your own worlds. */
+    private static final Component ON_SERVER = Component.literal("On this server the owner's settings apply. These only change your own worlds.")
+            .withStyle(ChatFormatting.YELLOW);
 
     private static boolean isRemoteServer() {
         Minecraft mc = Minecraft.getInstance();

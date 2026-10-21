@@ -418,4 +418,16 @@ public final class StoryText {
 
     /** /solace status when the story in this world is over and Solace is gone. */
     public static final String STATUS_OVER = "Your story in this world is over.";
+
+    /** An ending's name as players see it: the same as its advancement. */
+    public static String endingTitle(Ending e) {
+        return switch (e) {
+            case FOREVER -> "Forever";
+            case RELEASE -> "Free";
+            case ERASE -> "Quiet";
+            case TOGETHER -> "Together";
+            case COLLECTED -> "Home";
+            case NONE -> "";
+        };
+    }
 }

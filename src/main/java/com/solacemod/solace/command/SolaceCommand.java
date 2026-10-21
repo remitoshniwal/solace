@@ -292,22 +292,24 @@ public final class SolaceCommand {
     }
 
     private static int help(CommandContext<CommandSourceStack> ctx) {
-        String[] lines = {
-                "Solace commands:",
-                "  Just chat near Solace (or say its name) to talk to it.",
-                "  /solace setup           open Solace's settings (AI, voice, scares)",
+        boolean owner = ownerOrOperator(ctx.getSource());
+        List<String> lines = new java.util.ArrayList<>(List.of(
+                "Just chat near Solace (or say its name) to talk to it.",
                 "  /solace say <message>   talk to Solace from anywhere",
                 "  /solace come            call Solace to you",
-                "  /solace pockets         open Solace's inventory (or right-click it with an empty hand)",
-                "  /solace status          story progress and AI connection",
-                "  /solace note <text>     playtesting: save a note about this moment (see docs/PLAYTEST.md)",
-                "  /solace test            test your AI provider settings",
-                "  /solace forget          make Solace forget you (memory wipe)",
-                "  /solace reset           restart the story in this world",
-                "  /solace join / leave    multiplayer: get (or send away) your own Solace, if the server asks you to opt in",
-                "Try asking: \"follow me\", \"mine 10 iron\", \"build a shelter\", \"craft a stone pickaxe\", \"guard me\", \"give me your cobblestone\""
-        };
-        for (String l : lines) ctx.getSource().sendSuccess(() -> Component.literal(l).withStyle(ChatFormatting.GRAY), false);
+                "  /solace pockets         open its inventory (or right-click it with an empty hand)",
+                "  /solace status          your story so far, and the AI",
+                "  /solace setup           settings: AI, voice, scares, sounds"));
+        if (owner) lines.add("  /solace test            check that each AI brain answers");
+        lines.addAll(List.of(
+                "  /solace note <text>     playtesting: save a note about this moment",
+                "  /solace forget          make Solace forget you (in every world)",
+                "  /solace reset           start the story in this world again"));
+        if ("opt_in".equals(com.solacemod.solace.config.SolaceConfig.WHO_GETS_SOLACE.get())) lines.add("  /solace join / leave    get your own Solace, or send it away");
+        if (ctx.getSource().hasPermission(2)) lines.add("  /solace admin ...       testing tools for operators (spoilers!)");
+        lines.add("Try asking: \"follow me\", \"mine 10 iron\", \"build a shelter\", \"craft a stone pickaxe\", \"guard me\"");
+        line(ctx, "Solace commands", ChatFormatting.AQUA);
+        for (String l : lines) line(ctx, l, ChatFormatting.GRAY);
         return 1;
     }
 
@@ -394,21 +396,35 @@ public final class SolaceCommand {
         PlayerStory s = story(ctx, player);
         MinecraftServer server = ctx.getSource().getServer();
         StoryData data = StoryData.get(server);
-        msg(ctx, "AI: " + AiService.describe());
-        for (String line : AiService.brainStatus()) msg(ctx, "  " + line);
-        msg(ctx, "AI requests today: " + data.budget.totalToday(StoryData.today()) + " (limit " + com.solacemod.solace.config.SolaceConfig.DAILY_REQUEST_LIMIT.get() + ")");
+        boolean over = com.solacemod.solace.story.Afterward.gone(s);
+        line(ctx, "Solace status", ChatFormatting.AQUA);
+        // The story first: it's what players want to know.
+        if (!s.met) line(ctx, "You haven't met Solace yet.", ChatFormatting.WHITE);
+        else if (s.companion) line(ctx, "No story this time: just Solace. (/solace reset confirm to change your mind.)", ChatFormatting.WHITE);
+        else if (!com.solacemod.solace.config.SolaceConfig.STORY_ENABLED.get()) line(ctx, "The story is off on this server: Solace is just a companion.", ChatFormatting.WHITE);
+        else {
+            if (over) line(ctx, StoryText.STATUS_OVER, ChatFormatting.WHITE);
+            line(ctx, "Chapter " + s.chapter + " of 8, " + Math.round(s.playMinutes()) + " minutes together, pages found " + s.fragmentsFound.size() + "/" + StoryText.FRAGMENT_COUNT
+                    + (s.ending == com.solacemod.solace.story.Ending.NONE ? "" : ". Ending: " + StoryText.endingTitle(s.ending)), ChatFormatting.WHITE);
+        }
+        if (s.met && !over && !s.companion) {
+            line(ctx, "Its strength (Tether): " + (int) s.tether + "/" + (int) com.solacemod.solace.story.Bond.maxTether(s)
+                    + ". What you owe it (Debt): " + (int) s.debt + (s.request != null ? ". It asked you: \"" + s.request.text + "\"" : ""), ChatFormatting.GRAY);
+        }
+        if (s.met) line(ctx, "Trust: " + s.trust + ". Things it remembers about you: " + s.facts.size()
+                + ". Endings discovered: " + GlobalMemory.distinctEndings(player.getUUID()) + "/5", ChatFormatting.GRAY);
+        // Then the AI. The brain details are for whoever sets it up.
         int share = AiService.perPlayerLimit(server);
-        if (share > 0) msg(ctx, "Yours today: " + data.budget.usedToday(player.getUUID().toString(), StoryData.today()) + " of " + share);
-        if (!s.met) return msg(ctx, "You haven't met Solace yet.");
-        if (com.solacemod.solace.story.Afterward.gone(s)) msg(ctx, StoryText.STATUS_OVER);
-        if (s.companion) msg(ctx, "No story this time: just Solace. (/solace reset confirm to change your mind.)");
-        msg(ctx, "Story: chapter " + s.chapter + " of 8, " + Math.round(s.playMinutes()) + " minutes together, pages found " + s.fragmentsFound.size() + "/" + StoryText.FRAGMENT_COUNT
-                + (s.ending.name().equals("NONE") ? "" : ", ending: " + s.ending));
-        if (!com.solacemod.solace.story.Afterward.gone(s)) msg(ctx, "Solace's strength (Tether): " + (int) s.tether + "/" + (int) com.solacemod.solace.story.Bond.maxTether(s)
-                + ". Your debt to Solace: " + (int) s.debt + (s.request != null ? ". It asked you: \"" + s.request.text + "\"" : ""));
-        msg(ctx, "Trust: " + s.trust + ". Things Solace remembers about you: " + s.facts.size()
-                + ". Endings discovered: " + GlobalMemory.distinctEndings(player.getUUID()) + "/5");
+        String today = StoryData.today();
+        int limit = com.solacemod.solace.config.SolaceConfig.DAILY_REQUEST_LIMIT.get();
+        line(ctx, "AI: " + AiService.describe() + ". Requests today: " + data.budget.totalToday(today) + (limit > 0 ? " of " + limit : " (no daily limit)")
+                + (share > 0 ? " (yours: " + data.budget.usedToday(player.getUUID().toString(), today) + " of " + share + ")" : ""), ChatFormatting.DARK_GRAY);
+        if (ownerOrOperator(ctx.getSource())) for (String l : AiService.brainStatus()) line(ctx, "  " + l, ChatFormatting.DARK_GRAY);
         return 1;
+    }
+
+    private static void line(CommandContext<CommandSourceStack> ctx, String text, ChatFormatting color) {
+        ctx.getSource().sendSuccess(() -> Component.literal(text).withStyle(color), false);
     }
 
     private static int test(CommandContext<CommandSourceStack> ctx) {

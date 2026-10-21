@@ -396,7 +396,8 @@ public final class SolaceBrain {
 
     /** @param privately only the owner sees it, even with replies visible to all (story moments that could spoil someone else's story) */
     public static void display(ServerPlayer owner, @Nullable SolaceEntity solace, PlayerStory story, String text, String emotion, boolean privately) {
-        Component message = format(story, solace, text, emotion);
+        MutableComponent body = body(story, text, emotion);
+        Component message = Component.literal("<").append(name(story, solace, null)).append("> ").append(body);
         PlaytestLog.log(story, owner, "SOLACE", "\"" + text + "\"" + (emotion == null || emotion.isBlank() ? "" : " (" + emotion + ")"));
         if (solace != null && emotion != null && java.util.Set.of("angry", "sad", "glitch", "afraid")
                 .contains(emotion.toLowerCase(java.util.Locale.ROOT))) {
@@ -404,24 +405,22 @@ public final class SolaceBrain {
             // From chapter 4, real anger shows: he flares into his negative.
             if (solace.getCorruption() >= 4 && ("angry".equalsIgnoreCase(emotion) || "glitch".equalsIgnoreCase(emotion))) solace.goNegative(60);
         }
+        owner.sendSystemMessage(message);
         if (!privately && SolaceConfig.REPLIES_VISIBLE_TO_ALL.get() && owner.getServer() != null) {
-            owner.getServer().getPlayerList().broadcastSystemMessage(message, false);
-        } else {
-            owner.sendSystemMessage(message);
+            // Everyone else is told whose Solace is talking, since each player has their own.
+            Component others = Component.literal("<").append(name(story, solace, owner.getGameProfile().getName())).append("> ").append(body);
+            for (ServerPlayer p : owner.getServer().getPlayerList().getPlayers()) if (p != owner) p.sendSystemMessage(others);
+            owner.getServer().sendSystemMessage(message); // the server log, as before
         }
         PacketDistributor.sendToPlayer(owner, new ModNetwork.SpeechPayload(solace == null ? -1 : solace.getId(), text, emotion));
     }
 
-    private static Component format(PlayerStory story, @Nullable SolaceEntity solace, String text, String emotion) {
-        boolean story_ = SolaceConfig.STORY_ENABLED.get();
-        ChatFormatting color;
-        if (solace != null && solace.isHollow()) color = ChatFormatting.DARK_RED;
-        else if (story.ending == Ending.FOREVER || story.ending == Ending.COLLECTED) color = ChatFormatting.GRAY;
-        else if (!story_ || story.ending == Ending.TOGETHER || story.part() <= 2) color = ChatFormatting.AQUA;
-        else if (story.part() == 3) color = ChatFormatting.DARK_AQUA;
-        else color = ChatFormatting.RED;
-
+    /** "Solace" in the chapter's colour (sometimes glitched). With an owner name, "Remi's Solace", for other players. */
+    private static MutableComponent name(PlayerStory story, @Nullable SolaceEntity solace, @Nullable String owner) {
+        ChatFormatting color = nameColor(story, solace);
         MutableComponent name = Component.empty();
+        if (owner != null && (solace == null || !solace.isHollow())) name.append(Component.literal(owner + "'s ").withStyle(ChatFormatting.GRAY));
+        boolean story_ = SolaceConfig.STORY_ENABLED.get();
         if (story_ && story.part() >= 3 && story.ending == Ending.NONE && RANDOM.nextFloat() < 0.2F) {
             name.append(Component.literal("Sol").withStyle(color))
                     .append(Component.literal("a").withStyle(Style.EMPTY.withColor(color).withObfuscated(true)))
@@ -429,8 +428,22 @@ public final class SolaceBrain {
         } else {
             name.append(Component.literal(solace != null && solace.isHollow() ? "The Hollow" : "Solace").withStyle(color));
         }
-        MutableComponent line = Component.literal("<").append(name).append("> ");
+        return name;
+    }
 
+    private static ChatFormatting nameColor(PlayerStory story, @Nullable SolaceEntity solace) {
+        boolean story_ = SolaceConfig.STORY_ENABLED.get();
+        if (solace != null && solace.isHollow()) return ChatFormatting.DARK_RED;
+        if (story.ending == Ending.FOREVER || story.ending == Ending.COLLECTED) return ChatFormatting.GRAY;
+        if (!story_ || story.ending == Ending.TOGETHER || story.part() <= 2) return ChatFormatting.AQUA;
+        if (story.part() == 3) return ChatFormatting.DARK_AQUA;
+        return ChatFormatting.RED;
+    }
+
+    /** The words, in white, with a few scrambled ones when it glitches. */
+    private static MutableComponent body(PlayerStory story, String text, String emotion) {
+        boolean story_ = SolaceConfig.STORY_ENABLED.get();
+        MutableComponent line = Component.empty();
         boolean glitch = "glitch".equals(emotion) || (story_ && story.part() >= 3 && story.ending == Ending.NONE && RANDOM.nextFloat() < 0.12F);
         String[] words = text.split(" ");
         int glitchWords = glitch ? 1 + RANDOM.nextInt(Math.min(3, Math.max(1, words.length / 4 + 1))) : 0;
