@@ -34,7 +34,7 @@ public class WatcherRenderer extends MobRenderer<WatcherEntity, EntityModel<Watc
         poseStack.pushPose();
         poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(-bodyYaw));
         poseStack.translate(0.0, 0.04 + Math.sin(t * 0.06) * 0.06, 0.0);
-        SolaceBody.draw(poseStack, buffer, packedLight, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, 0, 0.4F, t, 0);
+        SolaceBody.draw(poseStack, buffer, packedLight, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, 0, 0.4F, t, 0, false);
         poseStack.popPose();
     }
 

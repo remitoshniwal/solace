@@ -8,6 +8,10 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### New in 1.8.1
+- **It changes as the story goes on.** In the later chapters, thin white cracks spread through Solace's dark armour and glow faintly in the dark, and its white outline turns a dirty grey that keeps cutting out, like a failing bulb.
+- **A cleaner Lantern.** The thin dark lines that showed through the Lantern's glow are gone, and it takes about a third less work to draw, which helps slower computers.
+
 ### New in 1.8.0
 - **Solace has a sound of its own.** Stand close and you'll hear a low hum, which slowly goes out of tune as the story goes on. The Lantern has a deep, shimmering drone. When its negative side flickers, you hear it flicker, even behind your back. When it turns fully negative, something heavy lands, then winds down when it's over.
 - **The Watcher, heard.** A faint ringing in your ears when it appears somewhere out there, and a soft scatter when it vanishes.

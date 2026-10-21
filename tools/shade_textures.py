@@ -7,6 +7,8 @@ Run:  python3 tools/shade_textures.py
 One 256x256 sheet holds every piece of the model; the negative form uses the same layout with different colours,
 so the model just swaps sheets. The negative also has a "_glow" sheet drawn on top, glowing (its flames and body).
 
+The uneasy form (later chapters) uses the normal sheet with white cracks (solace_shade_uneasy.png, and _glow for the cracks).
+
 Sheet layout (x, y, width, height), shared with tools/models/build_solace.js:
   skin      (0, 0, 64, 64)      the body, wrapped round the torso and limbs
   armour    (64, 0, 64, 64)     rows of laced plates (8 texels a row)
@@ -205,6 +207,46 @@ def sheet(negative, seed=7):
     return main, glow
 
 
+def crack(px, glow_px, x, y, ang, length, box, rng, depth):
+    """One crack: a one-pixel line running mostly straight, bending sharply every few pixels and sometimes forking,
+    with a dull grey chip along one side."""
+    x0, y0, w, h = box
+    run = 0
+    for _ in range(length):
+        ix, iy = int(round(x)), int(round(y))
+        if not (x0 <= ix < x0 + w and y0 <= iy < y0 + h) or px[ix, iy][3] == 0:
+            return
+        px[ix, iy] = (236, 236, 242, 255)
+        glow_px[ix, iy] = (236, 236, 242, 255)
+        ex, ey = ix + int(round(math.cos(ang + math.pi / 2))), iy + int(round(math.sin(ang + math.pi / 2)))
+        if x0 <= ex < x0 + w and y0 <= ey < y0 + h and px[ex, ey][3] > 0 and glow_px[ex, ey][3] == 0:
+            px[ex, ey] = (104, 104, 112, 255)
+        run += 1
+        if run >= rng.randint(3, 6):  # a sharp bend, and now and then a fork
+            run = 0
+            if depth < 2 and rng.random() < 0.3:
+                crack(px, glow_px, x, y, ang + rng.choice((-1, 1)) * rng.uniform(0.7, 1.2), length // 2, box, rng, depth + 1)
+            ang += rng.choice((-1, 1)) * rng.uniform(0.25, 0.6)
+        x += math.cos(ang)
+        y += math.sin(ang)
+
+
+def uneasy_sheet(seed=13):
+    """The uneasy form (later chapters): the normal sheet with thin white cracks through its body, armour, spikes and
+    claws, as if the negative is breaking through from inside. The cracks also go on a glow sheet so they show at night."""
+    main, _ = sheet(False)
+    glow = Image.new("RGBA", main.size, (0, 0, 0, 0))
+    px, glow_px = main.load(), glow.load()
+    rng = random.Random(seed)
+    # (area on the sheet, how many cracks start there)
+    for box, count in (((0, 0, 64, 64), 5), ((64, 0, 64, 64), 5), ((128, 64, 32, 64), 2), ((160, 64, 32, 64), 2)):
+        x0, y0, w, h = box
+        for _ in range(count):
+            crack(px, glow_px, rng.uniform(x0 + 3, x0 + w - 4), rng.uniform(y0 + 3, y0 + h - 4), rng.uniform(0, 2 * math.pi),
+                  rng.randint(16, 30), box, rng, 0)
+    return main, glow
+
+
 def outline_tex():
     """Plain white: the outline pass colours it white (normal form) or black (negative) per vertex."""
     return Image.new("RGBA", (16, 16), (255, 255, 255, 255))
@@ -304,6 +346,9 @@ if __name__ == "__main__":
     m, g = sheet(True)
     m.save(OUT / "solace_shade_negative.png")
     premultiplied(g).save(OUT / "solace_shade_negative_glow.png")
+    m, g = uneasy_sheet()
+    m.save(OUT / "solace_shade_uneasy.png")
+    premultiplied(g).save(OUT / "solace_shade_uneasy_glow.png")
     outline_tex().save(OUT / "outline.png")
     for i, (reach, veins, glow) in enumerate(((0.95, 0.9, 0.7), (1.0, 0.6, 0.5))):
         premultiplied(plasma(256, 11 + i * 17, reach, veins, glow)).save(OUT / f"orb_plasma_{i}.png")

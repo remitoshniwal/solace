@@ -25,6 +25,9 @@ final class SolaceBody {
     static final ResourceLocation NORMAL = Solace.id("textures/entity/solace_shade.png");
     private static final ResourceLocation NEGATIVE = Solace.id("textures/entity/solace_shade_negative.png");
     private static final ResourceLocation NEGATIVE_GLOW = Solace.id("textures/entity/solace_shade_negative_glow.png");
+    /** The uneasy form (later chapters): the normal sheet with white cracks, and the cracks alone, glowing. */
+    private static final ResourceLocation UNEASY = Solace.id("textures/entity/solace_shade_uneasy.png");
+    private static final ResourceLocation UNEASY_GLOW = Solace.id("textures/entity/solace_shade_uneasy_glow.png");
     /** Plain white, coloured per vertex: a white outline round the normal form, a black one round the negative. */
     private static final ResourceLocation OUTLINE = Solace.id("textures/entity/outline.png");
     /** Outline thickness, in model pixels (16 to a block). */
@@ -98,17 +101,24 @@ final class SolaceBody {
      * @param negativeMask which areas show the negative (BbModel.BODY, RIGHT_ARM, LEFT_ARM); 0 = none
      * @param glow         brightness of the white outline round the normal form (it stutters like a bad bulb)
      * @param push         how hard its cloak is pushed back (walking speed)
+     * @param uneasy       the later chapters: white cracks through it, and a dirty grey outline instead of a white one
      */
-    static void draw(PoseStack poseStack, MultiBufferSource buffer, int light, int overlay, int negativeMask, float glow, float t, float push) {
+    static void draw(PoseStack poseStack, MultiBufferSource buffer, int light, int overlay, int negativeMask, float glow, float t, float push,
+                     boolean uneasy) {
         BbModel m = model();
         Mat4 base = BbModel.base();
         int full = LightTexture.FULL_BRIGHT;
         // The outline is drawn with back faces hidden (entityCutout), which the inside-out trick needs.
         // (Each buffer is fetched right before it's used: fetching another one can close it.)
         if (negativeMask != BbModel.ALL) {
-            m.draw(base, new MeshDraw(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(NORMAL)), light, overlay), negativeMask, false, t, push, 0xFFFFFFFF);
+            m.draw(base, new MeshDraw(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(uneasy ? UNEASY : NORMAL)), light, overlay), negativeMask, false, t, push, 0xFFFFFFFF);
+            if (uneasy) {
+                // The cracks glow faintly, breathing slowly, so they show even in the dark.
+                m.draw(base, new MeshDraw(poseStack, buffer.getBuffer(RenderType.eyes(UNEASY_GLOW)), full, OverlayTexture.NO_OVERLAY),
+                        negativeMask, false, t, push, grey(0.5F + 0.25F * Mth.sin(t * 0.09F)));
+            }
             m.drawOutline(base, new MeshDraw(poseStack, buffer.getBuffer(RenderType.entityCutout(OUTLINE)), full, OverlayTexture.NO_OVERLAY), negativeMask, false, OUTLINE_WIDTH,
-                    grey(Math.min(1, 0.55F + glow * 0.6F)));
+                    uneasy ? dirty(Math.min(0.75F, 0.3F + glow * 0.5F)) : grey(Math.min(1, 0.55F + glow * 0.6F)));
         }
         if (negativeMask != 0) {
             m.draw(base, new MeshDraw(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(NEGATIVE)), full, overlay), negativeMask, true, t, push, 0xFFFFFFFF);
@@ -117,6 +127,12 @@ final class SolaceBody {
             m.drawOutline(base, new MeshDraw(poseStack, buffer.getBuffer(RenderType.entityCutout(OUTLINE)), full, OverlayTexture.NO_OVERLAY), negativeMask, true,
                     OUTLINE_WIDTH, 0xFF000000);
         }
+    }
+
+    /** A grimy, yellowed grey, like the glass of an old bulb. */
+    static int dirty(float level) {
+        int r = Math.max(0, Math.min(255, (int) (level * 255)));
+        return 0xFF000000 | r << 16 | (int) (r * 0.93F) << 8 | (int) (r * 0.8F);
     }
 
     static int grey(float level) {

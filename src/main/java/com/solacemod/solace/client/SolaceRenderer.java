@@ -126,8 +126,10 @@ public class SolaceRenderer extends EntityRenderer<SolaceEntity> {
         poseStack.mulPose(Axis.YP.rotationDegrees(-bodyYaw));
         poseStack.translate(shift, 0.04 + bob, 0);
         // The faint light along its edges grows stronger as the story goes on, and stutters like a bad bulb.
-        float glow = (0.25F + 0.15F * stage) * neon(t, entity.getId() + 7);
-        SolaceBody.draw(poseStack, buffer, packedLight, overlay, mask, glow, age, amount);
+        // Once it's uneasy (later chapters) the bulb is failing: dirtier, and it cuts out far more often.
+        boolean uneasy = entity.getForm() == SolaceEntity.FORM_UNEASY;
+        float glow = (0.25F + 0.15F * stage) * (uneasy ? failingNeon(t, entity.getId() + 7) : neon(t, entity.getId() + 7));
+        SolaceBody.draw(poseStack, buffer, packedLight, overlay, mask, glow, age, amount, uneasy);
         poseStack.popPose();
 
         if (entity.tickCount != lastParticleTick) {
@@ -143,6 +145,15 @@ public class SolaceRenderer extends EntityRenderer<SolaceEntity> {
         int h = (int) t * 0x27D4EB2D ^ seed * 0x165667B1;
         h ^= h >>> 15;
         return Math.floorMod(h, 29) == 0 ? pulse * 0.45F : pulse;
+    }
+
+    /** A failing neon tube: it buzzes between half and full and cuts out often, sometimes for a few ticks at a time. */
+    static float failingNeon(float t, int seed) {
+        float pulse = 0.75F + 0.25F * Mth.sin(t * 0.25F);
+        int h = (int) (t / 3) * 0x27D4EB2D ^ seed * 0x165667B1;
+        h ^= h >>> 15;
+        int roll = Math.floorMod(h, 9);
+        return roll == 0 ? 0.1F : roll == 1 ? pulse * 0.5F : pulse;
     }
 
     /** A few sparks and specks of light while it's negative; wisps of dark smoke off its shoulders in the late chapters. */

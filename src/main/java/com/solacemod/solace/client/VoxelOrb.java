@@ -73,30 +73,99 @@ final class VoxelOrb {
                 level[ix][iy][iz] = Math.min(level[ix][iy][iz] < 0 ? 9 : level[ix][iy][iz], 1);
             }
         }
-        List<Face> core = new ArrayList<>(), shell = new ArrayList<>(), outer = new ArrayList<>();
-        int[][] dirs = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+        // Faces are first marked on grids (one per direction), then joined into bigger rectangles (see merge).
+        int[][][][] core = new int[6][N][N][N], shell = new int[6][N][N][N];
+        List<Face> outer = new ArrayList<>();
         for (int x = 0; x < N; x++) for (int y = 0; y < N; y++) for (int z = 0; z < N; z++) {
             int lv = level[x][y][z];
             if (lv < 0) continue;
             boolean solid = lv <= 1;
-            for (int[] d : dirs) {
+            for (int di = 0; di < 6; di++) {
+                int[] d = DIRS[di];
                 int nl = get(level, x + d[0], y + d[1], z + d[2]);
                 // The hot middle is solid; the blue layers round it are see-through, each showing its outer side.
                 boolean show = solid ? nl < 0 || nl > 1 : nl < 0 || nl > lv;
                 if (!show) continue;
                 // For the glowing layers the alpha says how strongly they glow.
                 int alpha = solid ? 0xFF000000 : lv == 2 ? 0x70000000 : lv == 3 ? 0x80000000 : 0xB0000000;
-                Face face = face(x - c, y - c, z - c, d, palette[Math.min(lv, 4)] & 0xFFFFFF | alpha);
-                if (solid) core.add(face);
-                else shell.add(face);
-                if (nl < 0 && !arc[x][y][z]) outer.add(face); // (the thin lightning arcs get no outline)
+                int argb = palette[Math.min(lv, 4)] & 0xFFFFFF | alpha;
+                mark(solid ? core : shell, di, x, y, z, argb);
+                // The thin lightning arcs get no outline, and neither do faces in a dent: from the front, their outline
+                // would show as dark shards across the glow.
+                if (nl < 0 && !arc[x][y][z] && !inDent(level, x, y, z, d)) outer.add(face(x - c, y - c, z - c, d, argb));
             }
         }
-        return new Frame(core, shell, outline(outer, outlineColor));
+        return new Frame(merge(core), merge(shell), outline(outer, outlineColor));
+    }
+
+    /** How far to look out from a face for another part of the ball, in voxels. */
+    private static final int DENT_DEPTH = 6;
+
+    /** True if, looking straight out from this face, you soon hit another part of the ball: the face is inside a dent. */
+    private static boolean inDent(int[][][] level, int x, int y, int z, int[] d) {
+        for (int step = 2; step <= DENT_DEPTH; step++) {
+            if (get(level, x + d[0] * step, y + d[1] * step, z + d[2] * step) >= 0) return true;
+        }
+        return false;
+    }
+
+    private static final int[][] DIRS = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+
+    /** Notes a face of the voxel at (x, y, z) facing DIRS[di], by its slice and its place in that slice. */
+    private static void mark(int[][][][] grid, int di, int x, int y, int z, int argb) {
+        int axis = di / 2;
+        int[] p = {x, y, z};
+        grid[di][p[axis]][p[(axis + 1) % 3]][p[(axis + 2) % 3]] = argb;
+    }
+
+    /**
+     * Joins neighbouring faces that point the same way, sit in the same slice and have the same colour into bigger
+     * rectangles. It looks exactly the same but there are far fewer faces to send each frame (kinder to slow computers).
+     */
+    private static List<Face> merge(int[][][][] grid) {
+        List<Face> out = new ArrayList<>();
+        float c = (N - 1) / 2F;
+        for (int di = 0; di < 6; di++) {
+            int[] d = DIRS[di];
+            int axis = di / 2;
+            for (int slice = 0; slice < N; slice++) {
+                int[][] g = grid[di][slice];
+                for (int b = 0; b < N; b++) for (int a = 0; a < N; a++) {
+                    int argb = g[a][b];
+                    if (argb == 0) continue;
+                    int w = 1;
+                    while (a + w < N && g[a + w][b] == argb) w++;
+                    int h = 1;
+                    grow:
+                    while (b + h < N) {
+                        for (int k = 0; k < w; k++) if (g[a + k][b + h] != argb) break grow;
+                        h++;
+                    }
+                    for (int j = 0; j < h; j++) for (int k = 0; k < w; k++) g[a + k][b + j] = 0;
+                    out.add(rect(axis, d[axis], slice - c, a + (w - 1) / 2F - c, w, b + (h - 1) / 2F - c, h, d, argb));
+                }
+            }
+        }
+        return out;
     }
 
     private static int get(int[][][] level, int x, int y, int z) {
         return x < 0 || y < 0 || z < 0 || x >= N || y >= N || z >= N ? -1 : level[x][y][z];
+    }
+
+    /** A w by h voxel rectangle facing d, centred on (uc, vc) in its slice. Corners go round the same way as face(). */
+    private static Face rect(int axis, int s, float slicePos, float uc, int w, float vc, int h, int[] d, int argb) {
+        int u = (axis + 1) % 3, v = (axis + 2) % 3;
+        float[][] uv = {{-0.5F, -0.5F}, {0.5F, -0.5F}, {0.5F, 0.5F}, {-0.5F, 0.5F}};
+        float[] pos = new float[12];
+        for (int k = 0; k < 4; k++) {
+            float[] p = new float[3];
+            p[axis] = slicePos + s * 0.5F;
+            p[u] = uc + uv[k][0] * w;
+            p[v] = vc + uv[k][1] * s * h;
+            for (int a = 0; a < 3; a++) pos[k * 3 + a] = p[a] * VOX;
+        }
+        return new Face(pos, argb, d[0], d[1], d[2]);
     }
 
     /** One face of the voxel at (x, y, z) (in voxels from the centre), facing d. */
