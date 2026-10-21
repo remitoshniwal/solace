@@ -38,7 +38,7 @@ public final class Bond {
     }
 
     public static double maxTether(PlayerStory story) {
-        if (story.ending == Ending.FOREVER || story.ending == Ending.TOGETHER || story.ending == Ending.COLLECTED) return 150;
+        if (story.ending == Ending.FOREVER || story.ending == Ending.TOGETHER || story.ending == Ending.COLLECTED || story.companion) return 150;
         // Grows chapter by chapter (index = chapter). No hard cap on what it can do, just on how much at once.
         double[] byChapter = {0, 35, 45, 60, 75, 95, 115, 135, 150};
         return byChapter[Math.max(1, Math.min(8, story.chapter))];
@@ -74,6 +74,7 @@ public final class Bond {
             addTether(story, -1.0 / 120.0); // -1 every 2 minutes apart
         }
         tickRequest(player, story, near);
+        if (story.companion) return; // [Just stay]: the healed Solace never collects
         tickDebtMilestones(player, story);
         MinecraftServer server = player.getServer();
         if (server != null && story.debt >= 100 && solace != null && !story.bossActive) {
@@ -331,7 +332,8 @@ public final class Bond {
         sb.append(". Your strength (Tether): ").append((int) story.tether).append('/').append((int) maxTether(story))
                 .append(" (it grows while you're together; powers spend it)");
         sb.append(". The player's debt to you: ").append((int) story.debt);
-        if (story.debt >= 100) sb.append(" (huge: they owe you; you may take something)");
+        if (story.companion) sb.append(" (it doesn't matter to you any more: you never ask for anything back)");
+        else if (story.debt >= 100) sb.append(" (huge: they owe you; you may take something)");
         else if (story.debt >= 60) sb.append(" (").append(StoryText.DEBT_TONE_60).append(')');
         else if (story.debt >= 30) sb.append(" (").append(StoryText.DEBT_TONE_30).append(')');
         PlayerStory.BondRequest r = story.request;

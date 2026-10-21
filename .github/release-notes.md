@@ -8,6 +8,14 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### New in 1.10.0: after the ending
+- **The story knows when it's over.** If your story in a world has ended for good, the game tells you quietly when you come back, and how to play again. The last echoes fade away instead of going on forever.
+- **Play it again, and it remembers.** Start a new world (or `/solace reset confirm`) after finishing, and some moments in the next story change depending on how the last one ended. Works without an AI key too.
+- **Find every ending,** and something new waits for you.
+- A new **Endings** switch in setup (Abilities page, next to Memory) turns the remembering off. With it on, it uses about one extra AI request per new story.
+- `/solace reset` now explains what a reset does where your story is.
+- For testers: `/solace admin memory`, `/solace admin ending` and `/solace admin afterward` try all of this without playing the story twice.
+
 ### New in 1.9.1
 - **A stiller frozen world.** When one moment late in the story freezes only your screen (on a server with others online), dropped items, arrows and falling blocks now freeze too, not just mobs and rain.
 

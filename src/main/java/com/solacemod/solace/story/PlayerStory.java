@@ -122,6 +122,18 @@ public final class PlayerStory {
     public long lastJealousyTick = -1_000_000;
     public long lastWitnessCommentTick = -1_000_000;
 
+    // After the ending (story/Afterward.java)
+    /** How the player's last story ended, noted when Solace met them in this world (NONE = it doesn't remember one). Never changes later. */
+    public Ending remembered = Ending.NONE;
+    /** The player had found all five endings when Solace met them here. */
+    public boolean rememberedAll;
+    /** This is a restarted story (/solace reset) in a world where Solace met them before. */
+    public boolean againHere;
+    /** After all five endings the player chose [Just stay]: no chapters, no scares, just the healed Solace. */
+    public boolean companion;
+    /** How many after-ending scares (Watcher sightings or signs) have happened. They stop after a few. */
+    public int afterScares;
+
     // Timing (not saved; reset each session)
     public long lastInteractionTick;
     public long lastAmbientTick;
@@ -144,8 +156,9 @@ public final class PlayerStory {
         return (chapter + 1) / 2;
     }
 
+    /** True after an ending, and in [Just stay] mode (no story at all). */
     public boolean storyOver() {
-        return ending != Ending.NONE;
+        return ending != Ending.NONE || companion;
     }
 
     /** True while Solace should exist in the world for this player. */
@@ -239,6 +252,11 @@ public final class PlayerStory {
         secondsNear.forEach((id, sec) -> near.putInt(id.toString(), sec));
         t.put("Near", near);
         if (pendingRipple != null) t.putString("PendingRipple", pendingRipple.name());
+        t.putString("Remembered", remembered.name());
+        t.putBoolean("RememberedAll", rememberedAll);
+        t.putBoolean("AgainHere", againHere);
+        t.putBoolean("Companion", companion);
+        t.putInt("AfterScares", afterScares);
         return t;
     }
 
@@ -308,6 +326,11 @@ public final class PlayerStory {
                 // unknown ending name: forget it
             }
         }
+        s.remembered = Ending.parse(t.getString("Remembered"));
+        s.rememberedAll = t.getBoolean("RememberedAll");
+        s.againHere = t.getBoolean("AgainHere");
+        s.companion = t.getBoolean("Companion");
+        s.afterScares = t.getInt("AfterScares");
         return s;
     }
 

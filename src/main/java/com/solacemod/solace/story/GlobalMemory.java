@@ -95,6 +95,16 @@ public final class GlobalMemory {
         return get(id).endings.stream().distinct().count();
     }
 
+    /** The most recent ending this player reached in any world, or NONE. */
+    public static Ending lastEnding(UUID id) {
+        List<String> list = get(id).endings;
+        for (int i = list.size() - 1; i >= 0; i--) {
+            Ending e = Ending.parse(list.get(i));
+            if (e != Ending.NONE) return e;
+        }
+        return Ending.NONE;
+    }
+
     public static void forget(UUID id) {
         CACHE.put(id, new Entry());
         try {

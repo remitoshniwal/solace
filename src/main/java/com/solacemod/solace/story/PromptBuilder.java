@@ -69,7 +69,7 @@ public final class PromptBuilder {
 
         if (SolaceConfig.STORY_ENABLED.get()) {
             sb.append('\n').append(StoryText.SECRET_LORE).append('\n');
-            sb.append('\n').append(StoryText.chapterPersona(story.chapter, story.ending)).append('\n');
+            sb.append('\n').append(story.companion ? StoryText.COMPANION_PERSONA : StoryText.chapterPersona(story.chapter, story.ending)).append('\n');
         } else {
             sb.append("\nYou are a kind, loyal, slightly mysterious companion. There is no horror story.\n");
         }
@@ -83,9 +83,12 @@ public final class PromptBuilder {
             if (g.worldsMet > 1) {
                 sb.append("You have met this player before, in ").append(g.worldsMet - 1).append(" other world(s). They don't expect you to remember, but you do.\n");
                 for (String f : g.facts) if (!story.facts.contains(f)) sb.append("- (from another world) ").append(f).append('\n');
-                if (!g.endings.isEmpty()) sb.append("How your story ended with them before: ").append(String.join(", ", g.endings)).append(". You may bring this up, hurt or hopeful.\n");
             }
         }
+        if (story.againHere) sb.append("You met them in this same world before: they started your story over. You remember.\n");
+        // How the last story ended (noted when you met them here, so it never mixes up this world's own ending).
+        String last = Afterward.promptMemory(story);
+        if (!last.isEmpty() && SolaceConfig.STORY_ENABLED.get()) sb.append(last).append('\n');
 
         sb.append("\n").append(actionsHelp(story)).append("\n");
         sb.append("""

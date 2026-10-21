@@ -112,6 +112,7 @@ public final class SolaceSetupScreen extends Screen {
     private String listenMode;
     private boolean ambient;
     private boolean crossWorld;
+    private boolean rememberEndings;
     private String whoGets;
 
     private int playerLimit;
@@ -200,6 +201,7 @@ public final class SolaceSetupScreen extends Screen {
         listenMode = SolaceConfig.LISTEN_MODE.get();
         ambient = SolaceConfig.AMBIENT_CHATTER.get();
         crossWorld = SolaceConfig.CROSS_WORLD_MEMORY.get();
+        rememberEndings = SolaceConfig.REMEMBER_ENDINGS.get();
         whoGets = SolaceConfig.WHO_GETS_SOLACE.get();
 
         playerLimit = SolaceConfig.DAILY_REQUESTS_PER_PLAYER.get();
@@ -244,6 +246,7 @@ public final class SolaceSetupScreen extends Screen {
         SolaceConfig.LISTEN_MODE.set(listenMode);
         SolaceConfig.AMBIENT_CHATTER.set(ambient);
         SolaceConfig.CROSS_WORLD_MEMORY.set(crossWorld);
+        SolaceConfig.REMEMBER_ENDINGS.set(rememberEndings);
         SolaceConfig.WHO_GETS_SOLACE.set(whoGets);
         SolaceConfig.DAILY_REQUESTS_PER_PLAYER.set(playerLimit);
         SolaceConfig.JEALOUSY.set(jealousy);
@@ -623,9 +626,13 @@ public final class SolaceSetupScreen extends Screen {
                 .withTooltip(v -> Tooltip.create(Component.literal("Comments on night falling, low health, caves... Uses AI requests.")))
                 .create(controlX(), rowY(4), controlWidth(), 20, Component.literal("Talks on its own"), (b, v) -> ambient = v));
         label(5, "Remembers you");
-        addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "Across all worlds" : "Only in this world"))
+        int memoryHalf = (controlWidth() - 3) / 2;
+        addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "All worlds" : "This world"))
                 .withValues(List.of(true, false)).withInitialValue(crossWorld).displayOnlyValue()
-                .create(controlX(), rowY(5), controlWidth(), 20, Component.literal("Memory"), (b, v) -> crossWorld = v));
+                .withTooltip(v -> Tooltip.create(Component.literal(v ? "Solace remembers you across all your worlds." : "Solace only remembers you in this world.")))
+                .create(controlX(), rowY(5), memoryHalf, 20, Component.literal("Memory"), (b, v) -> crossWorld = v));
+        addRenderableWidget(toggle(controlX() + memoryHalf + 3, rowY(5), memoryHalf, "Endings", rememberEndings, v -> rememberEndings = v,
+                "Solace remembers how your last story ended, and the next one changes a little. About 1 extra AI request per new story."));
         note(rowY(6) + 2, Component.literal("Give Solace items by right-clicking it while holding them."));
     }
 

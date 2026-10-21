@@ -31,6 +31,9 @@ import java.util.List;
  * and writes every solace: sound that played to solace/sounds-tour.txt (pictures can't show how a sound sounds, only that it played).
  * With -Dsolace.tour=together it tries the multiplayer moments alone (a stand-in plays the other player) with the playtest log on,
  * and takes pictures of the Together setup tab, two Solaces meeting, the lines players get, the personal freeze and the boss bar.
+ * With -Dsolace.tour=afterward it fakes past endings in the memory and takes pictures of what comes after an ending: each remembered
+ * meeting, the slip, the first Watcher, the all-five choice, the reset lines, and "your story here is over" (pictures a_*.png).
+ * It runs with no AI, so the pictures show the written lines. At the end it clears the faked endings from the memory.
  */
 @EventBusSubscriber(modid = Solace.MODID, value = Dist.CLIENT)
 public final class ScreenshotTour {
@@ -38,7 +41,8 @@ public final class ScreenshotTour {
     private static final boolean PHASE2 = "phase2".equals(System.getProperty("solace.tour"));
     private static final boolean SOUNDS = "sounds".equals(System.getProperty("solace.tour"));
     private static final boolean TOGETHER = "together".equals(System.getProperty("solace.tour"));
-    private static final boolean ENABLED = Boolean.getBoolean("solace.screenshots") || PLAYTEST || PHASE2 || SOUNDS || TOGETHER;
+    private static final boolean AFTERWARD = "afterward".equals(System.getProperty("solace.tour"));
+    private static final boolean ENABLED = Boolean.getBoolean("solace.screenshots") || PLAYTEST || PHASE2 || SOUNDS || TOGETHER || AFTERWARD;
     /** Together tour: the "AI comments" setting before the tour turned it off, put back at the end. */
     private static Boolean aiCommentsBefore;
     /** For the sounds tour: every solace: sound that played, in order. */
@@ -70,14 +74,15 @@ public final class ScreenshotTour {
         }
         MinecraftServer server = mc.getSingleplayerServer();
         if (server == null) return;
-        mc.options.hideGui = !PLAYTEST && !PHASE2 && !SOUNDS && !TOGETHER;
+        mc.options.hideGui = !PLAYTEST && !PHASE2 && !SOUNDS && !TOGETHER && !AFTERWARD;
         mc.options.pauseOnLostFocus = false; // clicking another window must not pause the tour's world
         ticks++;
         // Solace appears 30 seconds after the player joins.
         if (ticks < 20 * 36) return;
         if (stops == null) {
             String me = mc.player.getGameProfile().getName();
-            stops = PLAYTEST ? playtestPlan(me) : PHASE2 ? phase2Plan(me) : SOUNDS ? soundsPlan(me) : TOGETHER ? togetherPlan(me) : plan(me);
+            stops = PLAYTEST ? playtestPlan(me) : PHASE2 ? phase2Plan(me) : SOUNDS ? soundsPlan(me) : TOGETHER ? togetherPlan(me)
+                    : AFTERWARD ? afterwardPlan(me) : plan(me);
         }
         if (wait > 0) {
             wait--;
@@ -196,6 +201,60 @@ public final class ScreenshotTour {
      * AI comments are switched off for the tour, so the written lines show (there's no AI key in the automatic build anyway).
      * The timeline goes to solace/playtest/.
      */
+    /** What comes after an ending, with faked memories (no AI: the written lines show). Timeline in run/solace/playtest/. */
+    private static List<Stop> afterwardPlan(String me) {
+        String solace = "@e[type=solace:solace,limit=1]";
+        String memory = "solace admin memory " + me + " ";
+        String after = "solace admin afterward " + me + " ";
+        String meetSpot = "tp " + solace + " 0.5 -60 4.0 180 0";
+        List<Stop> list = new ArrayList<>();
+        // Waits are generous: during the tour the game's server can run at half speed, and a line must arrive before its picture.
+        list.add(new Stop(List.of("#quiet", "gamerule logAdminCommands false", "gamerule sendCommandFeedback true",
+                "gamerule doDaylightCycle false", "gamerule doWeatherCycle false", "weather clear", "time set noon",
+                "solace admin playtest on", "tp " + me + " 0.5 -60 0.5 0 8", meetSpot), 160, null)); // let the first meeting finish
+        // The meeting in a new world, once for each remembered ending.
+        int n = 1;
+        for (String e : List.of("forever", "collected", "erase", "release", "together")) {
+            list.add(new Stop(List.of(memory + "clear", memory + "ending " + e, "#clear_chat", meetSpot, after + "meet"), 60, "a_1" + (char) ('a' + n - 1) + "_meet_" + e + ".png"));
+            n++;
+        }
+        // The same world after a reset.
+        list.add(new Stop(List.of(memory + "clear", memory + "ending erase", "#clear_chat", after + "meet_here"), 60, "a_2_meet_here_erase.png"));
+        // Chapter 3's slip and chapter 4's first Watcher: once where Maren stayed trapped, once where she was freed.
+        for (String e : List.of("erase", "together")) {
+            list.add(new Stop(List.of(memory + "clear", memory + "ending " + e, after + "meet"), 60, null));
+            list.add(new Stop(List.of("#clear_chat", after + "slip"), 60, "a_3_slip_" + e + ".png"));
+            list.add(new Stop(List.of("#clear_chat", "tp " + me + " 0.5 -60 0.5 0 8", after + "watcher"), 260, "a_4_watcher_" + e + ".png"));
+            list.add(new Stop(List.of("kill @e[type=solace:watcher]"), 60, null));
+        }
+        list.add(new Stop(List.of(after + "question"), 20, null)); // AI only: only the timeline shows it was asked
+        // All five endings found: the choice, then [Just stay].
+        list.add(new Stop(List.of(memory + "all", "#clear_chat", after + "meet"), 200, "a_5_all_five.png"));
+        list.add(new Stop(List.of("/solace choose just_stay"), 60, "a_6_just_stay.png"));
+        list.add(new Stop(List.of("#clear_chat", "/solace status"), 60, "a_7_status_companion.png"));
+        // Reset after an ending: back to a fresh story, the FOREVER ending, the warning, the line, then the meeting that knows.
+        list.add(new Stop(List.of(memory + "clear", "/solace reset confirm"), 20 * 60, null));
+        list.add(new Stop(List.of(meetSpot, "solace admin ending " + me + " forever"), 300, null));
+        list.add(new Stop(List.of("#clear_chat", "/solace reset"), 60, "a_8_reset_warning.png"));
+        list.add(new Stop(List.of("/solace reset confirm"), 60, "a_9_reset_watching.png"));
+        list.add(new Stop(List.of("#clear_chat"), 20 * 60, null));
+        list.add(new Stop(List.of("#open_chat"), 10, "a_10_meet_after_reset.png")); // open chat: the line may have faded by now
+        list.add(new Stop(List.of("#close"), 10, null));
+        // It's over: ERASE, then what each login says, talking to nobody, the echoes and /solace status.
+        list.add(new Stop(List.of("#clear_chat", "solace admin ending " + me + " erase"), 80, "a_11_ending_erase.png"));
+        list.add(new Stop(List.of("#clear_chat", after + "login"), 60, "a_12_over_erase.png"));
+        list.add(new Stop(List.of("/solace say hello? are you there?"), 60, "a_13_nobody_answers.png"));
+        for (int i = 0; i < 6; i++) list.add(new Stop(List.of(after + "echo"), 20 * 3, null)); // 4 sightings, the last sign, then nothing
+        list.add(new Stop(List.of("kill @e[type=solace:watcher]", "tp " + me + " 0.5 -60 0.5 180 30"), 60, "a_14_last_sign.png")); // turn around: the sign is behind
+        list.add(new Stop(List.of("#clear_chat", "/solace status"), 60, "a_15_status_over.png"));
+        // RELEASE: a fresh story, the ending, the login line.
+        list.add(new Stop(List.of("/solace reset confirm", "tp " + me + " 20.5 -60 0.5 0 8"), 20 * 60, null));
+        list.add(new Stop(List.of("solace admin ending " + me + " release"), 300, null));
+        list.add(new Stop(List.of("#clear_chat", after + "login"), 60, "a_16_over_release.png"));
+        list.add(new Stop(List.of(memory + "clear"), 20, null)); // don't leave faked endings in the dev memory
+        return list;
+    }
+
     private static List<Stop> togetherPlan(String me) {
         String solace = "@e[type=solace:solace,limit=1]";
         String together = "solace admin together " + me + " ";
@@ -279,6 +338,7 @@ public final class ScreenshotTour {
                 if (root != null) adv.setSelectedTab(root, true);
             }
             case "#close" -> mc.setScreen(null);
+            case "#open_chat" -> mc.setScreen(new net.minecraft.client.gui.screens.ChatScreen(""));
             case "#subtitles" -> mc.options.showSubtitles().set(true);
             case "#setup_together" -> mc.setScreen(SolaceSetupScreen.openOnTogether(null));
             case "#clear_chat" -> mc.gui.getChat().clearMessages(false);

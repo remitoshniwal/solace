@@ -41,6 +41,7 @@ public final class SolaceConfig {
     public static final ModConfigSpec.IntValue HISTORY_MESSAGES;
     public static final ModConfigSpec.BooleanValue SUMMARIZE_MEMORY;
     public static final ModConfigSpec.BooleanValue CROSS_WORLD_MEMORY;
+    public static final ModConfigSpec.BooleanValue REMEMBER_ENDINGS;
 
     // Chat
     public static final ModConfigSpec.ConfigValue<String> LISTEN_MODE;
@@ -144,6 +145,9 @@ public final class SolaceConfig {
                 .define("summarizeMemory", true);
         CROSS_WORLD_MEMORY = b.comment("Solace remembers you across different worlds. Stored in the 'solace' folder of your game directory.")
                 .define("crossWorldMemory", true);
+        REMEMBER_ENDINGS = b.comment("Solace remembers how your story ended (in other worlds, or here before a /solace reset), and the next story changes a little.",
+                        "Uses about 1 extra AI request per new story.")
+                .define("rememberEndings", true);
         b.pop();
 
         b.push("chat");

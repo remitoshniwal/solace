@@ -48,7 +48,7 @@ public final class StoryDirector {
             new Beat("c1_ask", 1, 4), new Beat("c1_hum", 1, 11), new Beat("c1_torch", 1, 16),
             new Beat("c2_tether", 2, 3), new Beat("c2_two_places", 2, 11), new Beat("c2_footsteps", 2, 19),
             // PART TWO: STATIC
-            new Beat("c3_page1", 3, 2), new Beat("c3_veins", 3, 5), new Beat("c3_fall", 3, 10), new Beat("c3_fall_ask", 3, 15),
+            new Beat("c3_page1", 3, 2), new Beat("c3_veins", 3, 5), new Beat("c3_slip", 3, Afterward.SLIP_MINUTE), new Beat("c3_fall", 3, 10), new Beat("c3_fall_ask", 3, 15),
             new Beat("c4_watcher", 4, 2), new Beat("c4_joined", 4, 8), new Beat("c4_page2", 4, 13), new Beat("c4_request", 4, 18),
             new Beat("c4_page3", 4, 22), new Beat("c4_sign", 4, 27),
             // PART THREE: TRUTH
@@ -101,6 +101,8 @@ public final class StoryDirector {
         Scheduler.later(40, () -> {
             if (!player.isRemoved()) StoryAdvancements.catchUp(player, story);
         });
+        Afterward.onLogin(player, story);
+        if (story.beatsDone.contains(Afterward.CHOICE_PENDING)) Scheduler.later(100, () -> Afterward.sendChoices(player, story));
         if (!story.met || !story.solaceShouldExist() || story.lastLogoutMs <= 0) return;
 
         long awayMinutes = (System.currentTimeMillis() - story.lastLogoutMs) / 60_000;
@@ -159,7 +161,7 @@ public final class StoryDirector {
         story.playTicks += 20;
         Bond.tick(player, story, SolaceManager.find(server, story));
         scanForFragments(player, story);
-        if (!storyOn()) return;
+        if (!storyOn() || story.companion) return;
         redeliverLostPages(player, story, server);
         tickEpilogue(player, story, server, now);
         if (story.ending != Ending.NONE || story.bossActive) return;
@@ -304,17 +306,13 @@ public final class StoryDirector {
         story.playerName = player.getGameProfile().getName();
         PlaytestLog.log(story, player, "MEET", "Solace appeared");
         StoryAdvancements.grant(player, "root");
-        GlobalMemory.Entry g = GlobalMemory.get(player.getUUID());
-        g.worldsMet++;
-        g.name = story.playerName;
-        GlobalMemory.save(player.getUUID());
-        boolean metBefore = GlobalMemory.enabled() && g.worldsMet > 1;
+        // Has it met them before, and does it remember how their last story ended? (story/Afterward.java)
+        boolean metBefore = Afterward.noteMeeting(player, story);
 
         SolaceEntity solace = SolaceManager.spawnNear(player, story, true);
         if (solace != null) Sounds.playFor(player, solace.position(), Sounds.get("block.amethyst_block.resonate"), 1.0F, 0.5F);
-        String prompt = metBefore ? StoryText.MEET_AGAIN : StoryText.MEET;
         Scheduler.later(40, () -> {
-            if (!player.isRemoved()) SolaceBrain.event(player, prompt, true);
+            if (!player.isRemoved()) Afterward.greet(player, story, metBefore);
         });
         if (!AiService.configured() && SolaceBrain.isAdmin(player)) {
             Scheduler.later(120, () -> player.sendSystemMessage(SolaceBrain.setupMessage(StoryText.SETUP_HINT)));
@@ -363,6 +361,7 @@ public final class StoryDirector {
             }
             case "c3_page1" -> deliverFragment(player, story, 0, Delivery.GROUND);
             case "c3_veins" -> SolaceBrain.event(player, StoryText.C3_VEINS, false);
+            case "c3_slip" -> Afterward.slip(player, story); // only if Solace remembers how the last story ended
             case "c3_fall" -> {
                 // The first Fall. Waits until you're safe on the ground (and gives up after a while).
                 return com.solacemod.solace.horror.OnItsOwn.fall(player, story) || inChapter(story) > 22;
@@ -373,7 +372,9 @@ public final class StoryDirector {
             }
             case "c4_watcher" -> {
                 HorrorDirector.spawnWatcher(player, 40, 60, 20 * 40, 22, -1);
-                Scheduler.later(100, () -> SolaceBrain.event(player, StoryText.C4_WATCHER, true));
+                Scheduler.later(100, () -> {
+                    if (!Afterward.firstWatcher(player, story)) SolaceBrain.event(player, StoryText.C4_WATCHER, true);
+                });
             }
             case "c4_joined" -> {
                 HorrorDirector.fakeJoin(player, "Maren");
@@ -592,7 +593,7 @@ public final class StoryDirector {
         if (again) {
             SolaceBrain.event(player, "The player still hasn't answered your question (will they stay with you forever?). Ask again, more desperate.", true);
         } else {
-            SolaceBrain.event(player, StoryText.QUESTION, true);
+            SolaceBrain.event(player, Afterward.question(story), true);
         }
         Scheduler.later(again ? 80 : 30, () -> sendChoices(player, story));
     }
@@ -812,6 +813,8 @@ public final class StoryDirector {
         if (player.isRemoved()) return;
         PlaytestLog.log(story, player, "ENDING", ending.name());
         GlobalMemory.recordEnding(player.getUUID(), ending);
+        MinecraftServer srv = player.getServer();
+        if (srv != null) StoryData.get(srv).recordEnding(player.getUUID(), ending);
         long found = GlobalMemory.distinctEndings(player.getUUID());
         StoryAdvancements.grantEnding(player, ending);
         if (found >= 5) StoryAdvancements.grant(player, "every_ending");
@@ -826,6 +829,25 @@ public final class StoryDirector {
     }
 
     // ---------- Admin / testing ----------
+
+    /** /solace admin ending: jumps straight to an ending's result (no question, no boss fight), for testing what comes after. */
+    public static void adminEnding(ServerPlayer player, PlayerStory story, Ending ending) {
+        MinecraftServer server = player.getServer();
+        if (server == null) return;
+        PlaytestLog.log(story, player, "ADMIN", "jumped straight to the ending " + ending.name() + " with /solace admin");
+        story.choicePending = false;
+        story.bossActive = false;
+        story.ending = ending;
+        SolaceEntity solace = SolaceManager.find(server, story);
+        if (ending == Ending.RELEASE || ending == Ending.ERASE) {
+            if (solace != null && solace.isHollow()) solace.revertFromHollow();
+            SolaceManager.remove(server, story);
+        } else if (solace != null) {
+            SolaceManager.updateForm(solace, story);
+        }
+        StoryData.get(server).setDirty();
+        finishEnding(player, story, ending, "(Jumped here with /solace admin ending.)");
+    }
 
     /** Jumps a player to the start of a chapter (for testing). Earlier pages count as found, earlier scenes as done. */
     public static void setChapter(ServerPlayer player, PlayerStory story, int chapter) {
@@ -850,11 +872,13 @@ public final class StoryDirector {
         LAST_GUIDE.clear();
         SLEEP_REMINDED.clear();
         Nudges.reset();
+        Afterward.reset();
     }
 
     public static void forgetSession(UUID id) {
         ONLINE_SINCE.remove(id);
         LAST_BEAT.remove(id);
         Nudges.forget(id);
+        Afterward.forgetSession(id);
     }
 }

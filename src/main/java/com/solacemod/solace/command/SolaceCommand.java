@@ -60,7 +60,11 @@ public final class SolaceCommand {
                             return b.buildFuture();
                         })
                         .executes(ctx -> {
-                            String err = StoryDirector.choose(ctx.getSource().getPlayerOrException(), StringArgumentType.getString(ctx, "option"));
+                            String option = StringArgumentType.getString(ctx, "option");
+                            ServerPlayer chooser = ctx.getSource().getPlayerOrException();
+                            String err = com.solacemod.solace.story.Afterward.isChoice(option)
+                                    ? com.solacemod.solace.story.Afterward.choose(chooser, option)
+                                    : StoryDirector.choose(chooser, option);
                             if (err != null) ctx.getSource().sendFailure(Component.literal(err));
                             return err == null ? 1 : 0;
                         })))
@@ -90,7 +94,7 @@ public final class SolaceCommand {
                         .executes(ctx -> msg(ctx, "This makes Solace forget everything it knows about you, in every world. Type /solace forget confirm"))
                         .then(Commands.literal("confirm").executes(SolaceCommand::forget)))
                 .then(Commands.literal("reset")
-                        .executes(ctx -> msg(ctx, "This restarts your Solace story in this world from the beginning. Type /solace reset confirm"))
+                        .executes(ctx -> msg(ctx, StoryText.resetWarning(story(ctx, ctx.getSource().getPlayerOrException()).ending)))
                         .then(Commands.literal("confirm").executes(SolaceCommand::reset)))
                 .then(Commands.literal("admin").requires(src -> src.hasPermission(2))
                         .then(Commands.literal("usage").executes(SolaceCommand::usage))
@@ -211,6 +215,44 @@ public final class SolaceCommand {
                                         .executes(ctx -> together(ctx, ""))
                                         .then(Commands.argument("detail", StringArgumentType.word())
                                                 .executes(ctx -> together(ctx, StringArgumentType.getString(ctx, "detail")))))))
+                        .then(Commands.literal("ending").then(Commands.argument("player", EntityArgument.player())
+                                .then(Commands.argument("ending", StringArgumentType.word())
+                                        .suggests((ctx, b) -> {
+                                            for (String o : List.of("forever", "release", "erase", "together", "collected")) b.suggest(o);
+                                            return b.buildFuture();
+                                        })
+                                        .executes(ctx -> {
+                                            ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
+                                            PlayerStory s = story(ctx, p);
+                                            com.solacemod.solace.story.Ending e = com.solacemod.solace.story.Ending.parse(StringArgumentType.getString(ctx, "ending").toUpperCase(java.util.Locale.ROOT));
+                                            if (e == com.solacemod.solace.story.Ending.NONE) return fail(ctx, "Pick an ending: forever release erase together collected");
+                                            if (!s.met) return fail(ctx, p.getGameProfile().getName() + " hasn't met Solace yet.");
+                                            StoryDirector.adminEnding(p, s, e);
+                                            return msg(ctx, "Jumped to the ending " + e.name() + ".");
+                                        }))))
+                        .then(Commands.literal("memory").then(Commands.argument("player", EntityArgument.player())
+                                .then(Commands.argument("what", StringArgumentType.word())
+                                        .suggests((ctx, b) -> {
+                                            for (String o : List.of("show", "ending", "all", "clear")) b.suggest(o);
+                                            return b.buildFuture();
+                                        })
+                                        .executes(ctx -> memory(ctx, ""))
+                                        .then(Commands.argument("detail", StringArgumentType.word())
+                                                .executes(ctx -> memory(ctx, StringArgumentType.getString(ctx, "detail")))))))
+                        .then(Commands.literal("afterward").then(Commands.argument("player", EntityArgument.player())
+                                .then(Commands.argument("moment", StringArgumentType.word())
+                                        .suggests((ctx, b) -> {
+                                            for (String o : com.solacemod.solace.story.Afterward.ADMIN_OPTIONS) b.suggest(o);
+                                            return b.buildFuture();
+                                        })
+                                        .executes(ctx -> {
+                                            ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
+                                            try {
+                                                return msg(ctx, com.solacemod.solace.story.Afterward.admin(p, story(ctx, p), StringArgumentType.getString(ctx, "moment")));
+                                            } catch (IllegalStateException e) {
+                                                return fail(ctx, e.getMessage());
+                                            }
+                                        }))))
                         .then(Commands.literal("question").then(Commands.argument("player", EntityArgument.player()).executes(ctx -> {
                             ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
                             PlayerStory s = story(ctx, p);
@@ -265,6 +307,15 @@ public final class SolaceCommand {
     }
 
     /** /solace admin together: tries one multiplayer moment now (with a stand-in when nobody else is online). */
+    private static int memory(CommandContext<CommandSourceStack> ctx, String detail) throws CommandSyntaxException {
+        ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
+        try {
+            return msg(ctx, com.solacemod.solace.story.Afterward.adminMemory(p, StringArgumentType.getString(ctx, "what"), detail));
+        } catch (IllegalStateException e) {
+            return fail(ctx, e.getMessage());
+        }
+    }
+
     private static int together(CommandContext<CommandSourceStack> ctx, String detail) throws CommandSyntaxException {
         ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
         try {
@@ -336,9 +387,11 @@ public final class SolaceCommand {
         int share = AiService.perPlayerLimit(server);
         if (share > 0) msg(ctx, "Yours today: " + data.budget.usedToday(player.getUUID().toString(), StoryData.today()) + " of " + share);
         if (!s.met) return msg(ctx, "You haven't met Solace yet.");
+        if (com.solacemod.solace.story.Afterward.gone(s)) msg(ctx, StoryText.STATUS_OVER);
+        if (s.companion) msg(ctx, "No story this time: just Solace. (/solace reset confirm to change your mind.)");
         msg(ctx, "Story: chapter " + s.chapter + " of 8, " + Math.round(s.playMinutes()) + " minutes together, pages found " + s.fragmentsFound.size() + "/" + StoryText.FRAGMENT_COUNT
                 + (s.ending.name().equals("NONE") ? "" : ", ending: " + s.ending));
-        msg(ctx, "Solace's strength (Tether): " + (int) s.tether + "/" + (int) com.solacemod.solace.story.Bond.maxTether(s)
+        if (!com.solacemod.solace.story.Afterward.gone(s)) msg(ctx, "Solace's strength (Tether): " + (int) s.tether + "/" + (int) com.solacemod.solace.story.Bond.maxTether(s)
                 + ". Your debt to Solace: " + (int) s.debt + (s.request != null ? ". It asked you: \"" + s.request.text + "\"" : ""));
         msg(ctx, "Trust: " + s.trust + ". Things Solace remembers about you: " + s.facts.size()
                 + ". Endings discovered: " + GlobalMemory.distinctEndings(player.getUUID()) + "/5");
@@ -384,6 +437,9 @@ public final class SolaceCommand {
         s.history.clear();
         s.summary = "";
         s.recentEvents.clear();
+        s.remembered = com.solacemod.solace.story.Ending.NONE;
+        s.rememberedAll = false;
+        StoryData.get(ctx.getSource().getServer()).endedHere.remove(player.getUUID());
         GlobalMemory.forget(player.getUUID());
         return msg(ctx, "Solace's memories of you are gone. (It still knows your name. You're standing right there.)");
     }
@@ -394,6 +450,7 @@ public final class SolaceCommand {
         StoryData data = StoryData.get(server);
         PlayerStory s = data.get(player.getUUID());
         SolaceEntity solace = SolaceManager.find(server, s);
+        if (solace != null) com.solacemod.solace.story.Afterward.onReset(player, s);
         if (solace != null) {
             if (solace.isHollow()) solace.revertFromHollow();
             solace.discard();

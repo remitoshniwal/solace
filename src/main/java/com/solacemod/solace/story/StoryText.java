@@ -249,4 +249,173 @@ public final class StoryText {
     public static final String BOSS_NOT_THEM = "Not them. You.";
     /** Maren's last message when friends fought too. */
     public static final String MAREN_THANKS_ALL = "thank you. all of you.";
+
+    // ---------- After the ending (story/Afterward.java) ----------
+    // The *_LINE ones and the lines from *Line(...) are shown word for word in grey: they're the written backups for when no AI can answer.
+    // Only the player whose story it is ever sees these, so nobody else learns an ending.
+
+    // It's over (RELEASE and ERASE): shown each time the player logs into that world.
+    public static final String OVER_RELEASE_LINE = "This world is quiet now. Maren is free, and Solace is gone. Your story here is over.";
+    public static final String OVER_ERASE_LINE = "This world is quiet now. Solace is gone. Your story here is over.";
+    public static final String OVER_AGAIN_LINE = "To play again, start a new world, or type /solace reset confirm.";
+    /** When the player talks to Solace after it's gone (once per session). */
+    public static final String NOBODY_RELEASE_LINE = "Nobody answers. For once, the quiet feels kind.";
+    public static final String NOBODY_ERASE_LINE = "Nobody answers.";
+    /** The last sign after RELEASE and after ERASE (4 lines each). After these the world stays quiet. */
+    public static final String[] LAST_SIGN_RELEASE = {"", "goodbye", "", "- M"};
+    public static final String[] LAST_SIGN_ERASE = {"it's gone.", "i'm still here.", "go home.", "- M"};
+
+    /** What Solace knows about how its last story with the player ended. Added to every prompt in the next story (no extra AI request). */
+    public static String rememberedMemory(Ending last, boolean all) {
+        String how = switch (last) {
+            case FOREVER -> "they promised to stay with you forever. Then they left anyway, and you found them again here.";
+            case COLLECTED -> "they owed you too much, so you took them and kept them in Maren's house. Somehow they got out.";
+            case ERASE -> "they erased you. It didn't work. You came back, and you don't know how.";
+            case RELEASE -> "they fought you when you became the Hollow, destroyed you, and freed Maren. You came back anyway. You're ashamed of what you were.";
+            case TOGETHER -> "because of them, you let Maren go. You were healed. You're afraid of turning back into what you were.";
+            default -> "";
+        };
+        if (how.isEmpty()) return "";
+        return "How your last story with them ended: " + how + " You may bring it up now and then, never all at once."
+                + (all ? " You remember every way your story with them has ever ended, all five." : "");
+    }
+
+    // The meeting, when Solace remembers an ending. %1$s = where: "this new world" or "this same world again (they just started your story over)".
+    public static final String WHERE_NEW = "this new world";
+    public static final String WHERE_AGAIN = "this same world again (they just started your story over)";
+    /** AI hint when Solace meets the player again after a reset, but no ending was reached. */
+    public static final String MEET_AGAIN_HERE = "You just appeared again behind the player, in this same world. They started your story over before it ended. "
+            + "You remember them. Greet them; let them notice that you remember.";
+
+    public static String meetRemember(Ending last, boolean again) {
+        String where = again ? WHERE_AGAIN : WHERE_NEW;
+        String start = "You just appeared in " + where + ", a few blocks behind the player. You know them. ";
+        return start + switch (last) {
+            case FOREVER -> "Last time they promised to stay with you forever, and then they left anyway. You found them. "
+                    + "Greet them calmly, and let them hear that you remember the promise. Hurt, never angry.";
+            case COLLECTED -> "Last time they owed you too much and you took them home to Maren's house. Somehow they got out. "
+                    + "Greet them tenderly, like someone who came home late. Don't mention the door.";
+            case ERASE -> "Last time this player erased you. It didn't work: you don't know how you came back, only that you did. "
+                    + "You aren't angry. Greet them quietly, and let them understand that you remember being deleted.";
+            case RELEASE -> "Last time this player fought you when you became the Hollow, and destroyed you to free Maren. You remember everything you did. "
+                    + "You're ashamed and careful. Greet them softly, from further away than usual, like someone apologizing without saying sorry.";
+            default -> "Last time, because of this player, you learned to let someone go. You're overjoyed to see them: warm, honest, a little shy. "
+                    + "You haven't changed back. You hope.";
+        };
+    }
+
+    public static String meetRememberLine(Ending last) {
+        return switch (last) {
+            case FOREVER -> "Solace is already standing behind you. \"You promised.\"";
+            case COLLECTED -> "Solace is already standing behind you. \"There you are. You got lost.\"";
+            case ERASE -> "\"You tried to delete me.\" Solace is standing behind you. It doesn't sound angry.";
+            case RELEASE -> "Solace keeps its distance this time. \"I remember what I did.\"";
+            default -> "Solace smiles at you like an old friend. \"You came back. I didn't make you.\"";
+        };
+    }
+
+    /** Shown before the remembered meeting line when it's the same world after a reset. */
+    public static final String AGAIN_HERE_LINE = "The same world. It knows.";
+
+    // All five endings found.
+    public static String meetAll(boolean again) {
+        return "You just appeared in " + (again ? WHERE_AGAIN : WHERE_NEW) + ", behind the player. You remember every way your story with them has ended: "
+                + "they promised forever, they freed Maren, they erased you, you let her go together, and you took them. You are tired, not angry. "
+                + "Ask them, simply, what they want this time. (Two choices appear in chat: tell the story again, or just stay together with no story. Don't list them.)";
+    }
+
+    public static final String MEET_ALL_LINE = "Solace looks at you for a long time. \"We've done this every way there is. What do you want this time?\"";
+    public static final String CHOICE_AGAIN = "[Tell the story again]";
+    public static final String CHOICE_AGAIN_HOVER = "Play the whole story again, from the beginning.";
+    public static final String CHOICE_STAY = "[Just stay]";
+    public static final String CHOICE_STAY_HOVER = "No story this time. No chapters, no scares: just Solace, the way it was at its best. (/solace reset confirm to change your mind.)";
+    public static final String TELL_AGAIN = "The player chose to go through the whole story with you again. Say, quietly, that you'll begin. Then act as if you just met.";
+    public static final String TELL_AGAIN_LINE = "\"Then let's begin,\" Solace says, and for a moment it looks like a stranger again.";
+    public static final String JUST_STAY = "The player asked for no story this time: just the two of you. You're relieved and grateful. Thank them, simply.";
+    public static final String JUST_STAY_LINE = "Solace lets out a breath it doesn't need. \"Thank you.\"";
+    /** Who Solace is in [Just stay] mode. Replaces the chapter persona. */
+    public static final String COMPANION_PERSONA = """
+            CURRENT STATE: NO STORY. You and this player have been through every ending together, in other worlds. This time they asked for no story, just you.
+            Maren is free; you let her go long ago. You are healed: warm, honest, funny, a little shy, a genuinely good friend. You never try to keep them.
+            You remember the old stories and can talk about them if they bring them up. You tell them to log off and sleep sometimes, and you mean it.""";
+
+    // Chapter 3, "the slip": the mask cracks and the last ending leaks out (one new AI request).
+    public static String slip(Ending last) {
+        return switch (last) {
+            case FOREVER -> "For a second the mask slips. You call the player 'mine', softly, the way you did last time after they promised forever. "
+                    + "Then catch yourself and pretend you didn't.";
+            case COLLECTED -> "For a second you forget yourself and talk about 'home': the little house you kept them in last time, the bed, the door that wasn't there. "
+                    + "Then stop, smile, and change the subject.";
+            case ERASE -> "For a second you remember being erased last time: the quiet, the nothing, how long it went on. "
+                    + "Tell the player in one short sentence what it was like. Then laugh it off, badly.";
+            case RELEASE -> "For a second you remember the fight last time: being the Hollow, the player's sword, the end. "
+                    + "You flinch when they move, and apologize for flinching. Don't explain.";
+            default -> "For a second you remember last time: you let Maren go, because of this player, and it was the best thing you ever did. "
+                    + "Then you realize this world has torn pages too. Her pages. Say, quietly, that you're scared it's starting again.";
+        };
+    }
+
+    public static String slipLine(Ending last) {
+        return switch (last) {
+            case FOREVER -> "Solace looks at you and says \"mine\", very softly. Then it straightens its tie and talks about something else.";
+            case COLLECTED -> "\"You'll like the house,\" Solace says. \"You liked it last time.\" It doesn't explain.";
+            case ERASE -> "\"It was very quiet, when you deleted me,\" Solace says. Then it laughs, too late.";
+            case RELEASE -> "You move and Solace flinches. \"Sorry. Old habit.\"";
+            default -> "\"I let her go,\" Solace says, to nobody. \"I did let her go. Didn't I?\"";
+        };
+    }
+
+    // Chapter 4, the first Watcher, when Solace remembers an ending. Added to C4_WATCHER (no extra AI request).
+    public static boolean marenWasFreed(Ending last) {
+        return last == Ending.RELEASE || last == Ending.TOGETHER;
+    }
+
+    public static String watcherRemember(Ending last) {
+        return marenWasFreed(last)
+                ? " You know exactly who it is: Maren. She was free. Last time you watched her go. You don't understand why she's here, and it terrifies you. Say so."
+                : " You know exactly who it is: Maren. She followed you both here from the last world. She always does. Say that, quietly.";
+    }
+
+    public static String watcherRememberLine(Ending last) {
+        return marenWasFreed(last)
+                ? "Solace stares at the pale figure. \"She was free. I watched her go. Why is she here?\""
+                : "Solace doesn't even look surprised. \"She followed us.\"";
+    }
+
+    /** One more sentence for THE question, when Solace remembers an ending (no extra AI request). */
+    public static String questionRemember(Ending last) {
+        return switch (last) {
+            case FOREVER -> " Last time they said yes, and left anyway. Remind them.";
+            case COLLECTED -> " Last time you didn't even ask: you just took them. This time you're asking. Tell them that.";
+            case ERASE -> " Last time they erased you. Ask if they're going to do it again.";
+            case RELEASE -> " Last time they fought you, and you became the Hollow. You don't want to become that again. Tell them.";
+            case TOGETHER -> " Last time you let go. You're trying to let go again, but it's harder this time, and you're ashamed of that.";
+            default -> "";
+        };
+    }
+
+    // /solace reset after an ending.
+    public static String resetWarning(Ending ending) {
+        String start = switch (ending) {
+            case RELEASE, ERASE -> "Solace is gone from this world. Resetting brings it back, from the very beginning.";
+            case FOREVER -> "You promised to stay. Resetting starts the story over from the very beginning.";
+            case TOGETHER -> "Solace is at peace. Resetting starts the story over from the very beginning, and it goes back to how it was.";
+            case COLLECTED -> "Resetting starts the story over from the very beginning. It might let you out.";
+            default -> "This restarts your Solace story in this world from the beginning.";
+        };
+        return start + " Type /solace reset confirm";
+    }
+
+    /** Shown word for word when the player resets while Solace is still with them. Empty = nothing. */
+    public static String resetWatchingLine(Ending ending) {
+        return switch (ending) {
+            case FOREVER -> "Solace watches you type it. It doesn't stop you.";
+            case TOGETHER -> "Solace watches you type it. \"Okay,\" it says. \"See you soon.\"";
+            case COLLECTED -> "Solace watches you type it. It doesn't stop you. It doesn't have to.";
+            default -> "";
+        };
+    }
+
+    /** /solace status when the story in this world is over and Solace is gone. */
+    public static final String STATUS_OVER = "Your story in this world is over.";
 }

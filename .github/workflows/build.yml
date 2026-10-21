@@ -54,12 +54,16 @@ jobs:
             # Phase 4 (multiplayer): with nobody online these must answer politely, never throw.
             echo "solace admin usage" > server_in
             echo "solace admin together nobody meet" > server_in
+            # Phase 5 (after the ending): the same, for the new admin commands.
+            echo "solace admin memory nobody show" > server_in
+            echo "solace admin ending nobody erase" > server_in
+            echo "solace admin afterward nobody meet" > server_in
             sleep 10
             echo "stop" > server_in
             sleep 20
           fi
           pkill -f "sleep 100000" || true
-          grep -q "Done (" server.log && echo "::notice title=Server smoke test::Server started, Solace and Watcher summoned, /solace and the admin usage/together commands ran, no Solace errors" || { echo "::error title=Smoke test::Server did not start"; }
+          grep -q "Done (" server.log && echo "::notice title=Server smoke test::Server started, Solace and Watcher summoned, /solace and the admin usage/together/memory/ending/afterward commands ran, no Solace errors" || { echo "::error title=Smoke test::Server did not start"; }
           # Report problems mentioning our mod, plus any crash.
           grep -n -i -B2 -A12 "exception\|crash report" server.log | grep -i -A12 -B2 "com\.solacemod\|crash report" | head -c 3800 > problems.txt || true
           # Pull the actual cause out of any crash report.
@@ -149,6 +153,21 @@ jobs:
             echo "::notice title=Multiplayer screenshots::${n} screenshots taken"
           fi
           grep -h "JEALOUSY\|WITNESS\|MEET\|RIPPLE\|HOLLOW\|personal freeze" run/solace/playtest/*.txt 2>/dev/null | tail -20 || true
+
+      - name: Screenshots (after the ending, with faked memories)
+        continue-on-error: true
+        run: |
+          export LIBGL_ALWAYS_SOFTWARE=1
+          rm -rf run/saves/solace_tour
+          SOLACE_TOUR=afterward timeout 900 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runClient > shots4.log 2>&1 || true
+          n=$(ls run/screenshots/a_*.png 2>/dev/null | wc -l)
+          if [ "$n" -eq 0 ]; then
+            msg=$(grep -i "screenshots\|exception\|error\|caused by\|at com.solacemod" shots4.log | grep -v -i "narrator\|flite" | tail -40 | cut -c 1-300 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')
+            echo "::warning title=No after-the-ending screenshots::${msg}"
+          else
+            echo "::notice title=After-the-ending screenshots::${n} screenshots taken"
+          fi
+          grep -h "AFTER\|written line" run/solace/playtest/*.txt 2>/dev/null | tail -30 || true
 
       - name: Upload screenshots
         if: always()

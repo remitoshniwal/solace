@@ -70,6 +70,7 @@ public final class SolaceBrain {
         server.execute(() -> Scheduler.later(1, () -> {
             if (player.isRemoved()) return;
             PlayerStory story = StoryData.get(server).get(player.getUUID());
+            if (Afterward.gone(story) && isAddressed(player, null, text)) Afterward.nobodyAnswers(player, story);
             if (!story.met || !story.solaceShouldExist()) return;
             SolaceEntity solace = SolaceManager.find(server, story);
             if (!isAddressed(player, solace, text)) return;
@@ -105,6 +106,7 @@ public final class SolaceBrain {
         MinecraftServer server = player.getServer();
         if (server == null || text.isBlank()) return;
         PlayerStory story = StoryData.get(server).get(player.getUUID());
+        if (Afterward.gone(story)) Afterward.nobodyAnswers(player, story);
         if (!story.met || !story.solaceShouldExist()) return;
         story.lastInteractionTick = server.getTickCount();
         Bond.onTalk(story, server.getTickCount());
@@ -114,7 +116,7 @@ public final class SolaceBrain {
             PENDING.computeIfAbsent(player.getUUID(), k -> new ArrayList<>()).add(line);
             return;
         }
-        request(player, story, line, CommandParser.parseCommands(text), true, false);
+        request(player, story, line, CommandParser.parseCommands(text), true, false, null);
     }
 
     /**
@@ -132,7 +134,36 @@ public final class SolaceBrain {
             if (important) PENDING.computeIfAbsent(player.getUUID(), k -> new ArrayList<>()).add("[EVENT] " + situation);
             return;
         }
-        request(player, story, "[EVENT] " + situation, List.of(), important, false);
+        request(player, story, "[EVENT] " + situation, List.of(), important, false, null);
+    }
+
+    /**
+     * A story moment with a written line for when no AI can answer (no key, a limit reached, or an error).
+     * Only the owner sees what's said, even with replies visible to all, so nobody else learns how their story ended.
+     */
+    public static void moment(ServerPlayer player, String situation, String writtenLine) {
+        moment(player, situation, writtenLine, 0);
+    }
+
+    private static void moment(ServerPlayer player, String situation, String writtenLine, int tries) {
+        MinecraftServer server = player.getServer();
+        if (server == null || player.isRemoved()) return;
+        PlayerStory story = StoryData.get(server).get(player.getUUID());
+        if (!story.met || !story.solaceShouldExist()) return;
+        if (BUSY.contains(player.getUUID())) {
+            // Another reply is on its way: try again in a few seconds (after about 15 seconds, the written line instead).
+            if (tries < 5) Scheduler.later(60, () -> moment(player, situation, writtenLine, tries + 1));
+            else written(player, story, writtenLine);
+            return;
+        }
+        request(player, story, "[EVENT] " + situation, List.of(), true, false, writtenLine);
+    }
+
+    /** A written line, word for word, in grey italics, for the owner only. */
+    public static void written(ServerPlayer player, PlayerStory story, String text) {
+        if (text == null || text.isEmpty()) return;
+        PlaytestLog.log(story, player, "SOLACE", "(written line) " + text);
+        player.sendSystemMessage(Component.literal(text).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
     }
 
     /** Solace's final words, spoken even though Solace is leaving the world (used by endings). */
@@ -140,7 +171,7 @@ public final class SolaceBrain {
         MinecraftServer server = player.getServer();
         if (server == null) return;
         PlayerStory story = StoryData.get(server).get(player.getUUID());
-        request(player, story, "[EVENT] " + situation, List.of(), true, true);
+        request(player, story, "[EVENT] " + situation, List.of(), true, true, null);
     }
 
     /** A job (mining, building...) finished or failed. Solace tells the player in its own words. */
@@ -155,9 +186,10 @@ public final class SolaceBrain {
     /**
      * @param fallbackActions actions to still carry out (silently) if the AI can't answer, so basic commands keep working
      * @param ignoreExistence speak even if Solace is gone (last words of an ending)
+     * @param writtenLine if not null: a story moment. Shown instead when the AI can't answer, and the reply is for the owner only
      */
     private static void request(ServerPlayer player, PlayerStory story, String userContent, List<JsonObject> fallbackActions,
-                                boolean important, boolean ignoreExistence) {
+                                boolean important, boolean ignoreExistence, @Nullable String writtenLine) {
         MinecraftServer server = player.getServer();
         if (server == null) return;
         com.solacemod.solace.ai.BrainPool.Kind kind = classify(userContent, important);
@@ -182,6 +214,7 @@ public final class SolaceBrain {
                 player.displayClientMessage(Component.literal("Solace is overwhelmed. Try again in a moment.").withStyle(ChatFormatting.DARK_GRAY), true);
             }
             runSilently(player, story, fallbackActions);
+            if (writtenLine != null) written(player, story, writtenLine);
             return;
         }
 
@@ -207,13 +240,16 @@ public final class SolaceBrain {
                     notifyError(live, err);
                 }
                 runSilently(live, liveStory, fallbackActions);
+                if (writtenLine != null) written(live, liveStory, writtenLine);
             } else {
-                apply(live, liveStory, userContent, ReplyParser.parse(text));
+                SolaceReply reply = ReplyParser.parse(text);
+                apply(live, liveStory, userContent, reply, writtenLine != null);
+                if (writtenLine != null && reply.say().isEmpty()) written(live, liveStory, writtenLine);
             }
             List<String> queued = PENDING.remove(id);
             if (queued != null && !queued.isEmpty()) {
                 String combined = String.join("\n", queued.subList(Math.max(0, queued.size() - 4), queued.size()));
-                request(live, liveStory, combined, CommandParser.parseCommands(combined), true, false);
+                request(live, liveStory, combined, CommandParser.parseCommands(combined), true, false, null);
             }
         }));
     }
@@ -265,7 +301,7 @@ public final class SolaceBrain {
     }
 
     /** Applies a reply: speak, act, remember, adjust trust, and save it to the conversation history. */
-    private static void apply(ServerPlayer player, PlayerStory story, String userContent, SolaceReply reply) {
+    private static void apply(ServerPlayer player, PlayerStory story, String userContent, SolaceReply reply, boolean privately) {
         MinecraftServer server = player.getServer();
         if (server == null) return;
         SolaceEntity solace = SolaceManager.find(server, story);
@@ -289,7 +325,7 @@ public final class SolaceBrain {
         // Something it was about to promise didn't happen ("here's some coal", but it has none and can't make it).
         // Don't show that line at all: ask for one honest reply instead, so the player never sees two messages that disagree.
         boolean retract = !problems.isEmpty() && followUpAllowed && !say.isEmpty();
-        if (!say.isEmpty() && !retract) display(player, solace, story, say, reply.emotion());
+        if (!say.isEmpty() && !retract) display(player, solace, story, say, reply.emotion(), privately);
         for (String fact : reply.remember()) {
             story.addFact(fact);
             GlobalMemory.addFact(player.getUUID(), fact);
@@ -353,6 +389,11 @@ public final class SolaceBrain {
 
     /** Shows Solace's line in chat and sends it to the player's game for text-to-speech. */
     public static void display(ServerPlayer owner, @Nullable SolaceEntity solace, PlayerStory story, String text, String emotion) {
+        display(owner, solace, story, text, emotion, false);
+    }
+
+    /** @param privately only the owner sees it, even with replies visible to all (story moments that would give away an ending) */
+    public static void display(ServerPlayer owner, @Nullable SolaceEntity solace, PlayerStory story, String text, String emotion, boolean privately) {
         Component message = format(story, solace, text, emotion);
         PlaytestLog.log(story, owner, "SOLACE", "\"" + text + "\"" + (emotion == null || emotion.isBlank() ? "" : " (" + emotion + ")"));
         if (solace != null && emotion != null && java.util.Set.of("angry", "sad", "glitch", "afraid")
@@ -361,7 +402,7 @@ public final class SolaceBrain {
             // From chapter 4, real anger shows: he flares into his negative.
             if (solace.getCorruption() >= 4 && ("angry".equalsIgnoreCase(emotion) || "glitch".equalsIgnoreCase(emotion))) solace.goNegative(60);
         }
-        if (SolaceConfig.REPLIES_VISIBLE_TO_ALL.get() && owner.getServer() != null) {
+        if (!privately && SolaceConfig.REPLIES_VISIBLE_TO_ALL.get() && owner.getServer() != null) {
             owner.getServer().getPlayerList().broadcastSystemMessage(message, false);
         } else {
             owner.sendSystemMessage(message);

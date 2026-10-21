@@ -79,7 +79,7 @@ public final class HorrorDirector {
         if (server == null || player.isSpectator() || !player.isAlive()) return;
         boolean erased = story.ending == Ending.ERASE;
         boolean released = story.ending == Ending.RELEASE;
-        if (story.ending != Ending.NONE && !erased && !released) return;
+        if ((story.ending != Ending.NONE && !erased && !released) || story.companion) return;
         if (story.chapter < 2 && !erased) return;
 
         long now = server.getTickCount();
@@ -90,13 +90,9 @@ public final class HorrorDirector {
         if (now < story.nextHorrorTick) return;
         story.nextHorrorTick = now + scheduleGap(story);
         story.lastHorrorTick = now;
-        if (erased) {
-            if (RANDOM.nextFloat() < 0.5F) spawnWatcher(player, 50, 70, 20 * 20, 25, -1);
-            return;
-        }
-        if (released) {
-            if (RANDOM.nextFloat() < 0.2F) placeSign(player, new String[]{"", "thank you"});
-            else if (RANDOM.nextFloat() < 0.2F) footsteps(player);
+        if (erased || released) {
+            // After the ending: a few last echoes, then the world goes quiet for good.
+            com.solacemod.solace.story.Afterward.afterScare(player, story);
             return;
         }
         Kind kind = pick(player, story);
@@ -408,9 +404,9 @@ public final class HorrorDirector {
                 .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
     }
 
-    /** Places a sign behind the player, facing them. */
-    public static void placeSign(ServerPlayer player, String[] lines) {
-        if (!SolaceConfig.ALLOW_WORLD_CHANGES.get()) return;
+    /** Places a sign behind the player, facing them. Returns false if it couldn't (world changes off, or no room). */
+    public static boolean placeSign(ServerPlayer player, String[] lines) {
+        if (!SolaceConfig.ALLOW_WORLD_CHANGES.get()) return false;
         ServerLevel level = player.serverLevel();
         Vec3 back = player.getLookAngle().multiply(-1, 0, -1).normalize();
         for (int attempt = 0; attempt < 10; attempt++) {
@@ -436,8 +432,9 @@ public final class HorrorDirector {
                     signBe.setChanged();
                     level.sendBlockUpdated(p, sign, sign, Block.UPDATE_ALL);
                 }
-                return;
+                return true;
             }
         }
+        return false;
     }
 }
