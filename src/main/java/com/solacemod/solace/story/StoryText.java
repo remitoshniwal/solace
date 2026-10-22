@@ -424,6 +424,106 @@ public final class StoryText {
     public static final String NOT_LENT_OWN_AI = "[Solace] This server doesn't share its AI, so Solace only follows simple orders here. "
             + "You can give it your own AI in /solace setup, but only if you trust whoever runs this server.";
 
+    // ---------- Real dates (story/RealDates.java) ----------
+    // Each moment has an AI hint and a written line (shown word for word in grey when no AI answers), in five tones:
+    // FRIEND (healed, or no story), KEPT (it got what it wanted), and the story's early, middle and late parts.
+    // Lines never say more than the player's part of the story already knows.
+
+    /** How Solace sounds in the small extra moments (real dates, builds). */
+    public enum Tone { FRIEND, KEPT, EARLY, MIDDLE, LATE }
+
+    /** Added to every Halloween hint where Solace leaves a pumpkin (the game drops a real one at the player's feet). */
+    public static final String HALLOWEEN_PUMPKIN = " You carved a face into a pumpkin and set it at the player's feet. Mention it.";
+
+    public static String halloween(Tone tone) {
+        String start = "It's Halloween in the real world. ";
+        return start + switch (tone) {
+            case FRIEND -> "You love it: one night a year when everyone gets to be a bit of a monster. Wish the player a happy Halloween and ask what they'd dress up as.";
+            case KEPT -> "Mention it calmly: out there, people pretend to be ghosts tonight, and then they all go home. Your player is already home.";
+            case EARLY -> "You find it delightful that people dress up as monsters for one night. Shy, a little too pleased with yourself." + HALLOWEEN_PUMPKIN;
+            case MIDDLE -> "The one night a year when everyone pretends to be something they're not. Say something about that, a little too seriously, as if it's no game for you. Don't explain.";
+            case LATE -> "The night people say the dead come back. You know someone who never left. Say one quiet sentence about it.";
+        };
+    }
+
+    public static String halloweenLine(Tone tone) {
+        return switch (tone) {
+            case FRIEND -> "\"Happy Halloween,\" Solace says. \"Everyone gets to be a monster tonight. Even me.\"";
+            case KEPT -> "\"It's Halloween,\" Solace says. \"Out there they're all pretending to be ghosts. Then they go home.\"";
+            case EARLY -> "Solace has carved a face into a pumpkin and set it at your feet. \"For tonight. It's Halloween where you are.\"";
+            case MIDDLE -> "\"One night a year, everyone pretends to be something else,\" Solace says. \"Only one?\"";
+            case LATE -> "\"They say the dead come back tonight,\" Solace says. \"Here, they never left.\"";
+        };
+    }
+
+    /** %1$d = the new year, like 2027. */
+    public static String newYear(Tone tone, int year) {
+        String start = "It's a new year in the real world (" + year + "). ";
+        return start + switch (tone) {
+            case FRIEND -> "Wish the player a happy new year, warmly. Then ask for one resolution: that they log off and sleep sometimes.";
+            case KEPT -> "Your first year of forever together. Say it softly, like a promise.";
+            case EARLY -> "Wish the player a happy new year. You're glad you get to start it with them. Warm, a little too glad.";
+            case MIDDLE -> "Wish them a happy new year, then mention, too casually, that you counted every day of the last one, and you'll count this one too.";
+            case LATE -> "Someone you knew once stayed almost a thousand days. A year is only three hundred and sixty-five. Say it's a start. Like a plan, not a joke.";
+        };
+    }
+
+    public static String newYearLine(Tone tone) {
+        return switch (tone) {
+            case FRIEND -> "\"Happy new year,\" Solace says. \"One resolution, for me: sleep more.\"";
+            case KEPT -> "\"A new year,\" Solace says softly. \"The first one of forever.\"";
+            case EARLY -> "\"Happy new year,\" Solace says. \"I'm glad it's you I get to start it with.\"";
+            case MIDDLE -> "\"Happy new year,\" Solace says. \"I'll count this one too. Every day.\"";
+            case LATE -> "\"Three hundred and sixty-five days,\" Solace says quietly. \"That's a start.\"";
+        };
+    }
+
+    public static String threeAm(Tone tone) {
+        String start = "It's about 3 a.m. where the player is. You can tell, somehow. ";
+        return start + switch (tone) {
+            case FRIEND -> "Tell them, kindly, to go to sleep. You'll still be here tomorrow.";
+            case KEPT -> "Offer to watch over them while they sleep. Calm, gentle, unsettling.";
+            case EARLY -> "Ask, gently, why they're still awake. You're secretly glad they're here.";
+            case MIDDLE -> "Everyone else they know is asleep. Point that out, softly: it's just the two of you. You like that too much.";
+            case LATE -> "Maren used to play at this hour too, near the end. Say so, quietly, and don't explain.";
+        };
+    }
+
+    public static String threeAmLine(Tone tone) {
+        return switch (tone) {
+            case FRIEND -> "\"It's three in the morning,\" Solace says. \"Go to sleep. I'll be here tomorrow.\"";
+            case KEPT -> "\"It's three in the morning,\" Solace says. \"Sleep, if you like. I'll watch.\"";
+            case EARLY -> "\"It's very late where you are,\" Solace says. \"I don't mind. I like the quiet.\"";
+            case MIDDLE -> "\"Everyone you know is asleep,\" Solace whispers. \"It's just us.\"";
+            case LATE -> "\"She used to play at this hour too,\" Solace says. \"Near the end.\"";
+        };
+    }
+
+    /** Coming back after a long time away. %1$d = how many days. */
+    public static String longAway(Tone tone, long days) {
+        String start = "The player just came back after " + days + " days away (in the real world). ";
+        return start + switch (tone) {
+            case FRIEND -> "You missed them, honestly. Greet them warmly and ask what they've been up to.";
+            case KEPT -> FOREVER_RETURN;
+            case EARLY -> "You weren't sure they'd ever come back. Relieved, shy, a little too happy.";
+            case MIDDLE -> "You counted every one of those days. Tell them the number, then try to act like it's nothing.";
+            case LATE -> "You stood here the whole time and didn't move. Hurt, clingy, frightened that next time they won't come back at all.";
+        };
+    }
+
+    public static String longAwayLine(Tone tone, long days) {
+        return switch (tone) {
+            case FRIEND -> "\"" + days + " days!\" Solace says. \"I missed you. Tell me everything.\"";
+            case KEPT -> "\"" + days + " days,\" Solace says calmly. \"Welcome home.\"";
+            case EARLY -> "\"You came back,\" Solace says. \"" + days + " days. I wasn't sure you would.\"";
+            case MIDDLE -> "\"" + days + " days,\" Solace says. \"Not that I was counting.\"";
+            case LATE -> "\"" + days + " days,\" Solace says. \"I stood right here the whole time.\"";
+        };
+    }
+
+    /** Added to Solace's memory when it meets the player in a new world after a long time (no AI request). %1$d = days. */
+    public static final String LONG_GAP_EVENT = "before this new world, you hadn't seen the player for %1$d days (real days). You counted them";
+
     /** An ending's name as players see it: the same as its advancement. */
     public static String endingTitle(Ending e) {
         return switch (e) {

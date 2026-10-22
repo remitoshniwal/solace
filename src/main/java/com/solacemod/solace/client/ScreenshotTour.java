@@ -34,6 +34,8 @@ import java.util.List;
  * With -Dsolace.tour=afterward it fakes past endings in the memory and takes pictures of what comes after an ending: each remembered
  * meeting, the slip, the first Watcher, the all-five choice, the reset lines, and "your story here is over" (pictures a_*.png).
  * It runs with no AI, so the pictures show the written lines. At the end it clears the faked endings from the memory.
+ * With -Dsolace.tour=dates it moves the player's clock to Halloween, the new year and 3 a.m., and back after a long time away,
+ * in each tone of the story (pictures d_*.png, written lines, no AI). Timeline in solace/playtest/.
  */
 @EventBusSubscriber(modid = Solace.MODID, value = Dist.CLIENT)
 public final class ScreenshotTour {
@@ -42,7 +44,8 @@ public final class ScreenshotTour {
     private static final boolean SOUNDS = "sounds".equals(System.getProperty("solace.tour"));
     private static final boolean TOGETHER = "together".equals(System.getProperty("solace.tour"));
     private static final boolean AFTERWARD = "afterward".equals(System.getProperty("solace.tour"));
-    private static final boolean ENABLED = Boolean.getBoolean("solace.screenshots") || PLAYTEST || PHASE2 || SOUNDS || TOGETHER || AFTERWARD;
+    private static final boolean DATES = "dates".equals(System.getProperty("solace.tour"));
+    private static final boolean ENABLED = Boolean.getBoolean("solace.screenshots") || PLAYTEST || PHASE2 || SOUNDS || TOGETHER || AFTERWARD || DATES;
     /** Together tour: the "AI comments" setting before the tour turned it off, put back at the end. */
     private static Boolean aiCommentsBefore;
     /** For the sounds tour: every solace: sound that played, in order. */
@@ -79,7 +82,7 @@ public final class ScreenshotTour {
         }
         MinecraftServer server = mc.getSingleplayerServer();
         if (server == null) return;
-        mc.options.hideGui = !PLAYTEST && !PHASE2 && !SOUNDS && !TOGETHER && !AFTERWARD;
+        mc.options.hideGui = !PLAYTEST && !PHASE2 && !SOUNDS && !TOGETHER && !AFTERWARD && !DATES;
         mc.options.pauseOnLostFocus = false; // clicking another window must not pause the tour's world
         ticks++;
         // Solace appears 30 seconds (of server time) after the player joins. Start once it's really here, plus 3 seconds to settle.
@@ -99,7 +102,7 @@ public final class ScreenshotTour {
         if (stops == null) {
             String me = mc.player.getGameProfile().getName();
             stops = PLAYTEST ? playtestPlan(me) : PHASE2 ? phase2Plan(me) : SOUNDS ? soundsPlan(me) : TOGETHER ? togetherPlan(me)
-                    : AFTERWARD ? afterwardPlan(me) : plan(me);
+                    : AFTERWARD ? afterwardPlan(me) : DATES ? datesPlan(me) : plan(me);
         }
         if (wait > 0) {
             wait -= passed;
@@ -278,6 +281,46 @@ public final class ScreenshotTour {
         return list;
     }
 
+    /** 1.12.0: every real-date moment in each tone, with a faked clock (no AI: the written lines show). */
+    private static List<Stop> datesPlan(String me) {
+        String solace = "@e[type=solace:solace,limit=1]";
+        String date = "solace admin date " + me + " ";
+        String near = "tp " + solace + " 0.5 -60 4.0 180 0";
+        List<Stop> list = new ArrayList<>();
+        list.add(new Stop(List.of("#quiet", "gamerule logAdminCommands false", "gamerule sendCommandFeedback false",
+                "gamerule doDaylightCycle false", "gamerule doWeatherCycle false", "weather clear", "time set noon",
+                "solace admin playtest on", "tp " + me + " 0.5 -60 0.5 0 8", near, "data merge entity " + solace + " {NoAI:1b}"), 60, null));
+        list.add(new Stop(List.of("#setup_abilities", "#mouse_corner"), 30, "d_0_setup.png"));
+        list.add(new Stop(List.of("#close"), 10, null));
+        // One picture per tone: the four moments one after the other, so all four lines are in the chat.
+        String[][] tones = {{"early", "solace admin chapter " + me + " 1"}, {"middle", "solace admin chapter " + me + " 3"},
+                {"late", "solace admin chapter " + me + " 5"}, {"kept", "solace admin ending " + me + " forever"}};
+        int n = 1;
+        for (String[] tone : tones) {
+            list.add(new Stop(List.of(tone[1]), tone[0].equals("kept") ? 300 : 60, null));
+            list.add(new Stop(List.of("#clear_chat", near, date + "forget", date + "set 2026-10-31 20:00"), 60, null));
+            list.add(new Stop(List.of(date + "set 2027-01-01 00:01"), 60, null));
+            list.add(new Stop(List.of(date + "set 2026-11-02 03:05"), 60, null));
+            list.add(new Stop(List.of(date + "away 12"), 40, null));
+            list.add(new Stop(List.of("#open_chat"), 10, "d_" + n++ + "_" + tone[0] + ".png")); // open chat: the first lines fade after 10 seconds
+            list.add(new Stop(List.of("#close"), 10, null));
+        }
+        // Healed: a fresh story that ends in TOGETHER. 3 a.m. stays quiet there (it already tells them to sleep).
+        list.add(new Stop(List.of("/solace reset confirm", "data merge entity " + solace + " {NoAI:0b}"), 20 * 60, null));
+        list.add(new Stop(List.of(near, "data merge entity " + solace + " {NoAI:1b}", "solace admin ending " + me + " together"), 300, null));
+        list.add(new Stop(List.of("#clear_chat", near, date + "forget", date + "set 2026-10-31 20:00"), 60, null));
+        list.add(new Stop(List.of(date + "set 2027-01-01 00:01"), 60, null));
+        list.add(new Stop(List.of(date + "set 2026-11-02 03:05"), 60, null));
+        list.add(new Stop(List.of(date + "away 12"), 40, null));
+        list.add(new Stop(List.of("#open_chat"), 10, "d_5_friend.png"));
+        list.add(new Stop(List.of("#close"), 10, null));
+        // Once only: Halloween again the same year says nothing. Then /solace admin date show.
+        list.add(new Stop(List.of("#clear_chat", date + "set 2026-10-31 21:00"), 60, null));
+        list.add(new Stop(List.of("gamerule sendCommandFeedback true", "/solace admin date " + me + " show"), 30, "d_6_once_only.png"));
+        list.add(new Stop(List.of(date + "clear", "execute as " + me + " run solace reset confirm", "solace admin playtest off"), 20, null));
+        return list;
+    }
+
     /**
      * Phase 4 (1.9.0): every multiplayer moment, alone. The other player is a stand-in ("Friend", or a Solace that belongs to nobody).
      * AI comments are switched off for the tour, so the written lines show (there's no AI key in the automatic build anyway).
@@ -382,6 +425,7 @@ public final class ScreenshotTour {
             case "#subtitles" -> mc.options.showSubtitles().set(true);
             case "#setup_together" -> mc.setScreen(SolaceSetupScreen.openOnTogether(null));
             case "#setup_story" -> mc.setScreen(SolaceSetupScreen.openOnStory(null));
+            case "#setup_abilities" -> mc.setScreen(SolaceSetupScreen.openOnAbilities(null));
             case "#clear_chat" -> mc.gui.getChat().clearMessages(false);
             case "#mouse_corner" -> {
                 // Park the mouse in the top left corner, so no button shows its tooltip in the picture.

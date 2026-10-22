@@ -56,6 +56,7 @@ public final class SolaceConfig {
     public static final ModConfigSpec.ConfigValue<String> WHO_GETS_SOLACE;
     public static final ModConfigSpec.BooleanValue PLAYTEST_LOG;
     public static final ModConfigSpec.BooleanValue STORY_NUDGES;
+    public static final ModConfigSpec.BooleanValue REAL_DATES;
 
     // Horror
     public static final ModConfigSpec.DoubleValue HORROR_INTENSITY;
@@ -160,7 +161,8 @@ public final class SolaceConfig {
                 .defineInRange("hearingRange", 24, 4, 128);
         REPLIES_VISIBLE_TO_ALL = b.comment("Multiplayer: everyone sees Solace's answers when its owner talks to it. Story moments always stay private.")
                 .define("repliesVisibleToAll", false);
-        AMBIENT_CHATTER = b.comment("Solace sometimes talks on its own (night falling, low health, caves...). Uses AI requests.")
+        AMBIENT_CHATTER = b.comment("Solace sometimes talks on its own (night falling, low health, caves...). Uses AI requests.",
+                        "Off = short written lines instead for the small extra moments (real dates).")
                 .define("ambientChatter", true);
         AMBIENT_CHATTER_MINUTES = b.comment("Minimum minutes between unprompted comments.")
                 .defineInRange("ambientChatterMinutes", 6, 1, 120);
@@ -180,6 +182,9 @@ public final class SolaceConfig {
         STORY_NUDGES = b.comment("Small hints when a player seems stuck: a rustle where a page is lying, Solace warning them away from the house.",
                         "The timings are guesses until the story has been playtested (story/Nudges.java).")
                 .define("nudges", true);
+        REAL_DATES = b.comment("Small moments on real dates and times: Halloween, the new year, very late at night, coming back after a long time away.",
+                        "They use each player's own clock and never change the story. A few AI requests a year (written lines with ambientChatter off).")
+                .define("realDates", true);
         b.pop();
 
         b.push("horror");

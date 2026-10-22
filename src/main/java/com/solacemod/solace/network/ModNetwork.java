@@ -151,6 +151,17 @@ public final class ModNetwork {
         }
     }
 
+    /** Client -> server: the player's time zone, in minutes from UTC, so real-date moments use their own clock. Never saved. */
+    public record ClockPayload(int offsetMinutes) implements CustomPacketPayload {
+        public static final Type<ClockPayload> TYPE = new Type<>(Solace.id("clock"));
+        public static final StreamCodec<ByteBuf, ClockPayload> CODEC = ByteBufCodecs.VAR_INT.map(ClockPayload::new, ClockPayload::offsetMinutes);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
     /** Tells this player's game what the server allows (see ServerAiPayload). */
     public static void sendServerAi(ServerPlayer player) {
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new ServerAiPayload(
@@ -175,6 +186,10 @@ public final class ModNetwork {
         registrar.playToServer(OwnAiPayload.TYPE, OwnAiPayload.CODEC,
                 (payload, ctx) -> ctx.enqueueWork(() -> {
                     if (ctx.player() instanceof ServerPlayer player) com.solacemod.solace.story.PlayerAi.onOwnBrains(player, payload.brains());
+                }));
+        registrar.playToServer(ClockPayload.TYPE, ClockPayload.CODEC,
+                (payload, ctx) -> ctx.enqueueWork(() -> {
+                    if (ctx.player() instanceof ServerPlayer player) com.solacemod.solace.story.RealDates.onClock(player, payload.offsetMinutes());
                 }));
         registrar.playToServer(VoiceTextPayload.TYPE, VoiceTextPayload.CODEC,
                 (payload, ctx) -> ctx.enqueueWork(() -> {

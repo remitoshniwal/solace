@@ -58,6 +58,8 @@ jobs:
             echo "solace admin memory nobody show" > server_in
             echo "solace admin ending nobody erase" > server_in
             echo "solace admin afterward nobody meet" > server_in
+            # 1.12.0 (real dates).
+            echo "solace admin date nobody show" > server_in
             sleep 10
             echo "stop" > server_in
             sleep 20
@@ -168,6 +170,21 @@ jobs:
             echo "::notice title=After-the-ending screenshots::${n} screenshots taken"
           fi
           grep -h "AFTER\|written line" run/solace/playtest/*.txt 2>/dev/null | tail -30 || true
+
+      - name: Screenshots (real dates, with a faked clock)
+        continue-on-error: true
+        run: |
+          export LIBGL_ALWAYS_SOFTWARE=1
+          rm -rf run/saves/solace_tour
+          SOLACE_TOUR=dates timeout 900 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runClient > shots5.log 2>&1 || true
+          n=$(ls run/screenshots/d_*.png 2>/dev/null | wc -l)
+          if [ "$n" -eq 0 ]; then
+            msg=$(grep -i "screenshots\|exception\|error\|caused by\|at com.solacemod" shots5.log | grep -v -i "narrator\|flite" | tail -40 | cut -c 1-300 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')
+            echo "::warning title=No real-date screenshots::${msg}"
+          else
+            echo "::notice title=Real-date screenshots::${n} screenshots taken"
+          fi
+          grep -h "DATE\|written line" run/solace/playtest/*.txt 2>/dev/null | tail -30 || true
 
       - name: Upload screenshots
         if: always()

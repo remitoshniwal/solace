@@ -159,6 +159,31 @@ public final class SolaceBrain {
         request(player, story, "[EVENT] " + situation, List.of(), true, false, writtenLine);
     }
 
+    /**
+     * A small extra comment (real dates, builds) with a written line. Like a story moment, but a cheap background request:
+     * skipped for the written line when the brains are nearly out, when talking on its own is switched off, or on any error.
+     */
+    public static void comment(ServerPlayer player, String situation, String writtenLine) {
+        comment(player, situation, writtenLine, 0);
+    }
+
+    private static void comment(ServerPlayer player, String situation, String writtenLine, int tries) {
+        MinecraftServer server = player.getServer();
+        if (server == null || player.isRemoved()) return;
+        PlayerStory story = StoryData.get(server).get(player.getUUID());
+        if (!story.met || !story.solaceShouldExist()) return;
+        if (!SolaceConfig.AMBIENT_CHATTER.get()) {
+            written(player, story, writtenLine);
+            return;
+        }
+        if (BUSY.contains(player.getUUID())) {
+            if (tries < 5) Scheduler.later(60, () -> comment(player, situation, writtenLine, tries + 1));
+            else written(player, story, writtenLine);
+            return;
+        }
+        request(player, story, "[EVENT] " + situation, List.of(), false, false, writtenLine);
+    }
+
     /** A written line, word for word, in grey italics, for the owner only. */
     public static void written(ServerPlayer player, PlayerStory story, String text) {
         if (text == null || text.isEmpty()) return;
@@ -196,6 +221,7 @@ public final class SolaceBrain {
         // Background chatter isn't worth a request when every brain is nearly out: save them for when the player talks.
         if (kind == com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND && AiService.configured(player.getUUID())
                 && !AiService.hasRoomFor(player.getUUID(), com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND)) {
+            if (writtenLine != null) written(player, story, writtenLine);
             return;
         }
         AiService.Gate gate = AiService.gate(server, player.getUUID());

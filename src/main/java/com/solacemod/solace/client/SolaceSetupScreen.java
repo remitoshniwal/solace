@@ -99,6 +99,7 @@ public final class SolaceSetupScreen extends Screen {
     private boolean crashComfort;
     private boolean bondHint;
     private boolean nudges;
+    private boolean realDates;
     /** Solace's own sounds, in percent. */
     private int solaceSounds;
     private boolean hum;
@@ -150,6 +151,13 @@ public final class SolaceSetupScreen extends Screen {
     public static SolaceSetupScreen openOnTogether(@Nullable Screen parent) {
         SolaceSetupScreen screen = new SolaceSetupScreen(parent, null);
         screen.page = Page.TOGETHER;
+        return screen;
+    }
+
+    /** Opens the setup screen on the Abilities tab. */
+    public static SolaceSetupScreen openOnAbilities(@Nullable Screen parent) {
+        SolaceSetupScreen screen = new SolaceSetupScreen(parent, null);
+        screen.page = Page.ABILITIES;
         return screen;
     }
 
@@ -219,6 +227,7 @@ public final class SolaceSetupScreen extends Screen {
         solaceSounds = ClientConfig.SOLACE_SOUNDS.get();
         hum = ClientConfig.HUM_NEAR_SOLACE.get();
         nudges = SolaceConfig.STORY_NUDGES.get();
+        realDates = SolaceConfig.REAL_DATES.get();
 
         mining = SolaceConfig.ALLOW_MINING.get();
         building = SolaceConfig.ALLOW_BUILDING.get();
@@ -276,6 +285,7 @@ public final class SolaceSetupScreen extends Screen {
         SolaceConfig.ALLOW_FAKE_CRASH.set(fakeCrash);
         SolaceConfig.ALLOW_SCREEN_EFFECTS.set(screenEffects);
         SolaceConfig.STORY_NUDGES.set(nudges);
+        SolaceConfig.REAL_DATES.set(realDates);
         SolaceConfig.ALLOW_MINING.set(mining);
         SolaceConfig.ALLOW_BUILDING.set(building);
         SolaceConfig.ALLOW_COMBAT.set(combat);
@@ -726,7 +736,11 @@ public final class SolaceSetupScreen extends Screen {
                 .create(controlX(), rowY(5), memoryHalf, 20, Component.literal("Memory"), (b, v) -> crossWorld = v));
         addRenderableWidget(toggle(controlX() + memoryHalf + 3, rowY(5), memoryHalf, "Endings", rememberEndings, v -> rememberEndings = v,
                 "Solace remembers how your last story ended, and the next one changes a little. About 1 extra AI request per new story."));
-        note(rowY(6) + 2, isRemoteServer() ? ON_SERVER : Component.literal("Give Solace items by right-clicking it while holding them."));
+        label(6, "Notices");
+        addRenderableWidget(toggle(controlX(), rowY(6), controlWidth(), "Real dates and times", realDates, v -> realDates = v,
+                "Small moments on real dates: Halloween, the new year, very late at night, coming back after a long time. "
+                        + "Uses each player's own clock. A few AI requests a year."));
+        note(rowY(7) + 2, isRemoteServer() ? ON_SERVER : Component.literal("Give Solace items by right-clicking it while holding them."));
     }
 
     /** Multiplayer: who gets a Solace, each player's share of AI requests, and what happens between players. */

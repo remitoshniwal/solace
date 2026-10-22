@@ -38,6 +38,9 @@ public final class OwnAi {
     public static void onServerAi(ModNetwork.ServerAiPayload payload) {
         server = payload;
         send();
+        // The server has Solace: tell it this computer's time zone (for real-date moments). Only the offset, never saved.
+        int offset = java.time.ZoneId.systemDefault().getRules().getOffset(java.time.Instant.now()).getTotalSeconds() / 60;
+        net.neoforged.neoforge.network.PacketDistributor.sendToServer(new ModNetwork.ClockPayload(offset));
     }
 
     @SubscribeEvent

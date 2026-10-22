@@ -54,6 +54,8 @@ neoForge {
             // SOLACE_STRICT_KEYS=1 turns this off, to check that keys are refused on unencrypted servers.
             if (System.getenv('SOLACE_STRICT_KEYS') == null) systemProperty 'solace.allowUnencryptedKeys', 'true'
             if (System.getenv('SOLACE_JOIN') != null) programArguments.addAll '--quickPlayMultiplayer', System.getenv('SOLACE_JOIN')
+            // SOLACE_TZ=Asia/Tokyo makes this player's computer pretend to be in another time zone (real-date moments use each player's clock).
+            if (System.getenv('SOLACE_TZ') != null) systemProperty 'user.timezone', System.getenv('SOLACE_TZ')
         }
         configureEach {
             logLevel = org.slf4j.event.Level.INFO

@@ -134,6 +134,10 @@ public final class PlayerStory {
     /** How many after-ending scares (Watcher sightings or signs) have happened. They stop after a few. */
     public int afterScares;
 
+    // Real dates (story/RealDates.java)
+    /** Each real-date moment and when it last happened ("halloween" -> "2026"), so each one happens once. */
+    public final Map<String, String> datesSeen = new LinkedHashMap<>();
+
     // Timing (not saved; reset each session)
     public long lastInteractionTick;
     public long lastAmbientTick;
@@ -154,6 +158,17 @@ public final class PlayerStory {
     /** The story's four parts: 1 Company (ch 1-2), 2 Static (ch 3-4), 3 Truth (ch 5-6), 4 The Question (ch 7-8). */
     public int part() {
         return (chapter + 1) / 2;
+    }
+
+    /** How Solace sounds in the small extra moments (real dates, builds): healed or no story, kept, or the story's early, middle and late parts. */
+    public StoryText.Tone tone() {
+        if (!com.solacemod.solace.config.SolaceConfig.STORY_ENABLED.get() || companion || ending == Ending.TOGETHER) return StoryText.Tone.FRIEND;
+        if (ending == Ending.FOREVER || ending == Ending.COLLECTED) return StoryText.Tone.KEPT;
+        return switch (part()) {
+            case 1 -> StoryText.Tone.EARLY;
+            case 2 -> StoryText.Tone.MIDDLE;
+            default -> StoryText.Tone.LATE;
+        };
     }
 
     /** True after an ending, and in [Just stay] mode (no story at all). */
@@ -257,6 +272,9 @@ public final class PlayerStory {
         t.putBoolean("AgainHere", againHere);
         t.putBoolean("Companion", companion);
         t.putInt("AfterScares", afterScares);
+        CompoundTag dates = new CompoundTag();
+        datesSeen.forEach(dates::putString);
+        t.put("Dates", dates);
         return t;
     }
 
@@ -331,6 +349,8 @@ public final class PlayerStory {
         s.againHere = t.getBoolean("AgainHere");
         s.companion = t.getBoolean("Companion");
         s.afterScares = t.getInt("AfterScares");
+        CompoundTag dates = t.getCompound("Dates");
+        for (String k : dates.getAllKeys()) s.datesSeen.put(k, dates.getString(k));
         return s;
     }
 

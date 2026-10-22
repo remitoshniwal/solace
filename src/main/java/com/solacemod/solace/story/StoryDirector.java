@@ -118,7 +118,8 @@ public final class StoryDirector {
         else prompt = "The player just came back after " + away + " away. Greet them warmly.";
         Scheduler.later(60, () -> {
             if (player.isRemoved()) return;
-            SolaceBrain.event(player, prompt, true);
+            // After a week or more away: a moment with a written line instead (story/RealDates.java).
+            if (!RealDates.longReturn(player, story, awayMinutes)) SolaceBrain.event(player, prompt, true);
             // Like Maren's journal: come back after a long time and the lights are out.
             if (late && story.part() >= 3 && awayMinutes >= 60) HorrorDirector.torchesOut(player, 6, false);
             if (late) com.solacemod.solace.horror.OnItsOwn.builtWhileAway(player, story, awayMinutes);
@@ -161,6 +162,7 @@ public final class StoryDirector {
         story.playTicks += 20;
         Bond.tick(player, story, SolaceManager.find(server, story));
         scanForFragments(player, story);
+        RealDates.tick(player, story);
         if (!storyOn() || story.companion) return;
         redeliverLostPages(player, story, server);
         tickEpilogue(player, story, server, now);
@@ -307,7 +309,9 @@ public final class StoryDirector {
         PlaytestLog.log(story, player, "MEET", "Solace appeared");
         StoryAdvancements.grant(player, "root");
         // Has it met them before, and does it remember how their last story ended? (story/Afterward.java)
+        long lastSeenMs = GlobalMemory.enabled() ? GlobalMemory.get(player.getUUID()).lastSeenMs : 0;
         boolean metBefore = Afterward.noteMeeting(player, story);
+        if (metBefore) RealDates.noteLongGap(story, lastSeenMs);
 
         SolaceEntity solace = SolaceManager.spawnNear(player, story, true);
         if (solace != null) Sounds.playFor(player, solace.position(), Sounds.get("block.amethyst_block.resonate"), 1.0F, 0.5F);
@@ -877,6 +881,7 @@ public final class StoryDirector {
         SLEEP_REMINDED.clear();
         Nudges.reset();
         Afterward.reset();
+        RealDates.reset();
     }
 
     public static void forgetSession(UUID id) {
@@ -884,5 +889,6 @@ public final class StoryDirector {
         LAST_BEAT.remove(id);
         Nudges.forget(id);
         Afterward.forgetSession(id);
+        RealDates.forget(id);
     }
 }

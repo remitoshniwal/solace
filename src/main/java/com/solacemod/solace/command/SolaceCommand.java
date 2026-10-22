@@ -262,6 +262,15 @@ public final class SolaceCommand {
                                                 return fail(ctx, e.getMessage());
                                             }
                                         }))))
+                        .then(Commands.literal("date").then(Commands.argument("player", EntityArgument.player())
+                                .then(Commands.argument("what", StringArgumentType.word())
+                                        .suggests((ctx, b) -> {
+                                            for (String o : com.solacemod.solace.story.RealDates.ADMIN_OPTIONS) b.suggest(o);
+                                            return b.buildFuture();
+                                        })
+                                        .executes(ctx -> date(ctx, ""))
+                                        .then(Commands.argument("detail", StringArgumentType.greedyString())
+                                                .executes(ctx -> date(ctx, StringArgumentType.getString(ctx, "detail")))))))
                         .then(Commands.literal("question").then(Commands.argument("player", EntityArgument.player()).executes(ctx -> {
                             ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
                             PlayerStory s = story(ctx, p);
@@ -269,6 +278,16 @@ public final class SolaceCommand {
                             for (int i = 0; i < StoryText.FRAGMENT_COUNT; i++) s.fragmentsFound.add(i);
                             return msg(ctx, "Solace will ask its question in about a minute.");
                         })))));
+    }
+
+    /** /solace admin date: fakes a player's clock, to test the real-date moments (story/RealDates.java). */
+    private static int date(CommandContext<CommandSourceStack> ctx, String detail) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
+        try {
+            return msg(ctx, com.solacemod.solace.story.RealDates.admin(p, story(ctx, p), StringArgumentType.getString(ctx, "what"), detail));
+        } catch (IllegalStateException e) {
+            return fail(ctx, e.getMessage());
+        }
     }
 
     /** Server operators, the console, or whoever owns this single player world (not friends joining it over LAN). */

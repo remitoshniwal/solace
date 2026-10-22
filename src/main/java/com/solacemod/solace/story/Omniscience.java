@@ -100,7 +100,7 @@ final class Omniscience {
                 .append(" mobs, walked ").append(walkedKm).append(" km, and played ").append(hours).append(" hours");
 
         // The real world
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = RealDates.now(p); // the player's own clock, when their game said
         sb.append(". In the real world it is ").append(now.format(DateTimeFormatter.ofPattern("h:mm a 'on' EEEE", Locale.ENGLISH)))
                 .append(" (you just know this; it unsettles players if you mention it, especially late at night)");
         return sb.toString();
