@@ -8,6 +8,12 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### New in 1.10.1: fewer spoilers
+- **Tab keeps secrets.** Pressing Tab after `/solace choose` only suggests the choices you've actually been offered.
+- **Your story stays yours.** With "Replies to all" on, other players see Solace's answers when you talk to it, but not your story's big moments.
+- **No surprise costs.** `/solace test` (which sends a real request to every AI brain) is now for server operators and the single player world's owner only.
+- Gentler wording in the setup screen, so it doesn't hint at what happens later.
+
 ### New in 1.10.0: after the ending
 - **The story knows when it's over.** If your story in a world has ended for good, the game tells you quietly when you come back, and how to play again. The last echoes fade away instead of going on forever.
 - **Play it again, and it remembers.** Start a new world (or `/solace reset confirm`) after finishing, and some moments in the next story change depending on how the last one ended. Works without an AI key too.
