@@ -8,6 +8,13 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### New in 1.10.2: tidier messages
+- **A clearer `/solace status`.** Your story first, then the AI, with colours. Lines that don't apply (like debt when there's no story) are hidden.
+- **`/solace help` works,** and only lists what you can use.
+- **On someone else's server,** every setup page now tells you that the server owner's settings apply.
+- **Whose Solace is that?** With "Replies to all" on, other players see "Remi's Solace" instead of just "Solace".
+- Ending titles now use the same names as their advancements.
+
 ### New in 1.10.1: fewer spoilers
 - **Tab keeps secrets.** Pressing Tab after `/solace choose` only suggests the choices you've actually been offered.
 - **Your story stays yours.** With "Replies to all" on, other players see Solace's answers when you talk to it, but not your story's big moments.
