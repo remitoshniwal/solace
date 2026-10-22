@@ -56,6 +56,7 @@ public final class ServerEvents {
             com.solacemod.solace.horror.Phenomena.restore(player);
             com.solacemod.solace.horror.PersonalFreeze.forget(player);
             com.solacemod.solace.story.AiService.forgetOwn(player.getUUID()); // their own AI key is forgotten the moment they leave
+            com.solacemod.solace.story.RealDates.forget(player.getUUID()); // and their time zone
             PlayerStory story = StoryData.get(player.getServer()).getIfPresent(player.getUUID());
             if (story != null) StoryDirector.onLogout(player, story);
         }

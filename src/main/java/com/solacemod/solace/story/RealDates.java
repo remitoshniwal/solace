@@ -53,6 +53,7 @@ public final class RealDates {
         ONLINE_SINCE.clear();
     }
 
+    /** The player left: forget their time zone and any faked clock. */
     public static void forget(UUID id) {
         OFFSET_MINUTES.remove(id);
         FAKE_SHIFT.remove(id);

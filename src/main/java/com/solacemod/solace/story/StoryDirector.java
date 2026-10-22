@@ -889,6 +889,5 @@ public final class StoryDirector {
         LAST_BEAT.remove(id);
         Nudges.forget(id);
         Afterward.forgetSession(id);
-        RealDates.forget(id);
     }
 }
