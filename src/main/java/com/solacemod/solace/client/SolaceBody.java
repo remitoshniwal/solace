@@ -117,7 +117,10 @@ final class SolaceBody {
                 m.draw(base, new MeshDraw(poseStack, buffer.getBuffer(RenderType.eyes(UNEASY_GLOW)), full, OverlayTexture.NO_OVERLAY),
                         negativeMask, false, t, push, grey(0.5F + 0.25F * Mth.sin(t * 0.09F)));
             }
-            m.drawOutline(base, new MeshDraw(poseStack, buffer.getBuffer(RenderType.entityCutout(OUTLINE)), full, OverlayTexture.NO_OVERLAY), negativeMask, false, OUTLINE_WIDTH,
+            // With a shader pack on, "full brightness" gets coloured like torchlight (orange or peach), so the white outline is drawn
+            // as a glow instead, which shader packs leave white. Both ways hide back faces, as the inside-out trick needs.
+            RenderType outline = Shaders.packOn() ? RenderType.eyes(OUTLINE) : RenderType.entityCutout(OUTLINE);
+            m.drawOutline(base, new MeshDraw(poseStack, buffer.getBuffer(outline), full, OverlayTexture.NO_OVERLAY), negativeMask, false, OUTLINE_WIDTH,
                     uneasy ? dirty(Math.min(0.75F, 0.3F + glow * 0.5F)) : grey(Math.min(1, 0.55F + glow * 0.6F)));
         }
         if (negativeMask != 0) {

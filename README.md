@@ -31,6 +31,8 @@ Solace shows up about 30 seconds after you join a world. It's a tall, headless f
 
 Solace needs an AI brain to talk. Setting one up takes about two minutes and can be free; see below.
 
+Works alongside Sodium, and with Iris shader packs (checked with BSL and Complementary Reimagined): its white outline stays white and its glow casts no shadow. Neither is needed.
+
 ## Give Solace an AI brain
 
 No files to edit. Everything is in game:

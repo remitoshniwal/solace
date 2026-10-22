@@ -8,6 +8,11 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### New in 1.14.0: friendlier with shader packs
+- **White stays white.** With Iris and a shader pack on, Solace's white outline used to turn orange or peach (shader packs colour "full brightness" like torchlight). It's now drawn as a glow the shader pack leaves white.
+- **Light casts no shadow.** Solace's brightest form no longer drops a solid shadow on the ground under shader packs.
+- **Still needs nothing extra.** Solace works the same without Iris. Checked with Sodium alone (no change), and with Iris and the BSL and Complementary Reimagined packs. Other packs may still look a little different. If one looks worse, turn off `shaderFriendlyGlow` in `solace-client.toml`.
+
 ### New in 1.13.0: Solace watches you build
 - **It notices.** Build a house, a farm, a tower, a wall, or dig a mine, and when you pause, Solace stops and looks at it. It remembers what you built and where, and brings it up later.
 - **It has opinions.** What it says about your build changes as your story goes on.

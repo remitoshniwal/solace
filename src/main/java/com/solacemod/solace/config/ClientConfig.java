@@ -29,6 +29,7 @@ public final class ClientConfig {
     public static final ModConfigSpec.BooleanValue BOND_HINT;
     public static final ModConfigSpec.IntValue SOLACE_SOUNDS;
     public static final ModConfigSpec.BooleanValue HUM_NEAR_SOLACE;
+    public static final ModConfigSpec.BooleanValue SHADER_FRIENDLY_GLOW;
 
     /** Your own AI on other people's servers (only if the server allows it and you trust it). */
     public static final int OWN_BRAINS = 5;
@@ -84,6 +85,9 @@ public final class ClientConfig {
         b.comment("What Solace shows on your screen.").push("display");
         BOND_HINT = b.comment("A small flame next to the hotbar: how strong Solace is right now, and how much you owe it. No numbers.")
                 .define("bondHint", true);
+        SHADER_FRIENDLY_GLOW = b.comment("Only matters with Iris and a shader pack on: draws Solace's white outline as a glow the shader pack",
+                        "leaves white, and stops its brightest form from casting a shadow. Turn off if it looks worse with your shader pack.")
+                .define("shaderFriendlyGlow", true);
         b.pop();
 
         b.comment("Your own AI on other people's servers, so the server owner doesn't pay for your Solace.",

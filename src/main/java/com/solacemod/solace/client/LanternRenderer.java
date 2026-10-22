@@ -46,6 +46,7 @@ final class LanternRenderer {
 
     void render(SolaceEntity entity, float partialTick, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
         if (blue == null) return; // still being built (only for a moment after the game starts)
+        if (Shaders.packOn() && Shaders.shadowPass()) return; // a ball of light casts no shadow (only shader packs draw entity shadows like this)
         // Real time, not game time: it keeps moving even while the world is frozen around it.
         float t = (net.minecraft.Util.getMillis() % 3_600_000L) / 50F;
         boolean hollow = entity.isHollow();
