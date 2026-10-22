@@ -8,6 +8,11 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### New in 1.11.0: your own AI on a friend's server
+- **Bring your own AI.** On a server run by a friend, you can now use your own AI key, so the server owner doesn't pay for your Solace. The owner turns on **Own AI keys** (Together page); you fill in the **AI Brain** page while connected.
+- **Only with friends you trust.** Your key goes to that server, and whoever runs it could get at it. Solace asks before sending it, never sends it over an unencrypted connection, never saves or logs it, and the server forgets it when you leave. Use a separate key with a spending limit, or a free one.
+- **The owner decides who uses theirs.** **Lend** (Together page): always, only to players without their own, or never.
+
 ### New in 1.10.3: under the hood
 - Small fixes that keep the mod building and testing reliably in the future. Nothing changes in game.
 

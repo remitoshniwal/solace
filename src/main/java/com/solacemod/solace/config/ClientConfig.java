@@ -30,6 +30,14 @@ public final class ClientConfig {
     public static final ModConfigSpec.IntValue SOLACE_SOUNDS;
     public static final ModConfigSpec.BooleanValue HUM_NEAR_SOLACE;
 
+    /** Your own AI on other people's servers (only if the server allows it and you trust it). */
+    public static final int OWN_BRAINS = 5;
+    public static final ModConfigSpec.BooleanValue OWN_AI;
+    public static final java.util.List<ModConfigSpec.ConfigValue<String>> OWN_PROVIDER = new java.util.ArrayList<>();
+    public static final java.util.List<ModConfigSpec.ConfigValue<String>> OWN_API_KEY = new java.util.ArrayList<>();
+    public static final java.util.List<ModConfigSpec.ConfigValue<String>> OWN_MODEL = new java.util.ArrayList<>();
+    public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> TRUSTED_SERVERS;
+
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
 
@@ -76,6 +84,21 @@ public final class ClientConfig {
         b.comment("What Solace shows on your screen.").push("display");
         BOND_HINT = b.comment("A small flame next to the hotbar: how strong Solace is right now, and how much you owe it. No numbers.")
                 .define("bondHint", true);
+        b.pop();
+
+        b.comment("Your own AI on other people's servers, so the server owner doesn't pay for your Solace.",
+                "ONLY for servers run by a friend you trust: your key is sent to that server, and whoever runs it could get at it.",
+                "Use a separate key with a spending limit (or a free one), so you can delete it any time.",
+                "Your key is only sent if the server allows it, you said you trust that server, and the connection is encrypted.").push("own_ai");
+        OWN_AI = b.comment("Use your own AI on servers that allow it.").define("enabled", false);
+        for (int i = 1; i <= OWN_BRAINS; i++) {
+            OWN_PROVIDER.add(b.comment(i == 1 ? "Brain " + i + ": groq, openai, anthropic, gemini, openrouter, deepseek, mistral, xai, together, cerebras, or none" : "Brain " + i)
+                    .define("provider" + i, "none"));
+            OWN_API_KEY.add(b.define("apiKey" + i, ""));
+            OWN_MODEL.add(b.comment("Blank = the provider's default").define("model" + i, ""));
+        }
+        TRUSTED_SERVERS = b.comment("Servers you said you trust with your key (their addresses). Remove one to stop sending it there.")
+                .defineListAllowEmpty("trustedServers", java.util.List.of(), () -> "", o -> o instanceof String);
         b.pop();
 
         SPEC = b.build();

@@ -45,6 +45,8 @@ public final class ServerEvents {
             PlayerStory story = StoryData.get(player.getServer()).get(player.getUUID());
             StoryDirector.onLogin(player, story);
             com.solacemod.solace.story.Together.onLogin(player, story);
+            // Tell their game whether this server takes players' own AI (it only sends a key if so, and if they trust the server).
+            com.solacemod.solace.network.ModNetwork.sendServerAi(player);
         }
     }
 
@@ -53,6 +55,7 @@ public final class ServerEvents {
         if (event.getEntity() instanceof ServerPlayer player && player.getServer() != null) {
             com.solacemod.solace.horror.Phenomena.restore(player);
             com.solacemod.solace.horror.PersonalFreeze.forget(player);
+            com.solacemod.solace.story.AiService.forgetOwn(player.getUUID()); // their own AI key is forgotten the moment they leave
             PlayerStory story = StoryData.get(player.getServer()).getIfPresent(player.getUUID());
             if (story != null) StoryDirector.onLogout(player, story);
         }
@@ -141,6 +144,8 @@ public final class ServerEvents {
         com.solacemod.solace.horror.OnItsOwn.reset();
         com.solacemod.solace.story.Together.reset();
         com.solacemod.solace.horror.PersonalFreeze.reset();
+        com.solacemod.solace.story.AiService.forgetAllOwn();
+        com.solacemod.solace.story.PlayerAi.reset();
         SolaceBrain.reset();
         StoryDirector.reset();
     }

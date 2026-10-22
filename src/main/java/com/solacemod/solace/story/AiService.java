@@ -3,6 +3,7 @@ package com.solacemod.solace.story;
 import com.solacemod.solace.Solace;
 import com.solacemod.solace.ai.BrainPool;
 import com.solacemod.solace.ai.Http;
+import com.solacemod.solace.ai.KeyResolver;
 import com.solacemod.solace.ai.LlmException;
 import com.solacemod.solace.ai.LlmProvider;
 import com.solacemod.solace.ai.LlmRequest;
@@ -20,9 +21,14 @@ import java.util.concurrent.CompletableFuture;
  * Connects the game to Solace's AI brains (up to 5 providers, see {@link BrainPool}), with cost limits on top.
  */
 public final class AiService {
-    public enum Gate { OK, NOT_CONFIGURED, RATE_LIMITED, DAILY_LIMIT, PLAYER_LIMIT }
+    public enum Gate { OK, NOT_CONFIGURED, RATE_LIMITED, DAILY_LIMIT, PLAYER_LIMIT, NOT_LENT }
 
     private static final BrainPool POOL = new BrainPool();
+    /**
+     * Players' own brains on this server (only when the owner allows it, see SolaceConfig.PLAYER_AI).
+     * Kept in memory only: never saved, never logged, and forgotten when the player leaves or the server stops.
+     */
+    private static final java.util.Map<UUID, BrainPool> OWN = new java.util.concurrent.ConcurrentHashMap<>();
     private static List<ProviderSettings> poolSettings = List.of();
     private static boolean migrated;
 
@@ -136,8 +142,89 @@ public final class AiService {
         return pool().hasRoomFor(kind);
     }
 
-    /** Checks the cost limits for a request made for this player. Counts the request if allowed. */
-    public static synchronized Gate gate(MinecraftServer server, UUID player) {
+    // ---------- Players' own brains ----------
+
+    /** Replaces this player's own brains (an empty list removes them). The settings come from ProviderSettings.forPlayer. */
+    public static void setOwn(UUID player, List<ProviderSettings> brains) {
+        if (brains.isEmpty()) {
+            OWN.remove(player);
+            return;
+        }
+        BrainPool pool = new BrainPool();
+        List<LlmProvider> providers = new ArrayList<>();
+        for (ProviderSettings s : brains) providers.add(LlmProvider.create(s));
+        pool.update(providers);
+        OWN.put(player, pool);
+    }
+
+    /** Forgets this player's own brains (they left). */
+    public static void forgetOwn(UUID player) {
+        OWN.remove(player);
+        FALLBACK_NOTICE.remove(player);
+    }
+
+    /** Forgets every player's own brains (the server is stopping). */
+    public static void forgetAllOwn() {
+        OWN.clear();
+        FALLBACK_NOTICE.clear();
+    }
+
+    /** This player's own brains, if they gave some and the owner still allows it. */
+    @javax.annotation.Nullable
+    private static BrainPool own(UUID player) {
+        if (!SolaceConfig.PLAYER_AI.get()) return null;
+        BrainPool pool = OWN.get(player);
+        return pool == null || pool.isEmpty() ? null : pool;
+    }
+
+    public static boolean hasOwn(UUID player) {
+        return own(player) != null;
+    }
+
+    /** "always", "no_backup" or "never": who may use the owner's brains. */
+    private static String lend() {
+        return SolaceConfig.LEND_AI.get();
+    }
+
+    /** True if Solace can talk for this player at all: their own brains, or the owner's (if lent to them). */
+    public static boolean configured(UUID player) {
+        return hasOwn(player) || (configured() && !lend().equals("never"));
+    }
+
+    /** Like {@link #hasRoomFor(BrainPool.Kind)}, but for this player's brains (and the owner's as a backup, if lent). */
+    public static boolean hasRoomFor(UUID player, BrainPool.Kind kind) {
+        BrainPool mine = own(player);
+        if (mine == null) return !lend().equals("never") && hasRoomFor(kind);
+        return mine.hasRoomFor(kind) || (lend().equals("always") && configured() && hasRoomFor(kind));
+    }
+
+    /** One line per own brain, for /solace status. Only names and models: never the key. */
+    public static List<String> ownStatus(UUID player) {
+        List<String> lines = new ArrayList<>();
+        BrainPool mine = own(player);
+        if (mine != null) for (BrainPool.Brain b : mine.brains()) lines.add("Your brain " + b.slot() + ": " + KeyResolver.hideKeys(b.describe()));
+        return lines;
+    }
+
+    /** Players using their own AI right now (for /solace admin usage). */
+    public static List<UUID> ownUsers() {
+        List<UUID> list = new ArrayList<>();
+        if (SolaceConfig.PLAYER_AI.get()) list.addAll(OWN.keySet());
+        return list;
+    }
+
+    /**
+     * Checks the cost limits for a request made for this player. Counts the request if allowed.
+     * A player with their own brains pays for their own requests, so nothing is counted against the owner.
+     */
+    public static Gate gate(MinecraftServer server, UUID player) {
+        if (hasOwn(player)) return Gate.OK;
+        if (lend().equals("never")) return configured() ? Gate.NOT_LENT : Gate.NOT_CONFIGURED;
+        return ownerGate(server, player);
+    }
+
+    /** The owner's cost limits (daily, per minute, each player's share). */
+    private static synchronized Gate ownerGate(MinecraftServer server, UUID player) {
         if (!configured()) return Gate.NOT_CONFIGURED;
         StoryData data = StoryData.get(server);
         RequestBudget.Result result = data.budget.tryUse(player.toString(), StoryData.today(), System.currentTimeMillis(),
@@ -172,6 +259,56 @@ public final class AiService {
                 Solace.LOGGER.warn("Solace AI request failed on every brain: {}", Http.unwrap(err).getMessage());
             }
         });
+    }
+
+    /**
+     * Sends a request for this player: through their own brains if they have some, otherwise the owner's.
+     * If their own brains all fail and the owner lends "always", the owner's brains try next (counted like any other request).
+     * Call {@link #gate} first, as before.
+     */
+    public static CompletableFuture<String> complete(MinecraftServer server, UUID player, LlmRequest request, LlmRequest compact, BrainPool.Kind kind) {
+        BrainPool mine = own(player);
+        if (mine == null) return complete(request, compact, kind);
+        CompletableFuture<String> first = mine.complete(request, compact, kind).thenApply(BrainPool.Answer::text);
+        return first.exceptionallyCompose(err -> {
+            // Never log the provider's message as it is: it can repeat part of the player's key.
+            Solace.LOGGER.info("Solace: a player's own AI didn't answer ({})", Http.unwrap(err).getClass().getSimpleName());
+            if (!lend().equals("always") || !configured()) return CompletableFuture.failedFuture(new OwnBrainException(err, ownStatus(player)));
+            // The owner's limits are checked on the server thread, like every other request.
+            return CompletableFuture.supplyAsync(() -> ownerGate(server, player), server).thenCompose(gate -> {
+                if (gate != Gate.OK) return CompletableFuture.failedFuture(new OwnBrainException(err, ownStatus(player)));
+                tellFallback(server, player);
+                return complete(request, compact, kind);
+            });
+        });
+    }
+
+    private static final java.util.Map<UUID, Long> FALLBACK_NOTICE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Tells the player (at most every 5 minutes) that the owner's AI is answering because theirs didn't. Runs on the server thread. */
+    private static void tellFallback(MinecraftServer server, UUID player) {
+        long now = System.currentTimeMillis();
+        Long last = FALLBACK_NOTICE.get(player);
+        if (last != null && now - last < 5 * 60_000) return;
+        FALLBACK_NOTICE.put(player, now);
+        net.minecraft.server.level.ServerPlayer p = server.getPlayerList().getPlayer(player);
+        if (p != null) p.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                "[Solace] Your own AI didn't answer, so the server owner's AI is answering for now. /solace status shows why.")
+                .withStyle(net.minecraft.ChatFormatting.GRAY));
+    }
+
+    /** A player's own brains failed (and the owner's weren't used). The message has any key-like text hidden. */
+    public static final class OwnBrainException extends LlmException {
+        /** @param brains what each of their brains is doing (from ownStatus): says why, when they're all resting */
+        public OwnBrainException(Throwable cause, List<String> brains) {
+            super(-1, KeyResolver.hideKeys(Http.unwrap(cause) instanceof BrainPool.BusyException && !brains.isEmpty()
+                    ? String.join(" ", brains) : hintFor(cause)));
+        }
+
+        @Override
+        public String hint() {
+            return getMessage();
+        }
     }
 
     public static CompletableFuture<String> complete(LlmRequest request) {

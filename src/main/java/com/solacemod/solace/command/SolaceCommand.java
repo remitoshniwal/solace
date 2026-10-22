@@ -46,6 +46,8 @@ public final class SolaceCommand {
                             return 1;
                         })))
                 .then(Commands.literal("setup").executes(ctx -> {
+                    // First what this server allows for players' own AI, so the screen can say so.
+                    com.solacemod.solace.network.ModNetwork.sendServerAi(ctx.getSource().getPlayerOrException());
                     net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(ctx.getSource().getPlayerOrException(),
                             new com.solacemod.solace.network.ModNetwork.OpenSetupPayload(false));
                     return 1;
@@ -351,6 +353,13 @@ public final class SolaceCommand {
         msg(ctx, "AI requests today: " + data.budget.totalToday(today) + " (server limit " + com.solacemod.solace.config.SolaceConfig.DAILY_REQUEST_LIMIT.get()
                 + (share > 0 ? ", each player " + share : ", no per-player limit here") + ")");
         java.util.Map<String, Integer> players = data.budget.playersToday(today);
+        // Players on their own AI pay for themselves: their requests aren't counted above. Names only.
+        java.util.List<String> ownNames = new java.util.ArrayList<>();
+        for (java.util.UUID id : AiService.ownUsers()) {
+            ServerPlayer p = server.getPlayerList().getPlayer(id);
+            if (p != null) ownNames.add(p.getGameProfile().getName());
+        }
+        if (!ownNames.isEmpty()) msg(ctx, "  Using their own AI (not counted): " + String.join(", ", ownNames));
         if (players.isEmpty()) return msg(ctx, "  Nobody has used any yet.");
         players.forEach((id, used) -> {
             String name = id;
@@ -420,6 +429,19 @@ public final class SolaceCommand {
         String today = StoryData.today();
         int limit = com.solacemod.solace.config.SolaceConfig.DAILY_REQUEST_LIMIT.get();
         boolean owner = ownerOrOperator(ctx.getSource());
+        String lend = com.solacemod.solace.config.SolaceConfig.LEND_AI.get();
+        if (AiService.hasOwn(player.getUUID())) {
+            // Their own brains: they may see these (names and models only, never the key).
+            line(ctx, "AI: your own. " + (lend.equals("always") && AiService.configured() ? "If it fails, the server owner's AI takes over."
+                    : "The server owner's AI isn't used for you."), ChatFormatting.GRAY);
+            for (String l : AiService.ownStatus(player.getUUID())) line(ctx, "  " + l, ChatFormatting.DARK_GRAY);
+            return 1;
+        }
+        if (lend.equals("never") && !owner) {
+            line(ctx, "AI: this server doesn't share its AI, so Solace only follows simple orders"
+                    + (com.solacemod.solace.config.SolaceConfig.PLAYER_AI.get() ? " (unless you use your own: /solace setup)." : "."), ChatFormatting.GRAY);
+            return 1;
+        }
         if (!AiService.configured()) {
             // The long "how to get a key" text is for whoever can set it up.
             line(ctx, owner ? "AI: not set up yet, so Solace can't talk. Open /solace setup to give it a brain." : "AI: not set up on this server, so Solace can't talk.", ChatFormatting.GRAY);

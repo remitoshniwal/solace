@@ -30,6 +30,8 @@ neoForge {
         server {
             server()
             programArgument '--nogui'
+            // Testing players' own AI without a real key: SOLACE_TEST_PLAYER_AI=http://127.0.0.1:1235/v1 sends their brains to a pretend AI.
+            if (System.getenv('SOLACE_TEST_PLAYER_AI') != null) systemProperty 'solace.testPlayerAiUrl', System.getenv('SOLACE_TEST_PLAYER_AI')
         }
         // Two players on one computer, for testing multiplayer (see docs/PLAYTEST.md):
         // ./gradlew runServer, then ./gradlew runPlayerA and ./gradlew runPlayerB, and join "localhost" from both.
@@ -39,12 +41,18 @@ neoForge {
             client()
             gameDirectory = project.file('run/playerA')
             programArguments.addAll '--username', 'Remi'
+            // The local test server runs with online mode off (no encryption), so let these test players send their own AI keys anyway.
+            // SOLACE_STRICT_KEYS=1 turns this off, to check that keys are refused on unencrypted servers.
+            if (System.getenv('SOLACE_STRICT_KEYS') == null) systemProperty 'solace.allowUnencryptedKeys', 'true'
             if (System.getenv('SOLACE_JOIN') != null) programArguments.addAll '--quickPlayMultiplayer', System.getenv('SOLACE_JOIN')
         }
         playerB {
             client()
             gameDirectory = project.file('run/playerB')
             programArguments.addAll '--username', 'Friend'
+            // The local test server runs with online mode off (no encryption), so let these test players send their own AI keys anyway.
+            // SOLACE_STRICT_KEYS=1 turns this off, to check that keys are refused on unencrypted servers.
+            if (System.getenv('SOLACE_STRICT_KEYS') == null) systemProperty 'solace.allowUnencryptedKeys', 'true'
             if (System.getenv('SOLACE_JOIN') != null) programArguments.addAll '--quickPlayMultiplayer', System.getenv('SOLACE_JOIN')
         }
         configureEach {

@@ -51,7 +51,9 @@ No files to edit. Everything is in game:
 
 The other pages set up **Voice**, **Story** (turn scares down or off), **Abilities** and **Together** (multiplayer). **Advanced...** shows every setting.
 
-On a multiplayer server, **every player needs the mod installed**, but only the **server owner** needs an AI key: Solace's AI runs on the server, and the owner pays for everyone's requests. Each player gets their own Solace and their own story, and the Solaces notice each other (see the **Together** page to turn any of that off). Each player also has a daily share of the owner's AI requests (**Each player's share** on the Together page, 150 by default), so one chatty player can't use up everyone's. On a busy server, set **Who gets one** (Together page) to *Only players who type /solace join*. The server owner sets Solace's AI (in the server's `config/solace-common.toml`). Each player's voice and comfort settings are their own.
+On a multiplayer server, **every player needs the mod installed**, but only the **server owner** needs an AI key: Solace's AI runs on the server, and the owner pays for everyone's requests. Each player gets their own Solace and their own story, and the Solaces notice each other (see the **Together** page to turn any of that off). Each player also has a daily share of the owner's AI requests (the share on the Together page, 150 by default), so one chatty player can't use up everyone's. On a busy server, set **Who gets one** (Together page) to *Only players who type /solace join*. The server owner sets Solace's AI (in the server's `config/solace-common.toml`). Each player's voice and comfort settings are their own.
+
+**Players' own AI (servers among friends only).** The owner can turn on **Own AI keys** (Together page) so players can use their own AI key instead of the owner's. A player then fills in the **AI Brain** page while connected to that server. Their key is only sent if the owner allows it, they say they trust that server, and the connection is encrypted. **Whoever runs the server could get at a player's key**, so only do this with friends you trust, and use a separate key with a spending limit (or a free one). Only the big online providers work this way (not Ollama, LM Studio or a custom address). **Lend** (Together page) decides who may use the owner's AI: *always* (players without their own, and as a backup), *no backup*, or *never*. Details: [docs/PROVIDERS.md](docs/PROVIDERS.md#your-own-ai-on-someone-elses-server).
 
 More detail, including recommended models and costs: [docs/PROVIDERS.md](docs/PROVIDERS.md)
 
@@ -64,7 +66,7 @@ More detail, including recommended models and costs: [docs/PROVIDERS.md](docs/PR
   - **Daily limit** on the AI Brain page (default 400 replies a day for all brains together; after that Solace goes quiet until tomorrow)
   - At most 12 requests a minute (change in **Advanced...**)
   - **Talks on its own** (Abilities page) also uses requests. Turn it off to save more.
-  - In multiplayer: each player's daily share (Together page), and **Talks about them** (Together page), which lets Solace comment on the other players using a few extra requests. Turn it off to save more.
+  - In multiplayer: each player's daily share (Together page), and **AI comments** (Together page), which lets Solace comment on the other players using a few extra requests. Turn it off to save more.
 - Check `/solace status` to see how many requests were used today (operators: `/solace admin usage` lists each player).
 
 ## Voice chat (optional)

@@ -5,6 +5,7 @@ import com.google.gson.JsonParser;
 import com.solacemod.solace.ai.BrainPool;
 import com.solacemod.solace.ai.ChatMessage;
 import com.solacemod.solace.ai.RateInfo;
+import com.solacemod.solace.ai.KeyResolver;
 import com.solacemod.solace.ai.LlmException;
 import com.solacemod.solace.ai.LlmProvider;
 import com.solacemod.solace.ai.LlmRequest;
@@ -268,6 +269,7 @@ public final class AiSelfTest {
         check("parser: never shows raw JSON", !ReplyParser.parse("{\"emotion\":\"calm\",\"actio").say().contains("{"));
 
         budgetTests();
+        playerAiTests();
 
         server.stop(0);
         try {
@@ -477,6 +479,30 @@ public final class AiSelfTest {
 
     private static Throwable Http_unwrap(Throwable e) {
         return com.solacemod.solace.ai.Http.unwrap(e);
+    }
+
+    /** A player's own brain runs on someone else's server, so it must never reach the owner's machine or secrets. */
+    private static void playerAiTests() {
+        ProviderSettings groq = ProviderSettings.forPlayer("groq", " gsk_abc 123 ", "", 10, "");
+        check("player ai: big provider accepted, key cleaned", groq != null && groq.apiKey().equals("gsk_abc123"));
+        check("player ai: provider's own address", groq != null && groq.baseUrl().equals("https://api.groq.com/openai/v1"));
+        check("player ai: default model", groq != null && groq.model().equals("openai/gpt-oss-120b") && !groq.modelChosen());
+        check("player ai: env: keys refused (they'd read the owner's secrets)", ProviderSettings.forPlayer("groq", "env:GROQ_API_KEY", "", 10, "") == null
+                && ProviderSettings.forPlayer("openai", "ENV:x", "", 10, "") == null);
+        check("player ai: ollama refused (it would reach the owner's machine)", ProviderSettings.forPlayer("ollama", "k", "", 10, "") == null);
+        check("player ai: lm studio refused", ProviderSettings.forPlayer("lmstudio", "k", "", 10, "") == null);
+        check("player ai: custom address refused", ProviderSettings.forPlayer("custom", "k", "", 10, "") == null);
+        check("player ai: unknown provider refused", ProviderSettings.forPlayer("evil", "k", "", 10, "") == null);
+        check("player ai: blank key refused", ProviderSettings.forPlayer("groq", "  ", "", 10, "") == null);
+        check("player ai: very long key refused", ProviderSettings.forPlayer("groq", "k".repeat(301), "", 10, "") == null);
+        check("player ai: odd model names refused", ProviderSettings.forPlayer("gemini", "k", "../../x", 10, "") == null
+                && ProviderSettings.forPlayer("gemini", "k", "a?b", 10, "") == null && ProviderSettings.forPlayer("gemini", "k", "a b", 10, "") == null);
+        ProviderSettings or = ProviderSettings.forPlayer("openrouter", "k", "meta-llama/llama-3.3-70b-instruct:free", 10, "");
+        check("player ai: normal model names kept", or != null && or.model().equals("meta-llama/llama-3.3-70b-instruct:free") && or.modelChosen());
+        check("player ai: key never in the name", groq != null && !groq.toString().contains("gsk_"));
+        check("player ai: keys hidden in messages",
+                KeyResolver.hideKeys("Incorrect API key provided: sk-proj-abcdefghijklmnopqrstuvwxyz123456.").equals("Incorrect API key provided: [hidden]."));
+        check("player ai: normal messages untouched", KeyResolver.hideKeys("Your API key was rejected (401).").equals("Your API key was rejected (401)."));
     }
 
     private static void check(String name, boolean ok) {

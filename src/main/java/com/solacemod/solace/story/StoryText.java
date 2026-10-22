@@ -419,6 +419,11 @@ public final class StoryText {
     /** /solace status when the story in this world is over and Solace is gone. */
     public static final String STATUS_OVER = "Your story in this world is over.";
 
+    /** The server owner doesn't lend their AI (lendAi = never), and the player has none of their own. */
+    public static final String NOT_LENT = "[Solace] This server doesn't share its AI, so Solace only follows simple orders here.";
+    public static final String NOT_LENT_OWN_AI = "[Solace] This server doesn't share its AI, so Solace only follows simple orders here. "
+            + "You can give it your own AI in /solace setup, but only if you trust whoever runs this server.";
+
     /** An ending's name as players see it: the same as its advancement. */
     public static String endingTitle(Ending e) {
         return switch (e) {

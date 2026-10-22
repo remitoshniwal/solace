@@ -24,6 +24,29 @@ public record ProviderSettings(String name, Protocol protocol, String baseUrl, S
                 timeoutSeconds, isBlank(anthropicEffort) ? "low" : anthropicEffort.trim(), !isBlank(model));
     }
 
+    /**
+     * A player's own brain, used by someone else's server. Stricter than {@link #resolve}, because the server owner's
+     * computer makes the call: only the big online providers at their own address (never "localhost", a custom address,
+     * or Ollama and LM Studio, which would reach the owner's machine), and the key exactly as typed (never "env:...",
+     * which would read the owner's own secrets). Returns null if any of that isn't met.
+     */
+    public static ProviderSettings forPlayer(String providerName, String apiKey, String model, int timeoutSeconds, String anthropicEffort) {
+        ProviderPreset preset = ProviderPreset.get(providerName);
+        if (!allowedForPlayers(preset)) return null;
+        String key = apiKey == null ? "" : apiKey.replaceAll("[\\s\\u200B\\u00A0\\uFEFF]", "");
+        if (key.isEmpty() || key.length() > 300 || key.regionMatches(true, 0, "env:", 0, 4)) return null;
+        String mdl = isBlank(model) ? preset.defaultModel() : model.trim();
+        // Model names go into the request (and for Gemini, into the address), so only plain names are allowed.
+        if (mdl.length() > 100 || !mdl.matches("[A-Za-z0-9._:/@-]+") || mdl.contains("..")) return null;
+        return new ProviderSettings(preset.name(), preset.protocol(), stripSlash(preset.baseUrl()), key, mdl, timeoutSeconds,
+                isBlank(anthropicEffort) ? "low" : anthropicEffort.trim(), !isBlank(model));
+    }
+
+    /** The providers a player may use as their own brain on a server: online services that need a key. */
+    public static boolean allowedForPlayers(ProviderPreset preset) {
+        return preset != null && preset.needsKey() && preset.baseUrl().startsWith("https://");
+    }
+
     /** Returns a problem description if these settings can't possibly work, or null if they look fine. */
     public String problem() {
         ProviderPreset preset = ProviderPreset.get(name);

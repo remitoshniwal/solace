@@ -18,4 +18,14 @@ public final class KeyResolver {
         }
         return trimmed;
     }
+
+    /**
+     * Hides anything that looks like a key (a long run of letters, digits, dashes or underscores) in a message.
+     * Error messages from providers sometimes repeat part of the key; this is used before showing or saving
+     * errors from a player's own brain, so they never land in the server's log.
+     */
+    public static String hideKeys(String text) {
+        if (text == null) return "";
+        return text.replaceAll("[A-Za-z0-9_\\-]{24,}", "[hidden]");
+    }
 }

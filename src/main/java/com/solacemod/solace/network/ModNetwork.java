@@ -100,6 +100,64 @@ public final class ModNetwork {
         }
     }
 
+    /**
+     * Server -> client: does this server take players' own AI? Sent when they join and when they open setup.
+     * Their game never sends a key unless playerAi is true (and they said they trust this server).
+     * @param lendAi "always", "no_backup" or "never": who may use the owner's brains
+     * @param ownerHasAi the owner has at least one working brain
+     */
+    public record ServerAiPayload(boolean playerAi, String lendAi, boolean ownerHasAi) implements CustomPacketPayload {
+        public static final Type<ServerAiPayload> TYPE = new Type<>(Solace.id("server_ai"));
+        public static final StreamCodec<ByteBuf, ServerAiPayload> CODEC = StreamCodec.composite(
+                ByteBufCodecs.BOOL, ServerAiPayload::playerAi,
+                ByteBufCodecs.STRING_UTF8, ServerAiPayload::lendAi,
+                ByteBufCodecs.BOOL, ServerAiPayload::ownerHasAi,
+                ServerAiPayload::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    /** One of a player's own brains: provider name, key and model (blank = the provider's default). */
+    public record OwnBrain(String provider, String key, String model) {
+        public static final StreamCodec<ByteBuf, OwnBrain> CODEC = StreamCodec.composite(
+                ByteBufCodecs.stringUtf8(32), OwnBrain::provider,
+                ByteBufCodecs.stringUtf8(300), OwnBrain::key,
+                ByteBufCodecs.stringUtf8(100), OwnBrain::model,
+                OwnBrain::new);
+
+        @Override
+        public String toString() {
+            return provider + " (" + model + ")"; // never the key
+        }
+    }
+
+    /** Client -> server: the player's own brains for this server (empty = stop using them). At most 5. */
+    public record OwnAiPayload(java.util.List<OwnBrain> brains) implements CustomPacketPayload {
+        public static final Type<OwnAiPayload> TYPE = new Type<>(Solace.id("own_ai"));
+        public static final StreamCodec<ByteBuf, OwnAiPayload> CODEC = OwnBrain.CODEC.apply(ByteBufCodecs.list(5))
+                .map(OwnAiPayload::new, OwnAiPayload::brains);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+
+        @Override
+        public String toString() {
+            return "OwnAiPayload(" + brains.size() + " brains)"; // never the keys
+        }
+    }
+
+    /** Tells this player's game what the server allows (see ServerAiPayload). */
+    public static void sendServerAi(ServerPlayer player) {
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new ServerAiPayload(
+                com.solacemod.solace.config.SolaceConfig.PLAYER_AI.get(), com.solacemod.solace.config.SolaceConfig.LEND_AI.get(),
+                com.solacemod.solace.story.AiService.configured()));
+    }
+
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar("1");
         registrar.playToClient(SpeechPayload.TYPE, SpeechPayload.CODEC,
@@ -112,6 +170,12 @@ public final class ModNetwork {
                 (payload, ctx) -> ctx.enqueueWork(() -> com.solacemod.solace.client.ClientHooks.onOpenSetup(payload)));
         registrar.playToClient(BondPayload.TYPE, BondPayload.CODEC,
                 (payload, ctx) -> ctx.enqueueWork(() -> com.solacemod.solace.client.ClientHooks.onBond(payload)));
+        registrar.playToClient(ServerAiPayload.TYPE, ServerAiPayload.CODEC,
+                (payload, ctx) -> ctx.enqueueWork(() -> com.solacemod.solace.client.OwnAi.onServerAi(payload)));
+        registrar.playToServer(OwnAiPayload.TYPE, OwnAiPayload.CODEC,
+                (payload, ctx) -> ctx.enqueueWork(() -> {
+                    if (ctx.player() instanceof ServerPlayer player) com.solacemod.solace.story.PlayerAi.onOwnBrains(player, payload.brains());
+                }));
         registrar.playToServer(VoiceTextPayload.TYPE, VoiceTextPayload.CODEC,
                 (payload, ctx) -> ctx.enqueueWork(() -> {
                     if (ctx.player() instanceof ServerPlayer player) {

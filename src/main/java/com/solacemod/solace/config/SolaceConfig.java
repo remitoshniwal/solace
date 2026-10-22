@@ -71,6 +71,8 @@ public final class SolaceConfig {
     public static final ModConfigSpec.BooleanValue ENDINGS_RIPPLE;
     public static final ModConfigSpec.BooleanValue HOLLOW_WITH_FRIENDS;
     public static final ModConfigSpec.BooleanValue PERSONAL_FREEZE;
+    public static final ModConfigSpec.BooleanValue PLAYER_AI;
+    public static final ModConfigSpec.ConfigValue<String> LEND_AI;
     public static final ModConfigSpec.BooleanValue MULTIPLAYER_AI_COMMENTS;
 
     // Abilities
@@ -209,6 +211,15 @@ public final class SolaceConfig {
         MULTIPLAYER_AI_COMMENTS = b.comment("Solace talks about these moments using the AI (jealous remarks, what you witnessed, endings it felt).",
                         "Uses AI requests, paid from the server owner's key. Off = short written lines instead, no extra requests.")
                 .define("aiComments", true);
+        PLAYER_AI = b.comment("Players may give Solace their own AI key, so their requests don't cost you anything.",
+                        "Only for servers among friends: a player's key passes through this server (it is never saved, logged or shown,",
+                        "and is forgotten when they leave, but whoever runs the server could still get at it). Off by default.")
+                .define("playerAi", false);
+        LEND_AI = b.comment("Who may use YOUR AI brains (the ones above).",
+                        "always = players without their own AI, and players whose own AI has run out or fails",
+                        "no_backup = only players without their own AI",
+                        "never = nobody else: players without their own AI get a Solace that only follows simple orders")
+                .defineInList("lendAi", "always", java.util.Arrays.asList("always", "no_backup", "never"));
         b.pop();
 
         b.push("abilities");

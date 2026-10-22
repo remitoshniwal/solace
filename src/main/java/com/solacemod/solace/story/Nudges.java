@@ -118,7 +118,7 @@ public final class Nudges {
             GIVEN.put(key, given + 1);
             String dir = direction(player.position(), center);
             int roughly = Math.max(10, Math.round(dist / 10F) * 10);
-            boolean ai = AiService.configured() && AiService.hasRoomFor(BrainPool.Kind.STORY);
+            boolean ai = AiService.configured(player.getUUID()) && AiService.hasRoomFor(player.getUUID(), BrainPool.Kind.STORY);
             if (ai) {
                 // The fear points the way: it tells them NOT to go there.
                 SolaceBrain.event(player, String.format(Locale.ROOT, StoryText.NUDGE_HOUSE, dir, roughly), true);

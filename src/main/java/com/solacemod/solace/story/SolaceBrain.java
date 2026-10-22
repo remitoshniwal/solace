@@ -194,8 +194,8 @@ public final class SolaceBrain {
         if (server == null) return;
         com.solacemod.solace.ai.BrainPool.Kind kind = classify(userContent, important);
         // Background chatter isn't worth a request when every brain is nearly out: save them for when the player talks.
-        if (kind == com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND && AiService.configured()
-                && !AiService.hasRoomFor(com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND)) {
+        if (kind == com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND && AiService.configured(player.getUUID())
+                && !AiService.hasRoomFor(player.getUUID(), com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND)) {
             return;
         }
         AiService.Gate gate = AiService.gate(server, player.getUUID());
@@ -206,6 +206,9 @@ public final class SolaceBrain {
             if (gate == AiService.Gate.DAILY_LIMIT && HINTED.add(player.getUUID())) {
                 player.sendSystemMessage(Component.literal("[Solace] Daily AI request limit reached (change it in Solace setup). Solace is quiet until tomorrow.")
                         .withStyle(ChatFormatting.GRAY));
+            }
+            if (gate == AiService.Gate.NOT_LENT && HINTED.add(player.getUUID())) {
+                player.sendSystemMessage(Component.literal(SolaceConfig.PLAYER_AI.get() ? StoryText.NOT_LENT_OWN_AI : StoryText.NOT_LENT).withStyle(ChatFormatting.GRAY));
             }
             if (gate == AiService.Gate.PLAYER_LIMIT && HINTED.add(player.getUUID())) {
                 player.sendSystemMessage(Component.literal(StoryText.PLAYER_LIMIT_LINE).withStyle(ChatFormatting.GRAY));
@@ -224,7 +227,7 @@ public final class SolaceBrain {
         UUID id = player.getUUID();
         BUSY.add(id);
         player.displayClientMessage(Component.literal("Solace is thinking...").withStyle(ChatFormatting.DARK_AQUA, ChatFormatting.ITALIC), true);
-        AiService.complete(req, compact, kind).whenComplete((text, err) -> server.execute(() -> {
+        AiService.complete(server, id, req, compact, kind).whenComplete((text, err) -> server.execute(() -> {
             BUSY.remove(id);
             ServerPlayer live = server.getPlayerList().getPlayer(id);
             if (live == null) return;
@@ -283,7 +286,10 @@ public final class SolaceBrain {
         Long last = LAST_ERROR_NOTICE.get(player.getUUID());
         if (last != null && now - last < 5 * 60_000) return;
         LAST_ERROR_NOTICE.put(player.getUUID(), now);
-        if (isAdmin(player)) {
+        if (com.solacemod.solace.ai.Http.unwrap(err) instanceof AiService.OwnBrainException) {
+            // Their own brains: only they can fix it (any key-like text in the message is already hidden).
+            player.sendSystemMessage(setupMessage("Your own AI didn't answer: " + AiService.hintFor(err)));
+        } else if (isAdmin(player)) {
             player.sendSystemMessage(setupMessage("AI problem: " + AiService.hintFor(err) + " (Solace stays quiet until this works; simple commands still work)"));
         }
     }
@@ -364,9 +370,9 @@ public final class SolaceBrain {
         if (story.history.size() <= max + 8) return;
         List<PlayerStory.Turn> old = new ArrayList<>(story.history.subList(0, 8));
         story.history.subList(0, 8).clear();
-        if (!SolaceConfig.SUMMARIZE_MEMORY.get() || !AiService.configured() || SUMMARIZING.contains(player.getUUID())) return;
+        if (!SolaceConfig.SUMMARIZE_MEMORY.get() || !AiService.configured(player.getUUID()) || SUMMARIZING.contains(player.getUUID())) return;
         MinecraftServer server = player.getServer();
-        if (server == null || !AiService.hasRoomFor(com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND)) return;
+        if (server == null || !AiService.hasRoomFor(player.getUUID(), com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND)) return;
         if (AiService.gate(server, player.getUUID()) != AiService.Gate.OK) return;
 
         StringBuilder transcript = new StringBuilder();
@@ -376,7 +382,7 @@ public final class SolaceBrain {
         String user = "Old summary: " + (story.summary.isEmpty() ? "(none)" : story.summary) + "\n\nNew conversation:\n" + transcript;
         UUID id = player.getUUID();
         SUMMARIZING.add(id);
-        AiService.complete(new LlmRequest(system, List.of(ChatMessage.user(user)), 300, 0.3, false), null, com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND)
+        AiService.complete(server, id, new LlmRequest(system, List.of(ChatMessage.user(user)), 300, 0.3, false), null, com.solacemod.solace.ai.BrainPool.Kind.BACKGROUND)
                 .whenComplete((text, err) -> server.execute(() -> {
                     SUMMARIZING.remove(id);
                     if (err != null || text == null) return;

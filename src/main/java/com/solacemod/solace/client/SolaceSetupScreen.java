@@ -125,6 +125,15 @@ public final class SolaceSetupScreen extends Screen {
     private boolean togetherAi;
     private boolean repliesToAll;
     private boolean defendVsPlayers;
+    private boolean playerAi;
+    private String lendAi;
+
+    /**
+     * True on someone else's server: the AI page edits YOUR OWN brains for servers (saved on this computer),
+     * not the owner's. Decided when the screen opens.
+     */
+    private final boolean own;
+    private boolean ownEnabled;
 
     private Component status = Component.empty();
     private boolean testing;
@@ -133,6 +142,7 @@ public final class SolaceSetupScreen extends Screen {
         super(Component.literal("Solace Setup"));
         this.parent = parent;
         this.container = container;
+        this.own = isRemoteServer();
         load();
     }
 
@@ -176,6 +186,17 @@ public final class SolaceSetupScreen extends Screen {
             }
         }
         dailyLimit = SolaceConfig.DAILY_REQUEST_LIMIT.get();
+        if (own) {
+            // Your own brains for servers, instead of the brains for your own worlds.
+            for (int i = 0; i < BRAINS; i++) {
+                providers[i] = ClientConfig.OWN_PROVIDER.get(i).get();
+                if (!ProviderSettings.allowedForPlayers(ProviderPreset.get(providers[i]))) providers[i] = "none";
+                apiKeys[i] = ClientConfig.OWN_API_KEY.get(i).get();
+                models[i] = ClientConfig.OWN_MODEL.get(i).get();
+                baseUrls[i] = "";
+            }
+        }
+        ownEnabled = ClientConfig.OWN_AI.get();
 
         voiceIn = ClientConfig.VOICE_INPUT.get();
         sttKey = ClientConfig.STT_API_KEY.get();
@@ -221,20 +242,31 @@ public final class SolaceSetupScreen extends Screen {
         togetherAi = SolaceConfig.MULTIPLAYER_AI_COMMENTS.get();
         repliesToAll = SolaceConfig.REPLIES_VISIBLE_TO_ALL.get();
         defendVsPlayers = SolaceConfig.DEFEND_AGAINST_PLAYERS.get();
+        playerAi = SolaceConfig.PLAYER_AI.get();
+        lendAi = SolaceConfig.LEND_AI.get();
     }
 
     private void save() {
-        SolaceConfig.PROVIDER.set(providers[0]);
-        SolaceConfig.API_KEY.set(apiKeys[0].trim());
-        SolaceConfig.MODEL.set(models[0].trim());
-        SolaceConfig.BASE_URL.set(baseUrls[0].trim());
-        for (int i = 1; i < BRAINS; i++) {
-            SolaceConfig.BRAIN_PROVIDER.get(i - 1).set(providers[i]);
-            SolaceConfig.BRAIN_API_KEY.get(i - 1).set(apiKeys[i].trim());
-            SolaceConfig.BRAIN_MODEL.get(i - 1).set(models[i].trim());
-            SolaceConfig.BRAIN_BASE_URL.get(i - 1).set(baseUrls[i].trim());
+        if (own) {
+            for (int i = 0; i < BRAINS; i++) {
+                ClientConfig.OWN_PROVIDER.get(i).set(providers[i]);
+                ClientConfig.OWN_API_KEY.get(i).set(apiKeys[i].trim());
+                ClientConfig.OWN_MODEL.get(i).set(models[i].trim());
+            }
+        } else {
+            SolaceConfig.PROVIDER.set(providers[0]);
+            SolaceConfig.API_KEY.set(apiKeys[0].trim());
+            SolaceConfig.MODEL.set(models[0].trim());
+            SolaceConfig.BASE_URL.set(baseUrls[0].trim());
+            for (int i = 1; i < BRAINS; i++) {
+                SolaceConfig.BRAIN_PROVIDER.get(i - 1).set(providers[i]);
+                SolaceConfig.BRAIN_API_KEY.get(i - 1).set(apiKeys[i].trim());
+                SolaceConfig.BRAIN_MODEL.get(i - 1).set(models[i].trim());
+                SolaceConfig.BRAIN_BASE_URL.get(i - 1).set(baseUrls[i].trim());
+            }
+            SolaceConfig.FALLBACK_PROVIDER.set("none"); // moved into the brains above
         }
-        SolaceConfig.FALLBACK_PROVIDER.set("none"); // moved into the brains above
+        ClientConfig.OWN_AI.set(ownEnabled);
         SolaceConfig.DAILY_REQUEST_LIMIT.set(dailyLimit);
         SolaceConfig.STORY_ENABLED.set(storyEnabled);
         SolaceConfig.STORY_SPEED.set(storySpeed);
@@ -265,6 +297,8 @@ public final class SolaceSetupScreen extends Screen {
         SolaceConfig.MULTIPLAYER_AI_COMMENTS.set(togetherAi);
         SolaceConfig.REPLIES_VISIBLE_TO_ALL.set(repliesToAll);
         SolaceConfig.DEFEND_AGAINST_PLAYERS.set(defendVsPlayers);
+        SolaceConfig.PLAYER_AI.set(playerAi);
+        SolaceConfig.LEND_AI.set(lendAi);
         SolaceConfig.SPEC.save();
 
         ClientConfig.VOICE_INPUT.set(voiceIn);
@@ -352,7 +386,11 @@ public final class SolaceSetupScreen extends Screen {
         int bw = (w - 6) / 3;
         addRenderableWidget(Button.builder(Component.literal("Done"), b -> {
             save();
-            onClose();
+            if (own && OwnAi.needsTrust()) askTrust();
+            else {
+                OwnAi.send();
+                onClose();
+            }
         }).bounds(x, by, bw, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> onClose()).bounds(x + bw + 3, by, bw, 20).build());
         Button advanced = Button.builder(Component.literal("Advanced..."), b -> {
@@ -381,7 +419,7 @@ public final class SolaceSetupScreen extends Screen {
 
     private void initAiPage() {
         // Row 0: which brain you're editing. Brain 1 is used first; the others take over before it runs out.
-        label(0, "Brain");
+        label(0, own ? "Your brain" : "Brain");
         int tabW = (controlWidth() - (BRAINS - 1) * 3) / BRAINS;
         for (int i = 0; i < BRAINS; i++) {
             int index = i;
@@ -400,7 +438,9 @@ public final class SolaceSetupScreen extends Screen {
 
         String provider = providers[brain];
         List<String> names = new ArrayList<>(PROVIDER_NOTES.keySet());
-        if (brain > 0) names.add(0, "none");
+        // On a server, your own brains can only be the big online providers (the server makes the call, see ProviderSettings.forPlayer).
+        if (own) names.removeIf(n -> !ProviderSettings.allowedForPlayers(ProviderPreset.get(n)));
+        if (brain > 0 || own) names.add(0, "none");
         label(1, "Provider");
         addRenderableWidget(CycleButton.<String>builder(SolaceSetupScreen::providerName)
                 .withValues(names).withInitialValue(names.contains(provider) ? provider : names.get(0)).displayOnlyValue()
@@ -446,7 +486,7 @@ public final class SolaceSetupScreen extends Screen {
             row++;
 
             // Only custom servers and programs on your PC need an address; the big providers fill it in automatically.
-            boolean showUrl = preset.baseUrl().isEmpty() || !preset.needsKey() || !baseUrls[brain].isBlank();
+            boolean showUrl = !own && (preset.baseUrl().isEmpty() || !preset.needsKey() || !baseUrls[brain].isBlank());
             if (showUrl) {
                 label(row, "Server URL");
                 EditBox urlBox = textBox(controlX(), rowY(row), controlWidth(), baseUrls[brain], v -> baseUrls[brain] = v);
@@ -458,18 +498,26 @@ public final class SolaceSetupScreen extends Screen {
         }
 
         // One row: the daily limit (for all brains together), then Test and Move up for this brain.
-        label(row, "Daily limit");
+        // On a server, the first button switches your own AI on or off instead (your provider's own limits apply).
+        label(row, own ? "Use it here" : "Daily limit");
         int limitW = controlWidth() / 2;
         int smallW = (controlWidth() - limitW - 6) / 2;
-        addRenderableWidget(CycleButton.<Integer>builder(v -> Component.literal(v == 0 ? "Unlimited!" : v + " a day"))
-                .withValues(DAILY_LIMITS).withInitialValue(DAILY_LIMITS.contains(dailyLimit) ? dailyLimit : 400).displayOnlyValue()
-                .withTooltip(v -> Tooltip.create(Component.literal("Most replies per day, for all brains together. Protects you from surprise bills. "
-                        + "After the limit, Solace goes quiet until tomorrow.")))
-                .create(controlX(), rowY(row), limitW, 20, Component.literal("Daily limit"), (btn, v) -> dailyLimit = v));
+        if (own) {
+            addRenderableWidget(CycleButton.onOffBuilder(ownEnabled)
+                    .withTooltip(v -> Tooltip.create(Component.literal("On: Solace uses your own AI on servers that allow it and that you said you trust.")))
+                    .create(controlX(), rowY(row), limitW, 20, Component.literal("Own AI"), (btn, v) -> ownEnabled = v));
+        } else {
+            addRenderableWidget(CycleButton.<Integer>builder(v -> Component.literal(v == 0 ? "Unlimited!" : v + " a day"))
+                    .withValues(DAILY_LIMITS).withInitialValue(DAILY_LIMITS.contains(dailyLimit) ? dailyLimit : 400).displayOnlyValue()
+                    .withTooltip(v -> Tooltip.create(Component.literal("Most replies per day, for all brains together. Protects you from surprise bills. "
+                            + "After the limit, Solace goes quiet until tomorrow.")))
+                    .create(controlX(), rowY(row), limitW, 20, Component.literal("Daily limit"), (btn, v) -> dailyLimit = v));
+        }
         if (!empty) {
             Button test = Button.builder(Component.literal(testing ? "..." : "Test"), b -> runTest())
                     .bounds(controlX() + limitW + 3, rowY(row), smallW, 20)
-                    .tooltip(Tooltip.create(Component.literal("Sends one tiny message to brain " + (brain + 1) + " to check it works."))).build();
+                    .tooltip(Tooltip.create(Component.literal("Sends one tiny message to brain " + (brain + 1) + " to check it works."
+                            + (own ? " It goes straight from your computer: your key isn't sent to the server for this." : "")))).build();
             test.active = !testing;
             addRenderableWidget(test);
         }
@@ -490,7 +538,11 @@ public final class SolaceSetupScreen extends Screen {
         String live = liveStatus(brain);
         if (!status.getString().isEmpty()) y = stack(y, status, 0xFFFFFFFF);
         else if (!live.isEmpty()) y = stack(y, Component.literal("Right now" + live), 0xFFAAAAAA);
-        else if (!empty) y = stack(y, Component.literal(PROVIDER_NOTES.getOrDefault(provider, "")), 0xFFAAAAAA);
+        else if (!empty && !own) y = stack(y, Component.literal(PROVIDER_NOTES.getOrDefault(provider, "")), 0xFFAAAAAA); // on a server the warning needs the room
+        if (own) {
+            initOwnNotes(y);
+            return;
+        }
         int used = 0;
         for (String p : providers) if (!p.equals("none")) used++;
         if (used < 2) {
@@ -504,6 +556,38 @@ public final class SolaceSetupScreen extends Screen {
             stack(y, Component.literal("You're on a server: the server owner sets Solace's AI there. This only changes your own worlds.")
                     .withStyle(ChatFormatting.YELLOW), 0xFFAAAAAA);
         }
+    }
+
+    /** The notes under your own AI on a server: the warning first, then what this server allows. */
+    private void initOwnNotes(int y) {
+        y = stack(y, Component.literal("Only on a server run by a friend you trust: your key goes to that server, and whoever runs it could get at it. "
+                + "Use a separate key with a spending limit (or a free one).").withStyle(ChatFormatting.GOLD), 0xFFAAAAAA);
+        com.solacemod.solace.network.ModNetwork.ServerAiPayload info = OwnAi.serverInfo();
+        String state;
+        if (info == null) state = "This server didn't say whether it takes players' own AI.";
+        else if (!info.playerAi()) state = "This server doesn't take players' own AI, so your key is never sent here.";
+        else if (!OwnAi.encrypted()) state = "This server's connection isn't encrypted, so your key is never sent here.";
+        else if (!OwnAi.trusted()) state = "This server takes players' own AI. Press Done to choose whether you trust it.";
+        else state = "You trust this server: with Own AI on, Solace uses your AI here.";
+        stack(y, Component.literal(state).withStyle(ChatFormatting.YELLOW), 0xFFAAAAAA);
+    }
+
+    /** Asks once per server whether the player trusts it with their key, before anything is sent. */
+    private void askTrust() {
+        if (minecraft == null) return;
+        String address = OwnAi.serverAddress();
+        minecraft.setScreen(new net.minecraft.client.gui.screens.ConfirmScreen(yes -> {
+            if (yes) {
+                OwnAi.trust();
+                OwnAi.send();
+            }
+            onClose();
+        }, Component.literal("Do you trust whoever runs this server?").withStyle(ChatFormatting.GOLD),
+                Component.literal("Your AI key will be sent to " + (address == null ? "this server" : address) + ". Solace never saves, logs or shows it, "
+                        + "and the server forgets it when you leave. But whoever runs the server controls that computer, so they could still get at "
+                        + "your key and use it.\n\nOnly say yes if a friend you trust runs this server. Use a separate key with a spending limit "
+                        + "(or a free one), so you can delete it any time."),
+                Component.literal("I trust them, send it"), Component.literal("Cancel")));
     }
 
     private void swap(int a, int b) {
@@ -654,12 +738,23 @@ public final class SolaceSetupScreen extends Screen {
                 .withTooltip(v -> Tooltip.create(Component.literal("Each player gets their own Solace. On a busy server, "
                         + "letting players opt in saves AI requests (the server owner pays for all of them).")))
                 .create(controlX(), rowY(0), controlWidth(), 20, Component.literal("Who gets one"), (b, v) -> whoGets = v));
-        label(1, "Each player's share");
-        addRenderableWidget(CycleButton.<Integer>builder(v -> Component.literal(v == 0 ? "No limit" : v + " AI requests a day"))
+        label(1, "Sharing your AI");
+        addRenderableWidget(CycleButton.<Integer>builder(v -> Component.literal(v == 0 ? "No limit" : v + " a day each"))
                 .withValues(PLAYER_LIMITS).withInitialValue(PLAYER_LIMITS.contains(playerLimit) ? playerLimit : 150).displayOnlyValue()
-                .withTooltip(v -> Tooltip.create(Component.literal("Most AI requests one player can use per day, so one chatty player "
+                .withTooltip(v -> Tooltip.create(Component.literal("Most of your AI requests one player can use per day, so one chatty player "
                         + "can't use up everyone's. Not used in single player.")))
-                .create(controlX(), rowY(1), controlWidth(), 20, Component.literal("Each player's share"), (b, v) -> playerLimit = v));
+                .create(controlX(), rowY(1), half, 20, Component.literal("Each player's share"), (b, v) -> playerLimit = v));
+        addRenderableWidget(CycleButton.<String>builder(v -> Component.literal(switch (v) {
+                    case "no_backup" -> "Lend: no backup";
+                    case "never" -> "Lend: never";
+                    default -> "Lend: always";
+                })).withValues(List.of("always", "no_backup", "never")).withInitialValue(lendAi).displayOnlyValue()
+                .withTooltip(v -> Tooltip.create(Component.literal(switch (v) {
+                    case "no_backup" -> "Players without their own AI use yours. Players with their own never fall back to yours.";
+                    case "never" -> "Only players with their own AI get a talking Solace. Everyone else's only follows simple orders.";
+                    default -> "Players without their own AI use yours, and so do players whose own AI runs out or fails.";
+                })))
+                .create(controlX() + half + 3, rowY(1), half, 20, Component.literal("Lend"), (b, v) -> lendAi = v));
         label(2, "Solace notices");
         addRenderableWidget(toggle(controlX(), rowY(2), half, "Jealousy", jealousy, v -> jealousy = v,
                 "Solace notices who you spend time with, and gets jealous (later in the story)."));
@@ -675,11 +770,14 @@ public final class SolaceSetupScreen extends Screen {
                 "Friends can join a boss fight: it gets stronger for each friend who fights, and it fights them too."));
         addRenderableWidget(toggle(controlX() + half + 3, rowY(4), half, "Own freeze", personalFreeze, v -> personalFreeze = v,
                 "With others online, one strange moment happens only on that player's screen instead of being skipped."));
-        label(5, "Talks about them");
+        label(5, "AI");
         addRenderableWidget(CycleButton.onOffBuilder(togetherAi)
                 .withTooltip(v -> Tooltip.create(Component.literal("Solace talks about these moments using the AI. "
                         + "Uses AI requests, paid from the server owner's key. Off = short written lines instead.")))
-                .create(controlX(), rowY(5), controlWidth(), 20, Component.literal("Talks about them"), (b, v) -> togetherAi = v));
+                .create(controlX(), rowY(5), half, 20, Component.literal("AI comments"), (b, v) -> togetherAi = v));
+        addRenderableWidget(toggle(controlX() + half + 3, rowY(5), half, "Own AI keys", playerAi, v -> playerAi = v,
+                "Players can give Solace their own AI key, so their requests cost you nothing. Only for servers among friends: "
+                        + "their key passes through your server. Solace never saves or shows it, but players have to trust you with it."));
         label(6, "Chat");
         addRenderableWidget(toggle(controlX(), rowY(6), half, "Replies to all", repliesToAll, v -> repliesToAll = v,
                 "Everyone sees Solace's answers when its owner talks to it. Story moments always stay private."));
@@ -772,9 +870,12 @@ public final class SolaceSetupScreen extends Screen {
     private void runTest() {
         int index = brain;
         String provider = providers[index];
-        ProviderSettings settings = ProviderSettings.resolve(provider, apiKeys[index], models[index], baseUrls[index], 20, SolaceConfig.ANTHROPIC_EFFORT.get());
+        ProviderSettings settings = own
+                ? ProviderSettings.forPlayer(provider, apiKeys[index], models[index], 20, SolaceConfig.ANTHROPIC_EFFORT.get())
+                : ProviderSettings.resolve(provider, apiKeys[index], models[index], baseUrls[index], 20, SolaceConfig.ANTHROPIC_EFFORT.get());
         if (settings == null) {
-            status = Component.literal("Unknown provider.").withStyle(ChatFormatting.RED);
+            status = Component.literal(own ? "Paste your key first. On a server, only a pasted key and a plain model name work." : "Unknown provider.")
+                    .withStyle(ChatFormatting.RED);
             rebuildWidgets();
             return;
         }
