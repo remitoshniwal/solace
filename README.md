@@ -36,7 +36,7 @@ No files to edit. Everything is in game:
 1. Press **Esc → Mods → Solace → Config** (or click **[Open setup]** when Solace mentions it in chat, or type `/solace setup`).
 2. On the **AI Brain** page, pick a **Provider**. Groq is the easiest free one.
 3. Click **Get key**, make a free account on that website, copy your key, and paste it into the **API key** box.
-4. Click **Test connection**. When it says "It works!", press **Done**.
+4. Click **Test**. When it says "It works!", press **Done**.
 
 | Provider | Cost |
 |---|---|
@@ -51,23 +51,40 @@ No files to edit. Everything is in game:
 
 The other pages set up **Voice**, **Story** (turn scares down or off), **Abilities** and **Together** (multiplayer). **Advanced...** shows every setting.
 
-On a multiplayer server, **every player needs the mod installed**, but only the **server owner** needs an AI key: Solace's AI runs on the server, and the owner pays for everyone's requests. Each player gets their own Solace and their own story, and the Solaces notice each other (see the **Together** page to turn any of that off). Each player also has a daily share of the owner's AI requests (the share on the Together page, 150 by default), so one chatty player can't use up everyone's. On a busy server, set **Who gets one** (Together page) to *Only players who type /solace join*. The server owner sets Solace's AI (in the server's `config/solace-common.toml`). Each player's voice and comfort settings are their own.
-
-**Players' own AI (servers among friends only).** The owner can turn on **Own AI keys** (Together page) so players can use their own AI key instead of the owner's. A player then fills in the **AI Brain** page while connected to that server. Their key is only sent if the owner allows it, they say they trust that server, and the connection is encrypted. **Whoever runs the server could get at a player's key**, so only do this with friends you trust, and use a separate key with a spending limit (or a free one). Only the big online providers work this way (not Ollama, LM Studio or a custom address). **Lend** (Together page) decides who may use the owner's AI: *always* (players without their own, and as a backup), *no backup*, or *never*. Details: [docs/PROVIDERS.md](docs/PROVIDERS.md#your-own-ai-on-someone-elses-server).
-
 More detail, including recommended models and costs: [docs/PROVIDERS.md](docs/PROVIDERS.md)
 
 ### ⚠️ Read this about API keys and money
 
 - **Your API key is like a password.** Anyone who has it can spend your money.
   - Don't show it on stream or in screenshots (the setup screen hides it unless you click **Show**).
-  - It's saved in `config/solace-common.toml` in your Minecraft folder: **never share that file** or put it in a modpack.
+  - It's saved in `config/solace-common.toml` in your Minecraft folder (your own key for servers in `config/solace-client.toml`): **never share those files** or put them in a modpack.
 - **Paid providers charge per message.** Each Solace reply is one request. Built-in limits stop surprise bills:
   - **Daily limit** on the AI Brain page (default 400 replies a day for all brains together; after that Solace goes quiet until tomorrow)
   - At most 12 requests a minute (change in **Advanced...**)
   - **Talks on its own** (Abilities page) also uses requests. Turn it off to save more.
   - In multiplayer: each player's daily share (Together page), and **AI comments** (Together page), which lets Solace comment on the other players using a few extra requests. Turn it off to save more.
 - Check `/solace status` to see how many requests were used today (operators: `/solace admin usage` lists each player).
+
+## Playing on a server
+
+- **Every player needs the mod**, the same version as the server.
+- **Only the server owner needs an AI key.** Solace's AI runs on the server, so the owner's key pays for everyone. The owner sets it up in the server's `config/solace-common.toml` (or in setup, when hosting from their own game).
+- **Each player gets their own Solace and their own story.** The Solaces notice each other; the **Together** page turns any of that off.
+- **Each player has a daily share** of the owner's AI (150 a day by default, Together page), so one chatty player can't use up everyone's.
+- **Busy server?** Set **Who gets one** (Together page) to *Only players who type /solace join*.
+- Each player's voice, comfort and sound settings are their own.
+
+### Players' own AI (only with friends you trust)
+
+The owner can turn on **Own AI keys** (Together page), so players can use their own AI key instead of the owner's:
+
+- A player fills in the **AI Brain** page while connected to that server and turns **Own AI** on. Solace asks once whether they trust that server.
+- The key is only sent if the owner allows it, the player trusts that server, and the connection is encrypted. The server never saves, logs or shows it, and forgets it when the player leaves.
+- **But whoever runs the server could still get at a player's key.** Only do this with friends you trust, and use a separate key with a spending limit (or a free one).
+- Only the big online providers work this way (not Ollama, LM Studio or a custom address).
+- **Lend** (Together page) decides who may use the owner's AI: *always* (players without their own, and as a backup), *no backup* (only players without their own) or *never*.
+
+Details: [docs/PROVIDERS.md](docs/PROVIDERS.md#your-own-ai-on-someone-elses-server)
 
 ## Voice chat (optional)
 
@@ -81,7 +98,7 @@ Open setup and go to the **Voice** page:
 
 | Command | What it does |
 |---|---|
-| `/solace` | Help |
+| `/solace` or `/solace help` | Help |
 | `/solace setup` | Open the settings screen |
 | `/solace say <message>` | Talk to Solace from anywhere |
 | `/solace come` | Call Solace to you |
@@ -91,8 +108,9 @@ Open setup and go to the **Voice** page:
 | `/solace note <text>` | Playtesting: save a note about this moment (see [docs/PLAYTEST.md](docs/PLAYTEST.md)) |
 | `/solace forget confirm` | Wipe Solace's memory of you (all worlds) |
 | `/solace reset confirm` | Restart the story in this world |
+| `/solace join` / `/solace leave confirm` | On servers where the owner chose *Only players who type /solace join*: get your own Solace, or send it away |
 | `/solace admin usage` | Server operators: how many AI requests each player used today |
-| `/solace admin ...` | Server operators, for testing: `chapter`, `trust`, `bond`, `fragment`, `power`, `horror`, `presence`, `lantern`, `question`, `together`, `playtest on/off` (see [docs/STORY.md](docs/STORY.md)) |
+| `/solace admin ...` | Server operators, for testing (**spoilers**): `chapter`, `trust`, `bond`, `fragment`, `power`, `horror`, `presence`, `lantern`, `negative`, `sound`, `question`, `ending`, `memory`, `afterward`, `together`, `playtest on/off`. Full list in [docs/STORY.md](docs/STORY.md) (**the whole story, spoilers**) |
 
 **Tip:** give Solace items by right-clicking it while holding them, or just throw them to it (Q). It doesn't need tools to mine (a pickaxe only makes it faster). Ask it for something it doesn't have and it makes it with its power, if it's strong enough. It needs blocks to build and coal + sticks to make torches.
 
@@ -133,7 +151,7 @@ Pushing to GitHub builds and tests the mod automatically (see `.github/workflows
 | `client/` | Rendering, voice chat, screen effects (only runs on players' computers) |
 | `config/` | All settings |
 
-Story spoilers: [docs/STORY.md](docs/STORY.md)
+Story spoilers (the whole story, every ending): [docs/STORY.md](docs/STORY.md)
 
 ## Credits
 
