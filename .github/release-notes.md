@@ -8,6 +8,9 @@ An AI companion that remembers you, and a psychological horror story about the l
 3. Start Minecraft with the NeoForge profile and open a world. Solace shows up after about 30 seconds.
 4. To give Solace an AI brain: **Esc > Mods > Solace > Config**
 
+### New in 1.10.3: under the hood
+- Small fixes that keep the mod building and testing reliably in the future. Nothing changes in game.
+
 ### New in 1.10.2: tidier messages
 - **A clearer `/solace status`.** Your story first, then the AI, with colours. Lines that don't apply (like debt when there's no story) are hidden.
 - **`/solace help` works,** and only lists what you can use.
