@@ -16,7 +16,8 @@ Solace shows up about 30 seconds after you join a world. It's a tall, headless f
 - **Does things on its own.** Leaves gifts on your bed. Watches you sleep. Builds things while you're logged off. Rearranges your chests. Once in a while, for a third of a second, you're in the sky, falling... and then you're back, like nothing happened.
 - **Three forms, made in Blockbench.** Every day it's a tall, headless, eyeless shadow in dark grey armour, with spiked shoulders, a laced collar round an empty hollow, long arms and claws, outlined in white. Sometimes it flickers into its negative: a white armoured wraith with shoulder flames and sword blades for hands, outlined in black. Its true form, the Lantern, is a crackling 3D ball of blue plasma with a white-hot middle. No extra mods needed.
 - **Does what you ask.** "follow me", "stay here", "guard me", "mine 10 iron", "chop some wood", "pick up the items", "build a shelter", "craft a stone pickaxe", "light this place up", "give me your cobblestone", "remember this place as home", "take me home", "where's the nearest village?", "make it day", "heal me"
-- **Knows what day it is.** Halloween, the new year, three in the morning, coming back after weeks away: Solace notices, in its own way. It uses your own clock, even on a server in another country (switch: **Real dates and times**, Abilities page).
+- **Knows what day it is.** Halloween, the new year, three in the morning, coming back after weeks away: Solace notices, in its own way. It uses your own clock, even on a server in another country (switch: **Real dates**, Abilities page).
+- **Watches what you build.** Build a house, a farm, a tower, a wall or a mine, and Solace stops to look at it, remembers it, and has something to say about it. It only ever looks: it never touches your builds (switch: **Your builds**, Abilities page).
 - **Remembers you.** Your name, what you like, what you did, how you treated it. It even remembers you **across different worlds**.
 - **Voice chat (optional).** Hold **G** to talk with your mic, and hear Solace speak.
 - **A real story.** 8 chapters, 7 journal pages, the Watcher, Maren's house, a boss fight, and **5 endings** (two are secret). Its own spoiler-free tab in the advancements screen (L) shows how far you've come.
@@ -111,7 +112,7 @@ Open setup and go to the **Voice** page:
 | `/solace reset confirm` | Restart the story in this world |
 | `/solace join` / `/solace leave confirm` | On servers where the owner chose *Only players who type /solace join*: get your own Solace, or send it away |
 | `/solace admin usage` | Server operators: how many AI requests each player used today |
-| `/solace admin ...` | Server operators, for testing (**spoilers**): `chapter`, `trust`, `bond`, `fragment`, `power`, `horror`, `presence`, `lantern`, `negative`, `sound`, `question`, `ending`, `memory`, `afterward`, `together`, `date`, `playtest on/off`. Full list in [docs/STORY.md](docs/STORY.md) (**the whole story, spoilers**) |
+| `/solace admin ...` | Server operators, for testing (**spoilers**): `chapter`, `trust`, `bond`, `fragment`, `power`, `horror`, `presence`, `lantern`, `negative`, `sound`, `question`, `ending`, `memory`, `afterward`, `together`, `date`, `build`, `playtest on/off`. Full list in [docs/STORY.md](docs/STORY.md) (**the whole story, spoilers**) |
 
 **Tip:** give Solace items by right-clicking it while holding them, or just throw them to it (Q). It doesn't need tools to mine (a pickaxe only makes it faster). Ask it for something it doesn't have and it makes it with its power, if it's strong enough. It needs blocks to build and coal + sticks to make torches.
 

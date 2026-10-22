@@ -57,9 +57,26 @@ public final class ServerEvents {
             com.solacemod.solace.horror.PersonalFreeze.forget(player);
             com.solacemod.solace.story.AiService.forgetOwn(player.getUUID()); // their own AI key is forgotten the moment they leave
             com.solacemod.solace.story.RealDates.forget(player.getUUID()); // and their time zone
+            com.solacemod.solace.story.Builds.forget(player.getUUID());
             PlayerStory story = StoryData.get(player.getServer()).getIfPresent(player.getUUID());
             if (story != null) StoryDirector.onLogout(player, story);
         }
+    }
+
+    /** A player placed a block: Solace counts it, to notice what they build (story/Builds.java). It never changes anything. */
+    @SubscribeEvent
+    public static void onPlaced(net.neoforged.neoforge.event.level.BlockEvent.EntityPlaceEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || player.getServer() == null) return;
+        PlayerStory story = StoryData.get(player.getServer()).getIfPresent(player.getUUID());
+        if (story != null && story.met) com.solacemod.solace.story.Builds.onPlaced(player, story, event.getPos().immutable(), event.getPlacedBlock());
+    }
+
+    /** A player broke a block: stone underground counts towards noticing a mine. */
+    @SubscribeEvent
+    public static void onBroken(net.neoforged.neoforge.event.level.BlockEvent.BreakEvent event) {
+        if (!(event.getPlayer() instanceof ServerPlayer player) || player.getServer() == null) return;
+        PlayerStory story = StoryData.get(player.getServer()).getIfPresent(player.getUUID());
+        if (story != null && story.met) com.solacemod.solace.story.Builds.onBroken(player, story, event.getPos().immutable(), event.getState());
     }
 
     /** While only this player's screen is frozen (chapter 6 with others online), nothing can hurt them: they can't see it coming. */
@@ -117,6 +134,7 @@ public final class ServerEvents {
                     com.solacemod.solace.horror.OnItsOwn.tickGifts(player, story);
                     AmbientChatter.tick(player, story);
                     com.solacemod.solace.story.Together.tick(player, story);
+                    com.solacemod.solace.story.Builds.tick(player, story);
                 }
             } catch (RuntimeException e) {
                 Solace.LOGGER.error("Solace tick failed for {}", player.getGameProfile().getName(), e);
@@ -147,6 +165,7 @@ public final class ServerEvents {
         com.solacemod.solace.horror.PersonalFreeze.reset();
         com.solacemod.solace.story.AiService.forgetAllOwn();
         com.solacemod.solace.story.PlayerAi.reset();
+        com.solacemod.solace.story.Builds.reset();
         SolaceBrain.reset();
         StoryDirector.reset();
     }

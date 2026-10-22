@@ -312,6 +312,8 @@ public final class OnItsOwn {
         Vec3 at = behind(p, 6 + RANDOM.nextInt(5));
         if (at == null) return;
         BlockPos base = BlockPos.containing(at);
+        // Never next to something the player built: their builds stay exactly as they left them.
+        if (com.solacemod.solace.story.Builds.nearBuild(story, level.dimension().location().toString(), base, 16, null)) return;
         switch (RANDOM.nextInt(3)) {
             case 0 -> { // a dirt pillar with a torch on top
                 int h = 3 + RANDOM.nextInt(3);

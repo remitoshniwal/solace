@@ -271,6 +271,15 @@ public final class SolaceCommand {
                                         .executes(ctx -> date(ctx, ""))
                                         .then(Commands.argument("detail", StringArgumentType.greedyString())
                                                 .executes(ctx -> date(ctx, StringArgumentType.getString(ctx, "detail")))))))
+                        .then(Commands.literal("build").then(Commands.argument("player", EntityArgument.player())
+                                .then(Commands.argument("what", StringArgumentType.word())
+                                        .suggests((ctx, b) -> {
+                                            for (String o : com.solacemod.solace.story.Builds.ADMIN_OPTIONS) b.suggest(o);
+                                            return b.buildFuture();
+                                        })
+                                        .executes(ctx -> build(ctx, ""))
+                                        .then(Commands.argument("detail", StringArgumentType.greedyString())
+                                                .executes(ctx -> build(ctx, StringArgumentType.getString(ctx, "detail")))))))
                         .then(Commands.literal("question").then(Commands.argument("player", EntityArgument.player()).executes(ctx -> {
                             ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
                             PlayerStory s = story(ctx, p);
@@ -285,6 +294,16 @@ public final class SolaceCommand {
         ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
         try {
             return msg(ctx, com.solacemod.solace.story.RealDates.admin(p, story(ctx, p), StringArgumentType.getString(ctx, "what"), detail));
+        } catch (IllegalStateException e) {
+            return fail(ctx, e.getMessage());
+        }
+    }
+
+    /** /solace admin build: what Solace noticed you build, and pretend builds for testing (story/Builds.java). */
+    private static int build(CommandContext<CommandSourceStack> ctx, String detail) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
+        try {
+            return msg(ctx, com.solacemod.solace.story.Builds.admin(p, story(ctx, p), StringArgumentType.getString(ctx, "what"), detail));
         } catch (IllegalStateException e) {
             return fail(ctx, e.getMessage());
         }

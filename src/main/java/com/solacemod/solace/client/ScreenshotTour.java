@@ -36,6 +36,8 @@ import java.util.List;
  * It runs with no AI, so the pictures show the written lines. At the end it clears the faked endings from the memory.
  * With -Dsolace.tour=dates it moves the player's clock to Halloween, the new year and 3 a.m., and back after a long time away,
  * in each tone of the story (pictures d_*.png, written lines, no AI). Timeline in solace/playtest/.
+ * With -Dsolace.tour=builds it places blocks for real (like a player) and builds a house, a farm, a tower, a wall and "something",
+ * and pictures what Solace says about each in each tone (pictures b_*.png, written lines, no AI).
  */
 @EventBusSubscriber(modid = Solace.MODID, value = Dist.CLIENT)
 public final class ScreenshotTour {
@@ -45,7 +47,10 @@ public final class ScreenshotTour {
     private static final boolean TOGETHER = "together".equals(System.getProperty("solace.tour"));
     private static final boolean AFTERWARD = "afterward".equals(System.getProperty("solace.tour"));
     private static final boolean DATES = "dates".equals(System.getProperty("solace.tour"));
-    private static final boolean ENABLED = Boolean.getBoolean("solace.screenshots") || PLAYTEST || PHASE2 || SOUNDS || TOGETHER || AFTERWARD || DATES;
+    private static final boolean BUILDS = "builds".equals(System.getProperty("solace.tour"));
+    private static final boolean ENABLED = Boolean.getBoolean("solace.screenshots") || PLAYTEST || PHASE2 || SOUNDS || TOGETHER || AFTERWARD || DATES || BUILDS;
+    /** Builds tour: the "talks on its own" gap before the tour shortened it, put back at the end. */
+    private static Integer ambientMinutesBefore;
     /** Together tour: the "AI comments" setting before the tour turned it off, put back at the end. */
     private static Boolean aiCommentsBefore;
     /** For the sounds tour: every solace: sound that played, in order. */
@@ -82,7 +87,7 @@ public final class ScreenshotTour {
         }
         MinecraftServer server = mc.getSingleplayerServer();
         if (server == null) return;
-        mc.options.hideGui = !PLAYTEST && !PHASE2 && !SOUNDS && !TOGETHER && !AFTERWARD && !DATES;
+        mc.options.hideGui = !PLAYTEST && !PHASE2 && !SOUNDS && !TOGETHER && !AFTERWARD && !DATES && !BUILDS;
         mc.options.pauseOnLostFocus = false; // clicking another window must not pause the tour's world
         ticks++;
         // Solace appears 30 seconds (of server time) after the player joins. Start once it's really here, plus 3 seconds to settle.
@@ -102,7 +107,7 @@ public final class ScreenshotTour {
         if (stops == null) {
             String me = mc.player.getGameProfile().getName();
             stops = PLAYTEST ? playtestPlan(me) : PHASE2 ? phase2Plan(me) : SOUNDS ? soundsPlan(me) : TOGETHER ? togetherPlan(me)
-                    : AFTERWARD ? afterwardPlan(me) : DATES ? datesPlan(me) : plan(me);
+                    : AFTERWARD ? afterwardPlan(me) : DATES ? datesPlan(me) : BUILDS ? buildsPlan(me) : plan(me);
         }
         if (wait > 0) {
             wait -= passed;
@@ -321,6 +326,62 @@ public final class ScreenshotTour {
         return list;
     }
 
+    /** 1.13.0: Solace notices builds. One real build placed like a player, then each kind in each tone (no AI: the written lines show). */
+    private static List<Stop> buildsPlan(String me) {
+        String solace = "@e[type=solace:solace,limit=1]";
+        String build = "solace admin build " + me + " ";
+        List<Stop> list = new ArrayList<>();
+        list.add(new Stop(List.of("#quiet", "gamerule logAdminCommands false", "gamerule sendCommandFeedback false",
+                "gamerule doDaylightCycle false", "gamerule doWeatherCycle false", "gamerule randomTickSpeed 0", "weather clear", "time set noon",
+                "solace admin playtest on", "tp " + me + " 0.5 -60 0.5 0 8", "tp " + solace + " 0.5 -60 6.0 180 0", "data merge entity " + solace + " {NoAI:1b}",
+                "solace admin chapter " + me + " 1"), 60, null));
+        list.add(new Stop(List.of("#setup_abilities", "#mouse_corner"), 30, "b_0_setup.png"));
+        list.add(new Stop(List.of("#close", "data merge entity " + solace + " {NoAI:0b}", "item replace entity " + me + " weapon.mainhand with minecraft:stone 64"), 10, null));
+        // For real: 48 blocks placed by right-clicking, then a pause, then Solace's next turn to talk on its own (shortened to a minute).
+        list.add(new Stop(List.of("#place_floor", "#ambient_fast", "#clear_chat"), 20 * 100, null));
+        list.add(new Stop(List.of("#open_chat"), 10, "b_1_real_floor.png"));
+        list.add(new Stop(List.of("#close", "#ambient_back"), 10, null));
+        // The builds, made with commands once. "record" counts their blocks as placed by the player.
+        list.add(new Stop(List.of("fill 10 -60 10 14 -56 14 minecraft:oak_planks hollow", "setblock 12 -60 10 minecraft:oak_door[half=lower,facing=north]",
+                "setblock 12 -59 10 minecraft:oak_door[half=upper,facing=north]", "setblock 12 -60 12 minecraft:red_bed[part=foot,facing=south]",
+                "setblock 12 -60 13 minecraft:red_bed[part=head,facing=south]",
+                "fill 20 -61 10 28 -61 18 minecraft:farmland", "fill 20 -60 10 28 -60 18 minecraft:wheat",
+                "fill -12 -60 10 -10 -45 12 minecraft:stone_bricks hollow", "fill -30 -60 40 -15 -57 40 minecraft:cobblestone",
+                "fill 30 -60 -20 36 -60 -14 minecraft:glass"), 40, null));
+        // Solace faces the player, then stops and turns to look at the house behind it (off to its left in the picture).
+        list.add(new Stop(List.of(build + "forget", "tp " + me + " 6.5 -60 0.5 0 10", "tp " + solace + " 6.5 -60 6.5 180 0", build + "record 10 -60 10 14 -56 14"), 40, "b_2_looks.png"));
+        String[][] tones = {{"early", "solace admin chapter " + me + " 1"}, {"middle", "solace admin chapter " + me + " 3"},
+                {"late", "solace admin chapter " + me + " 5"}, {"kept", "solace admin ending " + me + " forever"}};
+        int n = 3;
+        for (String[] tone : tones) {
+            list.add(new Stop(List.of(tone[1]), tone[0].equals("kept") ? 300 : 60, null));
+            list.addAll(eachBuild(me, build));
+            list.add(new Stop(List.of("#open_chat"), 10, "b_" + n++ + "_" + tone[0] + ".png"));
+            list.add(new Stop(List.of("#close"), 10, null));
+        }
+        list.add(new Stop(List.of("/solace reset confirm"), 20 * 60, null));
+        list.add(new Stop(List.of("solace admin ending " + me + " together"), 300, null));
+        list.addAll(eachBuild(me, build));
+        list.add(new Stop(List.of("#open_chat"), 10, "b_7_friend.png"));
+        list.add(new Stop(List.of("#close", "gamerule sendCommandFeedback true", "/solace admin build " + me + " list"), 20, null));
+        list.add(new Stop(List.of("#open_chat"), 10, "b_8_list.png"));
+        list.add(new Stop(List.of("#close", build + "forget", "execute as " + me + " run solace reset confirm", "solace admin playtest off"), 20, null));
+        return list;
+    }
+
+    /** Builds tour: Solace notices each build in turn and says its line (a mine is pretended: digging can't be replayed). */
+    private static List<Stop> eachBuild(String me, String build) {
+        List<Stop> list = new ArrayList<>();
+        list.add(new Stop(List.of("#clear_chat", build + "forget", "tp " + me + " 0.5 -60 0.5 0 8"), 10, null));
+        for (String box : List.of("10 -60 10 14 -56 14", "20 -60 10 28 -60 18", "-12 -60 10 -10 -45 12", "-30 -60 40 -15 -57 40", "30 -60 -20 36 -60 -14")) {
+            list.add(new Stop(List.of(build + "record " + box), 40, null));
+            list.add(new Stop(List.of(build + "say"), 20, null));
+        }
+        list.add(new Stop(List.of(build + "mine"), 10, null));
+        list.add(new Stop(List.of(build + "say"), 20, null));
+        return list;
+    }
+
     /**
      * Phase 4 (1.9.0): every multiplayer moment, alone. The other player is a stand-in ("Friend", or a Solace that belongs to nobody).
      * AI comments are switched off for the tour, so the written lines show (there's no AI key in the automatic build anyway).
@@ -445,6 +506,26 @@ public final class ScreenshotTour {
             }
             case "#ai_comments_back" -> {
                 if (aiCommentsBefore != null) com.solacemod.solace.config.SolaceConfig.MULTIPLAYER_AI_COMMENTS.set(aiCommentsBefore);
+            }
+            case "#place_floor" -> {
+                // Places the held block on the ground all around the player by right-clicking, like a player does (7 by 7, not under the player).
+                net.minecraft.core.BlockPos at = mc.player.blockPosition();
+                if (mc.gameMode == null) return;
+                for (int dx = -3; dx <= 3; dx++) {
+                    for (int dz = -3; dz <= 3; dz++) {
+                        if (dx == 0 && dz == 0) continue;
+                        net.minecraft.core.BlockPos ground = at.offset(dx, -1, dz);
+                        mc.gameMode.useItemOn(mc.player, net.minecraft.world.InteractionHand.MAIN_HAND, new net.minecraft.world.phys.BlockHitResult(
+                                net.minecraft.world.phys.Vec3.atCenterOf(ground).add(0, 0.5, 0), net.minecraft.core.Direction.UP, ground, false));
+                    }
+                }
+            }
+            case "#ambient_fast" -> {
+                ambientMinutesBefore = com.solacemod.solace.config.SolaceConfig.AMBIENT_CHATTER_MINUTES.get();
+                com.solacemod.solace.config.SolaceConfig.AMBIENT_CHATTER_MINUTES.set(1);
+            }
+            case "#ambient_back" -> {
+                if (ambientMinutesBefore != null) com.solacemod.solace.config.SolaceConfig.AMBIENT_CHATTER_MINUTES.set(ambientMinutesBefore);
             }
             case "#quiet" -> {
                 mc.getTutorial().setStep(net.minecraft.client.tutorial.TutorialSteps.NONE);

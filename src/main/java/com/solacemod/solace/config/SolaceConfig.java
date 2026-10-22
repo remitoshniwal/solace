@@ -57,6 +57,7 @@ public final class SolaceConfig {
     public static final ModConfigSpec.BooleanValue PLAYTEST_LOG;
     public static final ModConfigSpec.BooleanValue STORY_NUDGES;
     public static final ModConfigSpec.BooleanValue REAL_DATES;
+    public static final ModConfigSpec.BooleanValue NOTICE_BUILDS;
 
     // Horror
     public static final ModConfigSpec.DoubleValue HORROR_INTENSITY;
@@ -162,7 +163,7 @@ public final class SolaceConfig {
         REPLIES_VISIBLE_TO_ALL = b.comment("Multiplayer: everyone sees Solace's answers when its owner talks to it. Story moments always stay private.")
                 .define("repliesVisibleToAll", false);
         AMBIENT_CHATTER = b.comment("Solace sometimes talks on its own (night falling, low health, caves...). Uses AI requests.",
-                        "Off = short written lines instead for the small extra moments (real dates).")
+                        "Off = short written lines instead for the small extra moments (real dates, builds).")
                 .define("ambientChatter", true);
         AMBIENT_CHATTER_MINUTES = b.comment("Minimum minutes between unprompted comments.")
                 .defineInRange("ambientChatterMinutes", 6, 1, 120);
@@ -185,6 +186,10 @@ public final class SolaceConfig {
         REAL_DATES = b.comment("Small moments on real dates and times: Halloween, the new year, very late at night, coming back after a long time away.",
                         "They use each player's own clock and never change the story. A few AI requests a year (written lines with ambientChatter off).")
                 .define("realDates", true);
+        NOTICE_BUILDS = b.comment("Solace notices what you build (a house, a farm, a tower, a wall, a mine) and says something about it.",
+                        "It only looks, never changes a block. It talks about it at its next turn to talk on its own, so no extra AI requests",
+                        "(a written line instead with ambientChatter off).")
+                .define("noticeBuilds", true);
         b.pop();
 
         b.push("horror");

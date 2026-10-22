@@ -138,6 +138,14 @@ public final class PlayerStory {
     /** Each real-date moment and when it last happened ("halloween" -> "2026"), so each one happens once. */
     public final Map<String, String> datesSeen = new LinkedHashMap<>();
 
+    // Builds (story/Builds.java)
+    /** Builds Solace has noticed: "kind|dimension|x|y|z", oldest first. */
+    public final List<String> builds = new ArrayList<>();
+    /** A build Solace still wants to talk about at its next turn to talk on its own (not saved), or null. */
+    public String pendingBuild;
+    public int pendingBuildBlocks;
+    public long pendingBuildTick;
+
     // Timing (not saved; reset each session)
     public long lastInteractionTick;
     public long lastAmbientTick;
@@ -275,6 +283,7 @@ public final class PlayerStory {
         CompoundTag dates = new CompoundTag();
         datesSeen.forEach(dates::putString);
         t.put("Dates", dates);
+        t.put("Builds", strings(builds));
         return t;
     }
 
@@ -351,6 +360,7 @@ public final class PlayerStory {
         s.afterScares = t.getInt("AfterScares");
         CompoundTag dates = t.getCompound("Dates");
         for (String k : dates.getAllKeys()) s.datesSeen.put(k, dates.getString(k));
+        readStrings(t.getList("Builds", Tag.TAG_STRING), s.builds);
         return s;
     }
 

@@ -24,6 +24,12 @@ final class AmbientChatter {
         long time = level.getDayTime() % 24000;
         String situation;
         if (player.getHealth() <= 6) situation = "The player is badly hurt (health " + Math.round(player.getHealth()) + "/20). Say something worried.";
+        else if (com.solacemod.solace.story.Builds.pending(story, now) != null) {
+            // Something it watched them build (story/Builds.java): this turn is about that, with a written line if no AI answers.
+            story.lastAmbientTick = now;
+            com.solacemod.solace.story.Builds.speak(player, story);
+            return;
+        }
         else if (time >= 12500 && time < 13500) situation = "The sun is setting and night is coming.";
         else if (player.getBlockY() < 30 && !level.canSeeSky(player.blockPosition())) situation = "The player is deep underground in the dark.";
         else if (level.isThundering()) situation = "There's a thunderstorm.";

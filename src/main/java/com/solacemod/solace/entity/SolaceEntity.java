@@ -99,6 +99,9 @@ public class SolaceEntity extends PathfinderMob {
     private int stareTicks;
     @Nullable
     private Entity stareTarget;
+    /** A spot it stares at instead of someone (a build it noticed), or null. */
+    @Nullable
+    private Vec3 stareSpot;
     private int lanternTicks;
     private int formBeforeLantern = FORM_NORMAL;
     private int agitatedTicks;
@@ -238,7 +241,20 @@ public class SolaceEntity extends PathfinderMob {
     public void setStareTicks(int ticks) {
         this.stareTicks = ticks;
         this.stareTarget = null;
+        this.stareSpot = null;
         if (ticks > 0) getNavigation().stop();
+    }
+
+    /** Stands still and looks at a spot (a build it just noticed). */
+    public void stareAtSpot(Vec3 spot, int ticks) {
+        setStareTicks(ticks);
+        this.stareSpot = spot;
+    }
+
+    /** The spot it's staring at, or null. */
+    @Nullable
+    public Vec3 stareSpot() {
+        return stareSpot;
     }
 
     /** Stands still and stares at someone else (another player, another Solace, the Hollow) instead of its owner. */
@@ -256,7 +272,10 @@ public class SolaceEntity extends PathfinderMob {
 
     public void tickStare() {
         if (stareTicks > 0) stareTicks--;
-        if (stareTicks == 0) stareTarget = null;
+        if (stareTicks == 0) {
+            stareTarget = null;
+            stareSpot = null;
+        }
     }
 
     // ---------- Form ----------

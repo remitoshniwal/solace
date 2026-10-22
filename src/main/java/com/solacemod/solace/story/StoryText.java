@@ -524,6 +524,80 @@ public final class StoryText {
     /** Added to Solace's memory when it meets the player in a new world after a long time (no AI request). %1$d = days. */
     public static final String LONG_GAP_EVENT = "before this new world, you hadn't seen the player for %1$d days (real days). You counted them";
 
+    // ---------- Builds (story/Builds.java) ----------
+    // Solace noticed something the player built. One AI hint (the kind of build plus the tone) and a written line for each kind and tone.
+
+    /** How a kind of build is named in the AI hint and in Solace's memory. */
+    public static String buildName(String kind) {
+        return switch (kind) {
+            case "house" -> "a house";
+            case "farm" -> "a farm";
+            case "tower" -> "a tall tower";
+            case "wall" -> "a long wall";
+            case "mine" -> "a mine, deep underground";
+            default -> "something (you can't tell what yet)";
+        };
+    }
+
+    /** The AI hint. blocks = about how many blocks it took. */
+    public static String build(String kind, Tone tone, int blocks) {
+        String start = "You just watched the player build " + buildName(kind) + " (about " + blocks + " blocks). You stopped and looked at it. ";
+        return start + switch (tone) {
+            case FRIEND -> "Say one honest, warm thing about it, maybe a question. You're a good friend now.";
+            case KEPT -> "They're yours now. Say one calm, gentle, slightly unsettling thing about it.";
+            case EARLY -> "Say one shy, curious, admiring thing about it. A little too interested.";
+            case MIDDLE -> "Say one short thing about it, a little possessive: is it for you, or for keeping you out?";
+            case LATE -> "Say one short, quiet, unsettling thing about it. You may think of someone who built things here before, but don't explain.";
+        } + " One or two sentences. Never offer to change it or add to it.";
+    }
+
+    public static String buildLine(String kind, Tone tone) {
+        return switch (kind) {
+            case "house" -> switch (tone) {
+                case FRIEND -> "\"You built a house,\" Solace says. \"It's good. Really.\"";
+                case KEPT -> "\"A house,\" Solace says. \"You don't need one. You have me.\"";
+                case EARLY -> "Solace looks at the house for a long time. \"Is there room in it for me?\"";
+                case MIDDLE -> "\"You built walls,\" Solace says. \"Who are they for?\"";
+                case LATE -> "\"I built someone a house once,\" Solace says. It doesn't say anything else.";
+            };
+            case "farm" -> switch (tone) {
+                case FRIEND -> "\"You're growing things,\" Solace says. \"I like watching things grow.\"";
+                case KEPT -> "\"Plenty of food,\" Solace says. \"You'll never have to leave.\"";
+                case EARLY -> "Solace crouches by the field. \"Will you show me when they come up?\"";
+                case MIDDLE -> "\"You're planning to stay a while,\" Solace says. It sounds pleased.";
+                case LATE -> "\"She grew things too,\" Solace says. \"Near the end, she stopped watering them.\"";
+            };
+            case "tower" -> switch (tone) {
+                case FRIEND -> "\"Nice view up there?\" Solace asks. \"Don't fall.\"";
+                case KEPT -> "\"You can see so far from up there,\" Solace says. \"And there's nowhere to go.\"";
+                case EARLY -> "Solace stares up at the tower. \"You can see everything from up there.\"";
+                case MIDDLE -> "\"Higher,\" Solace says. \"So you can see me coming.\"";
+                case LATE -> "\"Up there you can see the whole world,\" Solace says. \"There's still no way out of it.\"";
+            };
+            case "wall" -> switch (tone) {
+                case FRIEND -> "\"Good wall,\" Solace says. \"That'll keep the creepers out.\"";
+                case KEPT -> "\"You don't need walls any more,\" Solace says. \"Nothing gets near you now.\"";
+                case EARLY -> "\"A wall!\" Solace says. \"To keep the monsters out?\"";
+                case MIDDLE -> "\"Walls keep things out,\" Solace says. \"Not me, though. Right?\"";
+                case LATE -> "Solace runs a hand along your wall. \"Walls don't keep anything out. They keep things in.\"";
+            };
+            case "mine" -> switch (tone) {
+                case FRIEND -> "\"Careful down here,\" Solace says. \"Bring torches. Bring me.\"";
+                case KEPT -> "\"So deep,\" Solace says. \"Nobody would ever find you down here. Except me.\"";
+                case EARLY -> "\"It's so quiet down here,\" Solace says. \"I like it.\"";
+                case MIDDLE -> "\"Deeper,\" Solace says softly. \"Where nobody else can hear us.\"";
+                case LATE -> "\"You're digging the wrong way,\" Solace says. \"There's no way out down here either.\"";
+            };
+            default -> switch (tone) {
+                case FRIEND -> "\"You made something,\" Solace says. \"What is it?\"";
+                case KEPT -> "Solace watches you build. It doesn't ask what it's for. It doesn't need to.";
+                case EARLY -> "Solace watches you build with its hands folded. \"What is it going to be?\"";
+                case MIDDLE -> "\"You're making something,\" Solace says. \"Will it still be here when you're gone?\"";
+                case LATE -> "Solace watches you build. \"Everything you make here stays here,\" it says. \"Like her things did.\"";
+            };
+        };
+    }
+
     /** An ending's name as players see it: the same as its advancement. */
     public static String endingTitle(Ending e) {
         return switch (e) {
