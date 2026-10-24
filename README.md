@@ -51,11 +51,9 @@ No files to edit. Everything is in game:
 | OpenAI, Anthropic (Claude), DeepSeek, Mistral, xAI, Together, Cerebras | Paid (some have free tiers) |
 | Custom | Any other "OpenAI-compatible" server |
 
-**Using free keys? Add a second brain.** Click **+** next to *Brain* and add another free provider (Gemini, Cerebras...). Solace switches between them on its own, before one runs out, so the free limits last much longer. Details: [docs/PROVIDERS.md](docs/PROVIDERS.md#more-than-one-brain-recommended-for-free-keys)
+**Using free keys? Add a second brain.** Click **+** next to *Brain* and add another free provider (Gemini, Cerebras...). Solace switches between them on its own, before one runs out, so the free limits last much longer.
 
 The other pages set up **Voice**, **Story** (turn scares down or off), **Abilities** and **Together** (multiplayer). **Advanced...** shows every setting.
-
-More detail, including recommended models and costs: [docs/PROVIDERS.md](docs/PROVIDERS.md)
 
 ### ⚠️ Read this about API keys and money
 
@@ -88,8 +86,6 @@ The owner can turn on **Own AI keys** (Together page), so players can use their 
 - Only the big online providers work this way (not Ollama, LM Studio or a custom address).
 - **Lend** (Together page) decides who may use the owner's AI: *always* (players without their own, and as a backup), *no backup* (only players without their own) or *never*.
 
-Details: [docs/PROVIDERS.md](docs/PROVIDERS.md#your-own-ai-on-someone-elses-server)
-
 ## Voice chat (optional)
 
 Open setup and go to the **Voice** page:
@@ -109,12 +105,12 @@ Open setup and go to the **Voice** page:
 | `/solace pockets` | Open Solace's inventory (or right-click it with an empty hand) |
 | `/solace status` | Your story so far, trust, and the AI (each brain's state for the owner and operators) |
 | `/solace test` | Test each AI brain (server operators, or the single player world's owner) |
-| `/solace note <text>` | Playtesting: save a note about this moment (see [docs/PLAYTEST.md](docs/PLAYTEST.md)) |
+| `/solace note <text>` | Playtesting: save a note about this moment |
 | `/solace forget confirm` | Wipe Solace's memory of you (all worlds) |
 | `/solace reset confirm` | Restart the story in this world |
 | `/solace join` / `/solace leave confirm` | On servers where the owner chose *Only players who type /solace join*: get your own Solace, or send it away |
 | `/solace admin usage` | Server operators: how many AI requests each player used today |
-| `/solace admin ...` | Server operators, for testing (**spoilers**): `chapter`, `trust`, `bond`, `fragment`, `power`, `horror`, `presence`, `lantern`, `negative`, `sound`, `question`, `ending`, `memory`, `afterward`, `together`, `date`, `build`, `playtest on/off`. Full list in [docs/STORY.md](docs/STORY.md) (**the whole story, spoilers**) |
+| `/solace admin ...` | Server operators, for testing (**spoilers**): `chapter`, `trust`, `bond`, `fragment`, `power`, `horror`, `presence`, `lantern`, `negative`, `sound`, `question`, `ending`, `memory`, `afterward`, `together`, `date`, `build`, `playtest on/off`. |
 
 **Tip:** give Solace items by right-clicking it while holding them, or just throw them to it (Q). It doesn't need tools to mine (a pickaxe only makes it faster). Ask it for something it doesn't have and it makes it with its power, if it's strong enough. It needs blocks to build and coal + sticks to make torches.
 
@@ -154,8 +150,6 @@ Pushing to GitHub builds and tests the mod automatically (see `.github/workflows
 | `horror/` | The scares |
 | `client/` | Rendering, voice chat, screen effects (only runs on players' computers) |
 | `config/` | All settings |
-
-Story spoilers (the whole story, every ending): [docs/STORY.md](docs/STORY.md)
 
 ## Credits
 

@@ -19,3 +19,6 @@
 /config/
 *.toml.bak
 .env
+
+# Private notes (kept on this computer only)
+/docs/
