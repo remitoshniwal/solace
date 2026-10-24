@@ -238,6 +238,7 @@ jobs:
       # On every push to main: if there's no Release yet for the version in gradle.properties, publish one with the jar.
       # To release a new version, change mod_version in gradle.properties and push.
       - name: Publish release
+        id: release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -249,4 +250,14 @@ jobs:
           else
             gh release create "$TAG" build/libs/*.jar --target "$GITHUB_SHA" --title "Solace $TAG" --notes-file .github/release-notes.md
             echo "::notice title=Release::Published $TAG"
+            echo "created=true" >> "$GITHUB_OUTPUT"
           fi
+
+      # Only when the step above just made a brand-new release: upload the same jar to Modrinth.
+      # Needs the GitHub secret MODRINTH_TOKEN (without it this step just skips).
+      # The version type (beta/release) and the other settings are at the top of the script.
+      - name: Upload to Modrinth
+        if: steps.release.outputs.created == 'true'
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: bash .github/scripts/modrinth-upload.sh
