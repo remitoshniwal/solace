@@ -178,7 +178,7 @@ public final class SolaceConfig {
                         "everyone = every player. opt_in = only players who type /solace join (saves AI requests on busy servers).")
                 .defineInList("whoGetsSolace", "everyone", java.util.Arrays.asList("everyone", "opt_in"));
         PLAYTEST_LOG = b.comment("Playtesting: write a timeline of everything that happens (chapters, pages, scares, what Solace said)",
-                        "to <game folder>/solace/playtest/. Notes from /solace note are always saved. See docs/PLAYTEST.md.")
+                        "to <game folder>/solace/playtest/. Notes from /solace note are always saved.")
                 .define("playtestLog", false);
         STORY_NUDGES = b.comment("Small hints when a player seems stuck: a rustle where a page is lying, Solace warning them away from the house.",
                         "The timings are guesses until the story has been playtested (story/Nudges.java).")

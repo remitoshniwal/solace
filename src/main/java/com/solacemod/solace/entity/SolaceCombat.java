@@ -19,7 +19,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Solace in your fights (docs/DESIGN.md section 6). It doesn't fight like a pet. It stands back and watches you,
+ * Solace in your fights. It doesn't fight like a pet. It stands back and watches you,
  * cheering you on. Once in a while it flickers next to a mob, kills it in one touch, and flickers back.
  * If you're about to die it almost always steps in, but saving you adds to your debt.
  */

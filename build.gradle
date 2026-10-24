@@ -33,7 +33,7 @@ neoForge {
             // Testing players' own AI without a real key: SOLACE_TEST_PLAYER_AI=http://127.0.0.1:1235/v1 sends their brains to a pretend AI.
             if (System.getenv('SOLACE_TEST_PLAYER_AI') != null) systemProperty 'solace.testPlayerAiUrl', System.getenv('SOLACE_TEST_PLAYER_AI')
         }
-        // Two players on one computer, for testing multiplayer (see docs/PLAYTEST.md):
+        // Two players on one computer, for testing multiplayer (a local test setup):
         // ./gradlew runServer, then ./gradlew runPlayerA and ./gradlew runPlayerB, and join "localhost" from both.
         // Each has its own folder, so their settings and logs don't mix. They don't need an AI key (the server has it).
         // SOLACE_JOIN=localhost makes them join that server straight away.

@@ -54,7 +54,7 @@ public final class Powers {
             Map.entry("carry", 30), Map.entry("darken", 60), Map.entry("lights_out", 120), Map.entry("whisper", 20)
     );
 
-    /** Power name -> Tether cost (docs/DESIGN.md section 4). Conjuring costs the item's value instead. */
+    /** Power name -> Tether cost. Conjuring costs the item's value instead. */
     public static final Map<String, Double> COSTS = Map.ofEntries(
             Map.entry("find", 5.0), Map.entry("reveal", 5.0), Map.entry("bless", 8.0), Map.entry("feed", 10.0), Map.entry("weather", 10.0),
             Map.entry("smite", 12.0), Map.entry("banish", 12.0), Map.entry("heal", 15.0), Map.entry("carry", 15.0), Map.entry("time", 20.0)

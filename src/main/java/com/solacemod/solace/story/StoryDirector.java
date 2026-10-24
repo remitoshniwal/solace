@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Runs the story (docs/DESIGN.md section 7): 8 chapters in 4 parts. Each chapter has timed scenes ("beats"),
+ * Runs the story: 8 chapters in 4 parts. Each chapter has timed scenes ("beats"),
  * and moves on when enough time has passed and enough of Maren's pages have been found.
  * Then the question, and the five endings.
  */

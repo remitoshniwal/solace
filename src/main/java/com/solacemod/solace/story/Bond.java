@@ -19,7 +19,7 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * The bond between Solace and the player (docs/DESIGN.md section 4).
+ * The bond between Solace and the player.
  *
  * TETHER = how strong Solace is. It grows with time spent together, talking and gifts, and drains when you're apart.
  *          Every power spends Tether. The maximum grows as the story goes on.

@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * How Solace moves (docs/DESIGN.md section 3): player-like most of the time, but not always.
+ * How Solace moves: player-like most of the time, but not always.
  * A hidden "creep meter" fills up over time (faster in later chapters). When it overflows, Solace does one
  * wrong thing, then the meter resets to a random level so you can never predict the next one.
  */

@@ -88,7 +88,7 @@ An AI companion that remembers you, and a psychological horror story about the l
 - For testers: `/solace admin power <player> <power>` and `/solace admin fragment <player> <page> ground`. The playtest log now also records hints, advancements and the price.
 
 ### New in 1.6.2
-- **Playtest tools.** `/solace note <text>` saves a note about the moment you're in. `/solace admin playtest on` writes a timeline of the whole story (chapters, pages, scares, what Solace said) to `solace/playtest/` in your Minecraft folder. How to run a playtest: [docs/PLAYTEST.md](https://github.com/remitoshniwal/solace/blob/main/docs/PLAYTEST.md).
+- **Playtest tools.** `/solace note <text>` saves a note about the moment you're in. `/solace admin playtest on` writes a timeline of the whole story (chapters, pages, scares, what Solace said) to `solace/playtest/` in your Minecraft folder.
 - **Fixed:** a story speed of 3 no longer turns into 2 when you save the setup screen.
 
 ### New in 1.6.1

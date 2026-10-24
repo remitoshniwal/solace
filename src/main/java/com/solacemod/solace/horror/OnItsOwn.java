@@ -44,7 +44,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Things Solace does on its own (docs/DESIGN.md section 5). None of them hurt you, and nothing is ever said about them.
+ * Things Solace does on its own. None of them hurt you, and nothing is ever said about them.
  * The AI is told afterwards (through the recent events list), so it can bring them up later, or pretend it didn't happen.
  */
 public final class OnItsOwn {

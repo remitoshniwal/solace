@@ -22,7 +22,7 @@ public final class PlayerStory {
     // Story progress
     public boolean met;
     public UUID solaceId;
-    /** Which of the 8 chapters the story is in (docs/DESIGN.md section 7). */
+    /** Which of the 8 chapters the story is in. */
     public int chapter = 1;
     public long playTicks;
     public int trust = 20;
@@ -36,7 +36,7 @@ public final class PlayerStory {
     public boolean bossActive;
     public long defiantUntilTick;
 
-    // The bond (see docs/DESIGN.md section 4)
+    // The bond
     /** How strong Solace is right now. Grows with time together; powers spend it. */
     public double tether = 10;
     /** What the player "owes" for Solace's gifts. High debt: it asks for things, then it collects. */
